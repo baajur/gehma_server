@@ -1,0 +1,7 @@
+CREATE TABLE users (
+    id UUID NOT NULL PRIMARY KEY,
+    tele_num VARCHAR(100) NOT NULL,
+    led BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP NOT NULL
+);
+
