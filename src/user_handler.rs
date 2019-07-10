@@ -52,11 +52,14 @@ fn create_entry(tel: String, pool: web::Data<Pool>) -> Result<(), crate::errors:
 fn get_entry(
     tele_num: String,
     pool: web::Data<Pool>,
-) -> Result<Vec<User>, crate::errors::ServiceError> {
+) -> Result<User, crate::errors::ServiceError> {
     let users = get_query(tele_num, pool)?;
     dbg!(&users);
-
-    Ok(users)
+    
+    match users.len() {
+        0 => Err(ServiceError::BadRequest("No user found".to_string())),
+        _ => Ok(users.get(0).unwrap().clone())
+    }
 }
 
 fn update_led_entry(tel: String, pool: web::Data<Pool>) -> Result<(), crate::errors::ServiceError> {

@@ -41,9 +41,16 @@ fn main() {
                         .max_age_time(chrono::Duration::days(1))
                         .secure(false) //FIXME
             )) 
-            .data(web::JsonConfig::default().limit(4096))
+            //.data(web::JsonConfig::default().limit(4096))
+            .data(web::JsonConfig::default())
             .service(
                 web::scope("/api")
+                /*
+                 * .service(
+                    web::resource("/")
+                        .route(web::get().to_async(|| actix_web::HttpResponse::Ok().finish()))
+                )
+                */
                 .service(
                     web::resource("/user/{base_tel}")
                         .route(web::get().to_async(user_handler::get))
@@ -52,11 +59,11 @@ fn main() {
                 )
                 .service(
                     web::resource("/exists/{base_tel}")
-                        .route(web::get().to_async(exists_handler::get))
+                        .route(web::post().to_async(exists_handler::get))
                 )
             )
         })
-        .bind("127.0.0.1:3000").unwrap()
+        .bind("10.0.0.50:3000").unwrap()
         .run().unwrap()
 
 }
