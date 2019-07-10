@@ -14,6 +14,7 @@ mod errors;
 //mod invitation_handler;
 //mod register_handler;
 mod user_handler;
+mod exists_handler;
 //mod contacts_handler;
 mod utils;
 
@@ -48,6 +49,10 @@ fn main() {
                         .route(web::get().to_async(user_handler::get))
                         .route(web::put().to_async(user_handler::update))
                         .route(web::post().to_async(user_handler::add))
+                )
+                .service(
+                    web::resource("/exists/{base_tel}")
+                        .route(web::get().to_async(exists_handler::get))
                 )
             )
         })
