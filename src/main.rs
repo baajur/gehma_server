@@ -46,6 +46,7 @@ fn main() {
                 .service(
                     web::resource("/user/{base_tel}")
                         .route(web::get().to_async(user_handler::get))
+                        .route(web::put().to_async(user_handler::update))
                         .route(web::post().to_async(user_handler::add))
                 )
             )
