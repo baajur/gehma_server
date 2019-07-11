@@ -45,6 +45,7 @@ pub fn update(
 }
 
 fn create_entry(tel: String, pool: web::Data<Pool>) -> Result<(), crate::errors::ServiceError> {
+    dbg!(&tel);
     let _ = dbg!(create_query(tel, pool)?);
     Ok(())
 }
@@ -91,7 +92,7 @@ fn update_led_query(
     let target = users.filter(tele_num.eq(&tele));
 
     users
-        .filter(tele_num.eq(&tele))
+        .filter(tele_num.eq(&tele.replace("+", "").replace(" ", "").trim()))
         .load::<User>(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Cannot find user".into()))
         .and_then(|mut result| {
@@ -119,7 +120,7 @@ fn get_query(
     let conn: &PgConnection = &pool.get().unwrap();
 
     users
-        .filter(tele_num.eq(para_num))
+        .filter(tele_num.eq(para_num.replace("+", "").replace(" ", "").trim()))
         .load::<User>(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
         .and_then(|result| {

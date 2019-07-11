@@ -33,14 +33,6 @@ fn main() {
         App::new()
             .data(pool.clone())
             .wrap(middleware::Logger::default())
-            .wrap(IdentityService::new(
-                    CookieIdentityPolicy::new(utils::SECRET_KEY.as_bytes())
-                        .name("auth")
-                        .path("/")
-                        .domain(domain.as_str())
-                        .max_age_time(chrono::Duration::days(1))
-                        .secure(false) //FIXME
-            )) 
             //.data(web::JsonConfig::default().limit(4096))
             .data(web::JsonConfig::default())
             .service(
