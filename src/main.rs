@@ -8,6 +8,8 @@ use actix_web::{middleware, web, App, HttpServer};
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
 
+use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
+
 mod models;
 mod schema;
 mod errors;
@@ -22,6 +24,12 @@ fn main() {
     dotenv::dotenv().ok();
     std::env::set_var("RUST_LOG", "actix_web=info,actix_server=info");
     let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL expected");
+
+    let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
+    builder
+        .set_private_key_file("key.pem", SslFiletype::PEM)
+        .unwrap();
+    builder.set_certificate_chain_file("cert.pem").unwrap();
 
     let manager = ConnectionManager::<PgConnection>::new(database_url);
     let pool : models::Pool = r2d2::Pool::builder()
@@ -60,7 +68,7 @@ fn main() {
                 )
             )
         })
-        .bind("10.0.0.50:3000").unwrap()
+        .bind_ssl("0.0.0.0:3000", builder).unwrap()
         .run().unwrap()
 
 }

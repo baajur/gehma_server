@@ -8,7 +8,7 @@ edition = "2018"
 
 [dependencies]
 actix-identity = "0.1.0"
-actix-web = "1.0.3"
+actix-web = { version="1.0.3", features=["ssl"] }
 argonautica = "0.2.0"
 chrono = { version = "0.4.6", features = ["serde"] }
 derive_more = "0.15.0"
@@ -23,3 +23,4 @@ serde_derive = "1.0"
 serde_json = "1.0"
 uuid = { version = "0.7", features = ["serde", "v4"] }
 phonenumber = "0.1"
+openssl = { version="0.10" }
