@@ -25,13 +25,11 @@ fn main() {
     std::env::set_var("RUST_LOG", "actix_web=info,actix_server=info");
     let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL expected");
 
-    /*
     let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
     builder
         .set_private_key_file("key.pem", SslFiletype::PEM)
         .unwrap();
     builder.set_certificate_chain_file("cert.pem").unwrap();
-    */
 
     let manager = ConnectionManager::<PgConnection>::new(database_url);
     let pool: models::Pool = r2d2::Pool::builder()
@@ -64,8 +62,8 @@ fn main() {
                     ),
             )
     })
-    //.bind_ssl("0.0.0.0:3000", builder)
-    .bind("0.0.0.0:3000")
+    .bind_ssl("0.0.0.0:80", builder)
+    //.bind("0.0.0.0:80")
     .unwrap()
     .run()
     .unwrap()
