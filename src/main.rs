@@ -44,13 +44,13 @@ fn main() {
                 )
                 */
                 .service(
-                    web::resource("/user/{base_tel}")
+                    web::resource("/user/{base_tel}/cc/{country_code}/")
                         .route(web::get().to_async(user_handler::get))
-                        .route(web::put().to_async(user_handler::update))
                         .route(web::post().to_async(user_handler::add))
+                        .route(web::put().to_async(user_handler::update))
                 )
                 .service(
-                    web::resource("/exists/{base_tel}")
+                    web::resource("/exists/{base_tel}/cc/{country_code}/")
                         .route(web::post().to_async(exists_handler::get))
                 )
             )

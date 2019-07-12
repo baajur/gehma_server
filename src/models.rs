@@ -10,15 +10,17 @@ pub struct User {
     pub tele_num: String,
     pub led: bool,
     pub created_at: chrono::NaiveDateTime,
+    pub country_code: String,
 }
 
-impl<T> From<T> for User where T: Into<String> {
-    fn from(e: T) -> Self {
+impl User {
+    pub fn my_from(e: &String, country_code: &String) -> Self {
         User {
             id: uuid::Uuid::new_v4(),
-            tele_num: e.into().replace("+", "").replace(" ", "").trim().to_string(),
+            tele_num: e.replace("+", "").replace(" ", "").trim().to_string(),
             led: false,
-            created_at: chrono::Local::now().naive_local()
+            created_at: chrono::Local::now().naive_local(),
+            country_code: country_code.to_string()
         }
     }
 }
