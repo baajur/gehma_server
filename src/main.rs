@@ -43,6 +43,11 @@ fn main() {
                         .route(web::get().to_async(|| actix_web::HttpResponse::Ok().finish()))
                 )
                 */
+
+                .service(
+                    web::resource("/user/{base_tel}/cc/{country_code}/led/{led}")
+                        .route(web::put().to_async(user_handler::update))
+                )
                 .service(
                     web::resource("/user/{base_tel}/cc/{country_code}/")
                         .route(web::get().to_async(user_handler::get))

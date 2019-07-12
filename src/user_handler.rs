@@ -35,10 +35,10 @@ pub fn get(
 }
 
 pub fn update(
-    info: web::Path<(String, String)>,
+    info: web::Path<(String, String, bool)>,
     pool: web::Data<Pool>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
-    web::block(move || update_led_entry(&info.0, &info.1, pool)).then(|res| match res {
+    web::block(move || update_led_entry(&info.0, &info.1, &info.2, pool)).then(|res| match res {
         Ok(_) => Ok(HttpResponse::Ok().finish()),
         Err(err) => match err {
             BlockingError::Error(service_error) => Err(service_error),
@@ -67,8 +67,8 @@ fn get_entry(tele_num: &String, country_code: &String, pool: web::Data<Pool>) ->
     }
 }
 
-fn update_led_entry(tel: &String, country_code: &String, pool: web::Data<Pool>) -> Result<(), crate::errors::ServiceError> {
-    let _ = dbg!(update_led_query(tel, country_code, pool)?);
+fn update_led_entry(tel: &String, country_code: &String, led: &bool, pool: web::Data<Pool>) -> Result<(), crate::errors::ServiceError> {
+    let _ = dbg!(update_led_query(tel, country_code, led, pool)?);
     Ok(())
 }
 
@@ -92,14 +92,32 @@ fn create_query(
 fn update_led_query(
     tele: &String,
     country_code: &String,
+    bled: &bool,
     pool: web::Data<Pool>,
-) -> Result<(), crate::errors::ServiceError> {
+) -> Result<usize, crate::errors::ServiceError> {
     use crate::schema::users::dsl::{led, tele_num, users};
 
     let conn: &PgConnection = &pool.get().unwrap();
 
-    let target = users.filter(tele_num.eq(phonenumber_to_international(&tele, &country_code).replace("+", "")));
+    let ttarget = phonenumber_to_international(&tele, &country_code).replace("+", "").replace(" ", "");
 
+    let target = users.filter(tele_num.eq(ttarget));
+
+    let res = diesel::update(target)
+        .set(led.eq(bled))
+        .execute(conn)
+        .map_err(|_db_error| {
+            ServiceError::BadRequest("Updating state failed".into())
+        })?;
+
+    if res != 200 {
+        Err(ServiceError::BadRequest("Nothing updated".into()))
+    }
+    else {
+        Ok(res)
+    }
+
+    /*
     users
         .filter(tele_num.eq(phonenumber_to_international(&tele, &country_code).replace("+", "")))
         .load::<User>(conn)
@@ -118,6 +136,7 @@ fn update_led_query(
                 Err(ServiceError::BadRequest("Invalid row set".into()))
             }
         })
+        */
 }
 
 fn get_query(
