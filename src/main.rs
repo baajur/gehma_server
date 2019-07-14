@@ -62,7 +62,7 @@ fn main() {
                     ),
             )
     })
-    .bind_ssl("0.0.0.0:80", builder)
+    .bind_ssl("0.0.0.0:3000", builder)
     //.bind("0.0.0.0:80")
     .unwrap()
     .run()
