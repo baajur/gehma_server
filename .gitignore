@@ -1,2 +1,6 @@
 /target
 **/*.rs.bk
+.env
+cert.pem
+key.pem
+server.csr
