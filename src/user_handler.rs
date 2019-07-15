@@ -35,6 +35,7 @@ pub fn get(
 #[derive(Debug, Deserialize)]
 pub struct UpdateUser {
     pub description: String,
+    pub led: String,
 }
 
 pub fn update(
@@ -42,6 +43,7 @@ pub fn update(
     data: web::Json<UpdateUser>,
     pool: web::Data<Pool>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
+    dbg!(&data);
     web::block(move || update_user(&info.0, &info.1, &data.into_inner(), pool)).then(
         |res| match res {
             Ok(_) => Ok(HttpResponse::Ok().finish()),
@@ -133,7 +135,7 @@ fn update_user_query(
     user: &UpdateUser,
     pool: web::Data<Pool>,
 ) -> Result<usize, crate::errors::ServiceError> {
-    use crate::schema::users::dsl::{tele_num, users, description};
+    use crate::schema::users::dsl::{description, led, tele_num, users};
 
     let conn: &PgConnection = &pool.get().unwrap();
 
@@ -143,16 +145,16 @@ fn update_user_query(
 
     let target = users.filter(tele_num.eq(ttarget));
 
-    let res = diesel::update(target)
-        .set(description.eq(user.description.to_string()))
-        .execute(conn)
-        .map_err(|_db_error| ServiceError::BadRequest("Updating state failed".into()))?;
+    let myled = match &*user.led {
+        "true" => true,
+        "false" => false,
+        _ => false,
+    };
 
-    if res != 200 {
-        Err(ServiceError::BadRequest("Nothing updated".into()))
-    } else {
-        Ok(res)
-    }
+    diesel::update(target)
+        .set((description.eq(user.description.to_string()), led.eq(myled)))
+        .execute(conn)
+        .map_err(|_db_error| ServiceError::BadRequest("Updating state failed".into()))
 }
 
 fn update_led_query(
@@ -171,16 +173,10 @@ fn update_led_query(
 
     let target = users.filter(tele_num.eq(ttarget));
 
-    let res = diesel::update(target)
+    diesel::update(target)
         .set(led.eq(bled))
         .execute(conn)
-        .map_err(|_db_error| ServiceError::BadRequest("Updating state failed".into()))?;
-
-    if res != 200 {
-        Err(ServiceError::BadRequest("Nothing updated".into()))
-    } else {
-        Ok(res)
-    }
+        .map_err(|_db_error| ServiceError::BadRequest("Updating state failed".into()))
 }
 
 fn get_query(

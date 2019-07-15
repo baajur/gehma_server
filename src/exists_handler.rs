@@ -75,7 +75,7 @@ fn get_query(
         .collect();
         //.filter(tele_num.eq(phonenumber_to_international(&para_num).replace("+", "")))
 
-    dbg!(&numbers);
+    //dbg!(&numbers);
 
     users
         .filter(tele_num.eq_any(numbers.iter_mut().map(|w| w.calculated_tele.clone()).collect::<Vec<String>>()))
