@@ -5,5 +5,6 @@ table! {
         led -> Bool,
         created_at -> Timestamp,
         country_code -> Varchar,
+        description -> Varchar,
     }
 }

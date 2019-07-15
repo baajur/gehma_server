@@ -10,15 +10,13 @@ pub fn add(
     info: web::Path<(String, String)>,
     pool: web::Data<Pool>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
-    web::block(move || create_entry(&info.0, &info.1, pool)).then(
-        |res| match res {
-            Ok(_) => Ok(HttpResponse::Ok().finish()),
-            Err(err) => match err {
-                BlockingError::Error(service_error) => Err(service_error),
-                BlockingError::Canceled => Err(ServiceError::InternalServerError),
-            },
+    web::block(move || create_entry(&info.0, &info.1, pool)).then(|res| match res {
+        Ok(_) => Ok(HttpResponse::Ok().finish()),
+        Err(err) => match err {
+            BlockingError::Error(service_error) => Err(service_error),
+            BlockingError::Canceled => Err(ServiceError::InternalServerError),
         },
-    )
+    })
 }
 
 pub fn get(
@@ -34,7 +32,28 @@ pub fn get(
     })
 }
 
+#[derive(Debug, Deserialize)]
+pub struct UpdateUser {
+    pub description: String,
+}
+
 pub fn update(
+    info: web::Path<(String, String)>,
+    data: web::Json<UpdateUser>,
+    pool: web::Data<Pool>,
+) -> impl Future<Item = HttpResponse, Error = ServiceError> {
+    web::block(move || update_user(&info.0, &info.1, &data.into_inner(), pool)).then(
+        |res| match res {
+            Ok(_) => Ok(HttpResponse::Ok().finish()),
+            Err(err) => match err {
+                BlockingError::Error(service_error) => Err(service_error),
+                BlockingError::Canceled => Err(ServiceError::InternalServerError),
+            },
+        },
+    )
+}
+
+pub fn update_led(
     info: web::Path<(String, String, bool)>,
     pool: web::Data<Pool>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
@@ -57,7 +76,11 @@ fn create_entry(
     Ok(())
 }
 
-fn get_entry(tele_num: &String, country_code: &String, pool: web::Data<Pool>) -> Result<User, crate::errors::ServiceError> {
+fn get_entry(
+    tele_num: &String,
+    country_code: &String,
+    pool: web::Data<Pool>,
+) -> Result<User, crate::errors::ServiceError> {
     let users = get_query(tele_num, country_code, pool)?;
     dbg!(&users);
 
@@ -67,7 +90,22 @@ fn get_entry(tele_num: &String, country_code: &String, pool: web::Data<Pool>) ->
     }
 }
 
-fn update_led_entry(tel: &String, country_code: &String, led: &bool, pool: web::Data<Pool>) -> Result<(), crate::errors::ServiceError> {
+fn update_user(
+    tel: &String,
+    country_code: &String,
+    user: &UpdateUser,
+    pool: web::Data<Pool>,
+) -> Result<(), crate::errors::ServiceError> {
+    let _ = dbg!(update_user_query(tel, country_code, user, pool)?);
+    Ok(())
+}
+
+fn update_led_entry(
+    tel: &String,
+    country_code: &String,
+    led: &bool,
+    pool: web::Data<Pool>,
+) -> Result<(), crate::errors::ServiceError> {
     let _ = dbg!(update_led_query(tel, country_code, led, pool)?);
     Ok(())
 }
@@ -89,6 +127,34 @@ fn create_query(
     Ok(ins)
 }
 
+fn update_user_query(
+    tel: &String,
+    country_code: &String,
+    user: &UpdateUser,
+    pool: web::Data<Pool>,
+) -> Result<usize, crate::errors::ServiceError> {
+    use crate::schema::users::dsl::{tele_num, users, description};
+
+    let conn: &PgConnection = &pool.get().unwrap();
+
+    let ttarget = phonenumber_to_international(&tel, &country_code)
+        .replace("+", "")
+        .replace(" ", "");
+
+    let target = users.filter(tele_num.eq(ttarget));
+
+    let res = diesel::update(target)
+        .set(description.eq(user.description.to_string()))
+        .execute(conn)
+        .map_err(|_db_error| ServiceError::BadRequest("Updating state failed".into()))?;
+
+    if res != 200 {
+        Err(ServiceError::BadRequest("Nothing updated".into()))
+    } else {
+        Ok(res)
+    }
+}
+
 fn update_led_query(
     tele: &String,
     country_code: &String,
@@ -99,44 +165,22 @@ fn update_led_query(
 
     let conn: &PgConnection = &pool.get().unwrap();
 
-    let ttarget = phonenumber_to_international(&tele, &country_code).replace("+", "").replace(" ", "");
+    let ttarget = phonenumber_to_international(&tele, &country_code)
+        .replace("+", "")
+        .replace(" ", "");
 
     let target = users.filter(tele_num.eq(ttarget));
 
     let res = diesel::update(target)
         .set(led.eq(bled))
         .execute(conn)
-        .map_err(|_db_error| {
-            ServiceError::BadRequest("Updating state failed".into())
-        })?;
+        .map_err(|_db_error| ServiceError::BadRequest("Updating state failed".into()))?;
 
     if res != 200 {
         Err(ServiceError::BadRequest("Nothing updated".into()))
-    }
-    else {
+    } else {
         Ok(res)
     }
-
-    /*
-    users
-        .filter(tele_num.eq(phonenumber_to_international(&tele, &country_code).replace("+", "")))
-        .load::<User>(conn)
-        .map_err(|_db_error| ServiceError::BadRequest("Cannot find user".into()))
-        .and_then(|mut result| {
-            dbg!(&result);
-            if let Some(user) = result.pop() {
-                let _ = diesel::update(target)
-                    .set(led.eq(!user.led))
-                    .execute(conn)
-                    .map_err(|_db_error| {
-                        ServiceError::BadRequest("Updating state failed".into())
-                    })?;
-                Ok(())
-            } else {
-                Err(ServiceError::BadRequest("Invalid row set".into()))
-            }
-        })
-        */
 }
 
 fn get_query(
@@ -148,7 +192,11 @@ fn get_query(
 
     let conn: &PgConnection = &pool.get().unwrap();
 
-    let tel = phonenumber_to_international(&format!("+{}", para_num), &country_code).chars().into_iter().skip(1).collect::<String>();
+    let tel = phonenumber_to_international(&format!("+{}", para_num), &country_code)
+        .chars()
+        .into_iter()
+        .skip(1)
+        .collect::<String>();
 
     dbg!(&tel);
 

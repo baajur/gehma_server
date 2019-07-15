@@ -48,7 +48,7 @@ fn main() {
                 web::scope("/api")
                     .service(
                         web::resource("/user/{base_tel}/cc/{country_code}/led/{led}")
-                            .route(web::put().to_async(user_handler::update)),
+                            .route(web::put().to_async(user_handler::update_led)),
                     )
                     .service(
                         web::resource("/user/{base_tel}/cc/{country_code}/")
@@ -62,8 +62,8 @@ fn main() {
                     ),
             )
     })
-    .bind_ssl("0.0.0.0:3000", builder)
-    //.bind("0.0.0.0:80")
+    //.bind_ssl("0.0.0.0:3000", builder)
+    .bind("0.0.0.0:3000")
     .unwrap()
     .run()
     .unwrap()
