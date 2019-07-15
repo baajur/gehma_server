@@ -1,0 +1,23 @@
+version: '3.3'
+
+services:
+   db:
+     image: posgres:12
+     volumes:
+       - db_data:/var/lib/mysql
+     restart: always
+     environment:
+       POSTGRES_USER: kper
+       POSTGRES_PASSWORD: kper1337 
+       POSTGRES_DB: gehma
+   server:
+     depends_on:
+       - db
+     build: .
+     ports:
+       - "80:80"
+     restart: always
+     environment:
+        DATABASE_URL=postgres://kper:kper1337@db/gehma
+volumes:
+    db_data: {}
