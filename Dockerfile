@@ -1,11 +1,14 @@
-FROM rust:1.31
+FROM rust:1.35
 
-RUN sudo apt-get install openssl libssl-dev
+RUN apt-get install openssl libssl-dev
 
 WORKDIR /usr/src/gehma
 
+RUN cargo install diesel_cli
+
 COPY . .
 
-RUN cargo install --path .
+RUN cargo build
 
-CMD["./target/debug/sprechstunde"]
+CMD ["/usr/local/cargo/bin/diesel migration run"]
+CMD ["/usr/src/gehma/target/debug/sprechstunde"]
