@@ -127,9 +127,18 @@ fn update_user_query(
 
     let conn: &PgConnection = &pool.get().unwrap();
 
+    let ttarget = phonenumber_to_international(tel, &country_code)
+        .map_err(|err| {
+            ServiceError::BadRequest(format!("Invalid number {}", tel))
+        })?
+        .replace("+", "")
+        .replace(" ", "");
+
+        /*
     let ttarget = phonenumber_to_international(&tel, &country_code)
         .replace("+", "")
         .replace(" ", "");
+        */
 
     let target = users.filter(tele_num.eq(ttarget));
 
@@ -175,9 +184,12 @@ fn get_query(
     let conn: &PgConnection = &pool.get().unwrap();
 
     let tel = phonenumber_to_international(&format!("+{}", para_num), &country_code)
+        .map_err(|err| {
+            ServiceError::BadRequest(format!("Invalid number {}", para_num))
+        })?
         .chars()
         .into_iter()
-        .skip(1)
+        .skip(1) //skip plus
         .collect::<String>();
 
     users

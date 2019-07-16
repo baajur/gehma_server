@@ -16,6 +16,14 @@ pub enum ServiceError {
     Unauthorized,
 }
 
+#[derive(Debug, Display)]
+pub enum InternalError {
+    #[display(fmt = "Invalid Phone Number: {}", _0)]
+    InvalidPhoneNumber(String),
+    #[display(fmt = "Invalid Country: {}", _0)]
+    InvalidCountry(String)
+}
+
 impl ResponseError for ServiceError {
     fn error_response(&self) -> HttpResponse {
         match self {

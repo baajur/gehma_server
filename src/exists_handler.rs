@@ -2,7 +2,7 @@ use actix_web::{error::BlockingError, web, HttpResponse};
 use diesel::{prelude::*, PgConnection};
 use futures::Future;
 
-use crate::errors::ServiceError;
+use crate::errors::{ServiceError, InternalError};
 use crate::models::{Pool, User};
 use crate::utils::phonenumber_to_international;
 
@@ -73,11 +73,22 @@ fn get_query(
     let mut numbers: Vec<ResponseUser> = phone_numbers
         .into_iter()
         .filter(|w| w.len() > 3)
-        .map(|w| ResponseUser {
-            calculated_tele: phonenumber_to_international(w, &country_code).replace("+", ""),
+        .filter_map(|w| match phonenumber_to_international(w, &country_code) {
+            Ok(number) => Some(ResponseUser {
+                calculated_tele: number.replace("+", ""),
+                old: w.to_string(),
+                user: None
+            }),
+            Err(err) => {
+                eprintln!("{}", err);
+                None
+            }
+        })
+        /*ResponseUser {
+            calculated_tele: replace("+", ""),
             old: w.to_string(),
             user: None
-        })
+        }*/
         .collect();
         //.filter(tele_num.eq(phonenumber_to_international(&para_num).replace("+", "")))
 
