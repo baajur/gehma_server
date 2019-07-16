@@ -1,4 +1,12 @@
 table! {
+    blacklist (blocker, blocked) {
+        blocker -> Varchar,
+        blocked -> Varchar,
+        created_at -> Timestamp,
+    }
+}
+
+table! {
     users (id) {
         id -> Uuid,
         tele_num -> Varchar,
@@ -9,3 +17,8 @@ table! {
         is_autofahrer -> Bool,
     }
 }
+
+allow_tables_to_appear_in_same_query!(
+    blacklist,
+    users,
+);
