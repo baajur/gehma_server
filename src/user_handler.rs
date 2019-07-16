@@ -47,7 +47,7 @@ pub fn update(
     dbg!(&data);
     web::block(move || update_user(&info.0, &info.1, &data.into_inner(), pool)).then(
         |res| match res {
-            Ok(_) => Ok(HttpResponse::Ok().finish()),
+            Ok(user) => Ok(HttpResponse::Ok().json(&user)),
             Err(err) => match err {
                 BlockingError::Error(service_error) => Err(service_error),
                 BlockingError::Canceled => Err(ServiceError::InternalServerError),
@@ -56,6 +56,7 @@ pub fn update(
     )
 }
 
+/*
 pub fn update_led(
     info: web::Path<(String, String, bool)>,
     pool: web::Data<Pool>,
@@ -68,6 +69,7 @@ pub fn update_led(
         },
     })
 }
+*/
 
 fn create_entry(
     tel: &String,
@@ -101,13 +103,14 @@ fn update_user(
 ) -> Result<User, crate::errors::ServiceError> {
     let user = update_user_query(tel, country_code, user, pool)?;
 
-    dbg!(&user);
+    //dbg!(&user);
 
     user.first()
         .map(|w| w.clone())
         .ok_or(ServiceError::BadRequest("No user found".into()))
 }
 
+/*
 fn update_led_entry(
     tel: &String,
     country_code: &String,
@@ -117,6 +120,7 @@ fn update_led_entry(
     let _ = dbg!(update_led_query(tel, country_code, led, pool)?);
     Ok(())
 }
+*/
 
 fn create_query(
     tel: &String,
@@ -163,6 +167,7 @@ fn update_user_query(
         _ => false,
     };
 
+    //FIXME update und danach query ist extrem teuer
     diesel::update(target)
         .set((
             description.eq(user.description.to_string()),
@@ -182,6 +187,7 @@ fn update_user_query(
         })
 }
 
+/*
 fn update_led_query(
     tele: &String,
     country_code: &String,
@@ -203,6 +209,7 @@ fn update_led_query(
         .execute(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Updating state failed".into()))
 }
+*/
 
 fn get_query(
     para_num: &String,

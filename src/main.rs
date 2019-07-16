@@ -46,10 +46,12 @@ fn main() {
             .service(web::scope("/test").service(web::resource("/").route(web::get().to(index))))
             .service(
                 web::scope("/api")
+                /*
                     .service(
                         web::resource("/user/{base_tel}/cc/{country_code}/led/{led}")
                             .route(web::put().to_async(user_handler::update_led)),
                     )
+                    */
                     .service(
                         web::resource("/user/{base_tel}/cc/{country_code}/")
                             .route(web::get().to_async(user_handler::get))
