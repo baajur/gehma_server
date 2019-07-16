@@ -24,7 +24,7 @@ pub fn get(
     pool: web::Data<Pool>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
     dbg!(&info);
-    dbg!(&payload);
+    //dbg!(&payload);
     web::block(move || {
         get_entry(
             &info.0,
