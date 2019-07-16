@@ -13,7 +13,7 @@ pub struct ResponseUser {
     pub user: Option<User> 
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct Payload {
     pub numbers: Vec<String>,
 }
@@ -23,6 +23,8 @@ pub fn get(
     mut payload: web::Json<Payload>,
     pool: web::Data<Pool>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
+    dbg!(&info);
+    dbg!(&payload);
     web::block(move || {
         get_entry(
             &info.0,
@@ -46,6 +48,10 @@ fn get_entry(
     phone_numbers: &mut Vec<String>,
     pool: web::Data<Pool>,
 ) -> Result<Vec<ResponseUser>, crate::errors::ServiceError> {
+    dbg!(&tel);
+    dbg!(&country_code);
+    //dbg!(&phone_numbers);
+
     let users = get_query(phone_numbers, country_code, pool)?;
 
     Ok(users)
