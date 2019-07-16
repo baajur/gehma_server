@@ -36,6 +36,7 @@ pub fn get(
 pub struct UpdateUser {
     pub description: String,
     pub led: String,
+    pub is_autofahrer: Option<String>,
 }
 
 pub fn update(
@@ -135,7 +136,7 @@ fn update_user_query(
     user: &UpdateUser,
     pool: web::Data<Pool>,
 ) -> Result<usize, crate::errors::ServiceError> {
-    use crate::schema::users::dsl::{description, led, tele_num, users};
+    use crate::schema::users::dsl::{description, is_autofahrer, led, tele_num, users};
 
     let conn: &PgConnection = &pool.get().unwrap();
 
@@ -145,14 +146,24 @@ fn update_user_query(
 
     let target = users.filter(tele_num.eq(ttarget));
 
-    let myled = match &*user.led {
+    let my_led = match &*user.led {
         "true" => true,
         "false" => false,
         _ => false,
     };
 
+    let my_is_autofahrer = match user.is_autofahrer.as_ref().map(|w| &**w) {
+        Some("true") => true,
+        Some("false") => false,
+        _ => false,
+    };
+
     diesel::update(target)
-        .set((description.eq(user.description.to_string()), led.eq(myled)))
+        .set((
+            description.eq(user.description.to_string()),
+            led.eq(my_led),
+            is_autofahrer.eq(my_is_autofahrer),
+        ))
         .execute(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Updating state failed".into()))
 }

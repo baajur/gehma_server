@@ -12,6 +12,7 @@ pub struct User {
     pub created_at: chrono::NaiveDateTime,
     pub country_code: String,
     pub description: String,
+    pub is_autofahrer: bool,
 }
 
 impl User {
@@ -22,7 +23,8 @@ impl User {
             led: false,
             created_at: chrono::Local::now().naive_local(),
             country_code: country_code.to_string(),
-            description: "".to_string()
+            description: "".to_string(),
+            is_autofahrer: false
         }
     }
 }
