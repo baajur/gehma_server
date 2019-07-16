@@ -62,8 +62,8 @@ fn main() {
                     ),
             )
     })
-    .bind_ssl("0.0.0.0:443", builder)
-    //.bind("0.0.0.0:3000")
+    //.bind_ssl("0.0.0.0:443", builder)
+    .bind("0.0.0.0:3000")
     .unwrap()
     .run()
     .unwrap()

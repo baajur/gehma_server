@@ -73,10 +73,10 @@ fn create_entry(
     tel: &String,
     country_code: &String,
     pool: web::Data<Pool>,
-) -> Result<(), crate::errors::ServiceError> {
-    dbg!(&tel);
-    let _ = dbg!(create_query(tel, country_code, pool)?);
-    Ok(())
+) -> Result<User, crate::errors::ServiceError> {
+    let user = create_query(tel, country_code, pool)?;
+    dbg!(&user);
+    Ok(user)
 }
 
 fn get_entry(
@@ -98,9 +98,14 @@ fn update_user(
     country_code: &String,
     user: &UpdateUser,
     pool: web::Data<Pool>,
-) -> Result<(), crate::errors::ServiceError> {
-    let _ = dbg!(update_user_query(tel, country_code, user, pool)?);
-    Ok(())
+) -> Result<User, crate::errors::ServiceError> {
+    let user = update_user_query(tel, country_code, user, pool)?;
+
+    dbg!(&user);
+
+    user.first()
+        .map(|w| w.clone())
+        .ok_or(ServiceError::BadRequest("No user found".into()))
 }
 
 fn update_led_entry(
@@ -135,7 +140,7 @@ fn update_user_query(
     country_code: &String,
     user: &UpdateUser,
     pool: web::Data<Pool>,
-) -> Result<usize, crate::errors::ServiceError> {
+) -> Result<Vec<User>, crate::errors::ServiceError> {
     use crate::schema::users::dsl::{description, is_autofahrer, led, tele_num, users};
 
     let conn: &PgConnection = &pool.get().unwrap();
@@ -165,7 +170,16 @@ fn update_user_query(
             is_autofahrer.eq(my_is_autofahrer),
         ))
         .execute(conn)
-        .map_err(|_db_error| ServiceError::BadRequest("Updating state failed".into()))
+        .map_err(|_db_error| ServiceError::BadRequest("Updating state failed".into()))?;
+
+    users
+        .filter(tele_num.eq(tel))
+        .load::<User>(conn)
+        .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
+        .and_then(|result| {
+            Ok(result)
+            //Err(ServiceError::BadRequest("Invalid Invitation".into()))
+        })
 }
 
 fn update_led_query(
