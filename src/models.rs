@@ -34,16 +34,16 @@ impl User {
 #[derive(Debug, Serialize, Deserialize, Queryable, Insertable, Clone)]
 #[table_name = "blacklist"]
 pub struct Blacklist {
-    pub blocker: uuid::Uuid,
-    pub blocked: uuid::Uuid,
+    pub blocker: String,
+    pub blocked: String,
     pub created_at: chrono::NaiveDateTime,
 }
 
 impl Blacklist {
-    pub fn my_from(blocker: uuid::Uuid, blocked: uuid::Uuid) -> Self {
+    pub fn my_from(blocker: &PhoneNumber, blocked: &PhoneNumber) -> Self {
         Blacklist {
-            blocker: blocker,
-            blocked: blocked,
+            blocker: blocker.to_string(),
+            blocked: blocked.to_string(),
             created_at: chrono::Local::now().naive_local(),
         }
     }

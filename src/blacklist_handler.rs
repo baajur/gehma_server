@@ -4,14 +4,13 @@ use futures::Future;
 use uuid::Uuid;
 
 use crate::errors::ServiceError;
-use crate::models::{Pool, User};
+use crate::models::{Blacklist, PhoneNumber, Pool, User};
 use crate::utils::phonenumber_to_international;
-
-use crate::models::Blacklist;
 
 #[derive(Debug, Deserialize)]
 pub struct PostData {
-    blocked: String
+    blocked: String,
+    country_code: String,
 }
 
 pub fn add(
@@ -20,12 +19,15 @@ pub fn add(
     pool: web::Data<Pool>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
     dbg!(&info);
-    web::block(move || create_entry(&info.into_inner(), &data.into_inner(), pool)).then(|res| match res {
-        Ok(_) => Ok(HttpResponse::Ok().finish()),
-        Err(err) => match err {
-            BlockingError::Error(service_error) => Err(service_error),
-            BlockingError::Canceled => Err(ServiceError::InternalServerError),
-        },
+    dbg!(&data);
+    web::block(move || create_entry(&info.into_inner(), &data.into_inner(), pool)).then(|res| {
+        match res {
+            Ok(_) => Ok(HttpResponse::Ok().finish()),
+            Err(err) => match err {
+                BlockingError::Error(service_error) => Err(service_error),
+                BlockingError::Canceled => Err(ServiceError::InternalServerError),
+            },
+        }
     })
 }
 
@@ -35,12 +37,14 @@ pub fn delete(
     pool: web::Data<Pool>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
     dbg!(&info);
-    web::block(move || delete_entry(&info.into_inner(), &data.into_inner(), pool)).then(|res| match res {
-        Ok(_) => Ok(HttpResponse::Ok().finish()),
-        Err(err) => match err {
-            BlockingError::Error(service_error) => Err(service_error),
-            BlockingError::Canceled => Err(ServiceError::InternalServerError),
-        },
+    web::block(move || delete_entry(&info.into_inner(), &data.into_inner(), pool)).then(|res| {
+        match res {
+            Ok(_) => Ok(HttpResponse::Ok().finish()),
+            Err(err) => match err {
+                BlockingError::Error(service_error) => Err(service_error),
+                BlockingError::Canceled => Err(ServiceError::InternalServerError),
+            },
+        }
     })
 }
 
@@ -49,23 +53,44 @@ fn create_entry(
     data: &PostData,
     pool: web::Data<Pool>,
 ) -> Result<Blacklist, crate::errors::ServiceError> {
-    let blocked = Uuid::parse_str(&data.blocked)?;
-    let blocker = Uuid::parse_str(blocker)?;
+    use crate::schema::users::dsl::{id, tele_num, users};
 
-    let b = create_query(blocker, blocked, pool)?;
+    let blocker2 = Uuid::parse_str(blocker)?;
+    let blocked = PhoneNumber::my_from(&data.blocked, &data.country_code)?;
+
+    dbg!(&blocked);
+    dbg!(&blocker);
+
+    let conn: &PgConnection = &pool.get().unwrap();
+
+    let myusers = users
+        .filter(id.eq(blocker2))
+        .load::<User>(conn)
+        .map_err(|_db_error| ServiceError::BadRequest("Cannot find user".into()))?;
+
+    let user = myusers
+        .first()
+        .map(|w| w.clone())
+        .ok_or(ServiceError::BadRequest(
+            "No user found with given uid".into(),
+        ))?;
+
+    let tel = PhoneNumber::my_from(&user.tele_num, &data.country_code)?;
+    let b = create_query(&tel, &blocked, pool)?;
+
     dbg!(&b);
     Ok(b)
 }
 
 fn create_query(
-    blocker: Uuid,
-    blocked: Uuid,
+    blocker: &PhoneNumber,
+    blocked: &PhoneNumber,
     pool: web::Data<Pool>,
 ) -> Result<Blacklist, crate::errors::ServiceError> {
     use crate::schema::blacklist::dsl::blacklist;
 
-    let new_inv: Blacklist = Blacklist::my_from(blocker, blocked);
     let conn: &PgConnection = &pool.get().unwrap();
+    let new_inv: Blacklist = Blacklist::my_from(blocker, blocked);
 
     let ins = diesel::insert_into(blacklist)
         .values(&new_inv)
@@ -76,20 +101,49 @@ fn create_query(
     Ok(ins)
 }
 
-fn delete_entry(blocker: &String, data: &PostData, pool: web::Data<Pool>) -> Result<(), crate::errors::ServiceError> {
-    let blocked = Uuid::parse_str(&data.blocked)?;
-    let blocker = Uuid::parse_str(blocker)?;
+fn delete_entry(
+    blocker: &String,
+    data: &PostData,
+    pool: web::Data<Pool>,
+) -> Result<(), crate::errors::ServiceError> {
+    use crate::schema::users::dsl::{id, tele_num, users};
 
-    delete_query(blocker, blocked, pool)
-   // dbg!(&b);
-}
+    let blocker2 = Uuid::parse_str(blocker)?;
+    let blocked = PhoneNumber::my_from(&data.blocked, &data.country_code)?;
 
-fn delete_query(sblocker: Uuid, sblocked: Uuid, pool: web::Data<Pool>) -> Result<(), crate::errors::ServiceError> {
-    use crate::schema::blacklist::dsl::{blacklist, blocker, blocked};
+    dbg!(&blocked);
+    dbg!(&blocker2);
 
     let conn: &PgConnection = &pool.get().unwrap();
 
-    let target = blacklist.filter(blocker.eq(sblocker)).filter(blocked.eq(sblocked));
+    let myusers = users
+        .filter(id.eq(blocker2))
+        .load::<User>(conn)
+        .map_err(|_db_error| ServiceError::BadRequest("Cannot find user".into()))?;
+
+    let user = myusers
+        .first()
+        .map(|w| w.clone())
+        .ok_or(ServiceError::BadRequest(
+            "No user found with given uid".into(),
+        ))?;
+
+    let tel = PhoneNumber::my_from(&user.tele_num, &data.country_code)?;
+
+    delete_query(&tel, &blocked, pool)
+}
+
+fn delete_query(
+    sblocker: &PhoneNumber,
+    sblocked: &PhoneNumber,
+    pool: web::Data<Pool>,
+) -> Result<(), crate::errors::ServiceError> {
+    use crate::schema::blacklist::dsl::{blacklist, blocked, blocker};
+    let conn: &PgConnection = &pool.get().unwrap();
+
+    let target = blacklist
+        .filter(blocker.eq(sblocker.to_string()))
+        .filter(blocked.eq(sblocked.to_string()));
 
     diesel::delete(target)
         .execute(conn)

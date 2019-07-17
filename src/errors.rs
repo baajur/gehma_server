@@ -17,6 +17,9 @@ pub enum ServiceError {
 
     #[display(fmt = "Unauthorized")]
     Unauthorized,
+
+    #[display(fmt = "Foreignkey mismatch: {}", _0)]
+    ForeignKeyMismatch(String),
 }
 
 #[derive(Debug, Display)]
@@ -34,6 +37,7 @@ impl ResponseError for ServiceError {
                 HttpResponse::InternalServerError().json("Internal Server Error")
             }
             ServiceError::BadRequest(ref message) => HttpResponse::BadRequest().json(message),
+            ServiceError::ForeignKeyMismatch(ref message) => HttpResponse::BadRequest().json(message),
             ServiceError::AlreadyExists(ref message) => HttpResponse::BadRequest().json(message),
             ServiceError::Unauthorized => HttpResponse::Unauthorized().json("Unauthorized"),
         }
@@ -60,6 +64,9 @@ impl From<DBError> for ServiceError {
                     let message = info.details().unwrap_or_else(|| info.message()).to_string();
                     return ServiceError::AlreadyExists(message);
                 }
+
+
+
                 ServiceError::InternalServerError
             }
             _ => ServiceError::InternalServerError
