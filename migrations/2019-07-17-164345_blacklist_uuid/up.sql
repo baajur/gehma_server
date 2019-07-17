@@ -1,0 +1,1 @@
+ALTER TABLE blacklist ADD COLUMN id uuid NOT NULL;
