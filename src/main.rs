@@ -50,6 +50,7 @@ fn main() {
                     .service(web::resource("/user").route(web::post().to_async(user_handler::add)))
                     .service(
                         web::resource("/user/{uid}/blacklist")
+                            .route(web::get().to_async(blacklist_handler::get_all))
                             .route(web::post().to_async(blacklist_handler::add))
                             .route(web::delete().to_async(blacklist_handler::delete)),
                     )

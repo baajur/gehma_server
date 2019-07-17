@@ -8,6 +8,29 @@ use crate::models::{Blacklist, PhoneNumber, Pool, User};
 use crate::utils::phonenumber_to_international;
 
 #[derive(Debug, Deserialize)]
+pub struct GetAllData {
+    numbers: Vec<String>,
+}
+
+pub fn get_all(
+    info: web::Path<(String)>,
+    //data: web::Json<GetAllData>,
+    pool: web::Data<Pool>,
+) -> impl Future<Item = HttpResponse, Error = ServiceError> {
+    dbg!(&info);
+    let info = info.into_inner();
+    web::block(move || get_entry(&info, pool)).then(|res| {
+        match res {
+            Ok(users) => Ok(HttpResponse::Ok().json(users)),
+            Err(err) => match err {
+                BlockingError::Error(service_error) => Err(service_error),
+                BlockingError::Canceled => Err(ServiceError::InternalServerError),
+            },
+        }
+    })
+}
+
+#[derive(Debug, Deserialize)]
 pub struct PostData {
     blocked: String,
     country_code: String,
@@ -46,6 +69,36 @@ pub fn delete(
             },
         }
     })
+}
+
+fn get_entry(blocker: &String, pool: web::Data<Pool>) -> Result<Vec<Blacklist>, crate::errors::ServiceError>  {
+    let blocker = Uuid::parse_str(blocker)?;
+
+    let bl = get_query(blocker, pool)?;
+
+    dbg!(&bl);
+
+    Ok(bl)
+}
+
+fn get_query(sblocker: Uuid, pool: web::Data<Pool>) -> Result<Vec<Blacklist>, crate::errors::ServiceError> {
+use crate::models::PhoneNumber;
+    use crate::schema::users::dsl::{id, users};
+    use crate::schema::blacklist::dsl::{blacklist, blocker, blocked};
+
+    let conn: &PgConnection = &pool.get().unwrap();
+
+    let user = users.filter(id.eq(sblocker))
+        .load::<User>(conn)
+        .map_err(|_db_err| ServiceError::BadRequest("Invalid User".into()))?
+        .first()
+        .map(|w| w.clone())
+        .ok_or(ServiceError::BadRequest("No user found".into()))?;
+
+
+    blacklist.filter(blocker.eq(user.tele_num))
+        .load::<Blacklist>(conn)
+        .map_err(|_db_err| ServiceError::BadRequest("Invalid User".into()))
 }
 
 fn create_entry(
@@ -95,6 +148,7 @@ fn create_query(
     let ins = diesel::insert_into(blacklist)
         .values(&new_inv)
         .get_result(conn)?;
+        //.map_err(|_db_error| ServiceError::BadRequest("Cannot insert into blacklist".into()))?;
 
     dbg!(&ins);
 

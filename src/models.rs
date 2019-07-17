@@ -5,7 +5,7 @@ use diesel::{r2d2::ConnectionManager, PgConnection};
 
 pub type Pool = r2d2::Pool<ConnectionManager<PgConnection>>;
 
-#[derive(Debug, Serialize, Deserialize, Queryable, Insertable, Clone)]
+#[derive(Debug, Serialize, Deserialize, Queryable, Insertable, Clone, Identifiable, Associations)]
 #[table_name = "users"]
 pub struct User {
     pub id: uuid::Uuid,
@@ -31,9 +31,11 @@ impl User {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Queryable, Insertable, Clone)]
+#[derive(Debug, Serialize, Deserialize, Queryable, Insertable, Clone, Identifiable, Associations)]
+#[belongs_to(User, foreign_key="blocker")]
 #[table_name = "blacklist"]
 pub struct Blacklist {
+    pub id: uuid::Uuid,
     pub blocker: String,
     pub blocked: String,
     pub created_at: chrono::NaiveDateTime,
@@ -42,6 +44,7 @@ pub struct Blacklist {
 impl Blacklist {
     pub fn my_from(blocker: &PhoneNumber, blocked: &PhoneNumber) -> Self {
         Blacklist {
+            id: uuid::Uuid::new_v4(),
             blocker: blocker.to_string(),
             blocked: blocked.to_string(),
             created_at: chrono::Local::now().naive_local(),
