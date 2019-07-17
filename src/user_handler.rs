@@ -75,7 +75,16 @@ fn create_entry(
     let tele = body.tele_num;
     let country_code = &body.country_code;
 
-    let user = create_query(PhoneNumber::my_from(&tele, country_code)?, &country_code, pool)?;
+    let tele2 = PhoneNumber::my_from(&tele, country_code)?;
+
+    dbg!(&tele2.to_string());
+
+    let user = match create_query(&tele2, &country_code, &pool) {
+        Ok(u) => Ok(u),
+        Err(ServiceError::AlreadyExists(_)) => get_entry_by_tel_query(&tele2, &pool),
+        Err(err) => Err(err),
+    }?;
+
     dbg!(&user);
     Ok(user)
 }
@@ -94,6 +103,28 @@ fn get_entry(
     }
 }
 
+fn get_entry_by_tel_query(
+    tele: &PhoneNumber,
+    pool: &web::Data<Pool>,
+) -> Result<User, crate::errors::ServiceError> {
+    use crate::schema::users::dsl::{description, is_autofahrer, led, id, users, tele_num};
+
+    let conn: &PgConnection = &pool.get().unwrap();
+    
+    let res = users
+        .filter(tele_num.eq(tele.to_string()))
+        .load::<User>(conn)
+        .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
+        .and_then(|result| {
+            Ok(result)
+            //Err(ServiceError::BadRequest("Invalid Invitation".into()))
+        })?;
+
+    res.first()
+        .map(|w| w.clone())
+        .ok_or(ServiceError::BadRequest("No user found".into()))
+}
+
 fn update_user(
     uid: &String,
     user: &UpdateUser,
@@ -110,9 +141,9 @@ fn update_user(
 }
 
 fn create_query(
-    tel: PhoneNumber,
+    tel: &PhoneNumber,
     country_code: &String,
-    pool: web::Data<Pool>,
+    pool: &web::Data<Pool>,
 ) -> Result<User, crate::errors::ServiceError> {
     use crate::schema::users::dsl::users;
 

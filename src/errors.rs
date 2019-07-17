@@ -12,6 +12,9 @@ pub enum ServiceError {
     #[display(fmt = "BadRequest: {}", _0)]
     BadRequest(String),
 
+    #[display(fmt = "Already exists: {}", _0)]
+    AlreadyExists(String),
+
     #[display(fmt = "Unauthorized")]
     Unauthorized,
 }
@@ -31,6 +34,7 @@ impl ResponseError for ServiceError {
                 HttpResponse::InternalServerError().json("Internal Server Error")
             }
             ServiceError::BadRequest(ref message) => HttpResponse::BadRequest().json(message),
+            ServiceError::AlreadyExists(ref message) => HttpResponse::BadRequest().json(message),
             ServiceError::Unauthorized => HttpResponse::Unauthorized().json("Unauthorized"),
         }
     }
@@ -54,9 +58,8 @@ impl From<DBError> for ServiceError {
             DBError::DatabaseError(kind, info) => {
                 if let DatabaseErrorKind::UniqueViolation = kind {
                     let message = info.details().unwrap_or_else(|| info.message()).to_string();
-                    return ServiceError::BadRequest(message);
+                    return ServiceError::AlreadyExists(message);
                 }
-
                 ServiceError::InternalServerError
             }
             _ => ServiceError::InternalServerError

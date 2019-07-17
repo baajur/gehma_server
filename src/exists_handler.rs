@@ -17,20 +17,20 @@ pub struct ResponseUser {
 #[derive(Debug, Deserialize)]
 pub struct Payload {
     pub numbers: Vec<String>,
-    pub country_code: String,
 }
 
 pub fn get(
-    info: web::Path<(String)>,
+    info: web::Path<(String, String)>,
     mut payload: web::Json<Payload>,
     pool: web::Data<Pool>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
     dbg!(&info);
     //dbg!(&payload);
     web::block(move || {
+        let info = info.into_inner();
         get_entry(
-            &info.into_inner(),
-            &payload.country_code.clone(),
+            &info.0,
+            &info.1,
             &mut payload.numbers,
             pool,
         )

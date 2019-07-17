@@ -60,7 +60,7 @@ fn main() {
                             .route(web::put().to_async(user_handler::update)),
                     )
                     .service(
-                        web::resource("/exists/{uid}")
+                        web::resource("/exists/{uid}/{country_code}")
                             .route(web::post().to_async(exists_handler::get)),
                     ),
             )

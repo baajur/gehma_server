@@ -21,7 +21,7 @@ impl User {
     pub fn my_from(e: &String, country_code: &String) -> Self {
         User {
             id: uuid::Uuid::new_v4(),
-            tele_num: e.replace("+", "").replace(" ", "").trim().to_string(),
+            tele_num: e.to_string(),
             led: false,
             created_at: chrono::Local::now().naive_local(),
             country_code: country_code.to_string(),
