@@ -17,6 +17,7 @@ mod schema;
 //mod register_handler;
 mod exists_handler;
 mod user_handler;
+mod blacklist_handler;
 //mod contacts_handler;
 mod utils;
 
@@ -52,6 +53,11 @@ fn main() {
                             .route(web::put().to_async(user_handler::update_led)),
                     )
                     */
+                    .service(
+                        web::resource("/user/{base_tel}/cc/{country_code}/blacklist")
+                            .route(web::post().to_async(blacklist_handler::add))
+                            .route(web::delete().to_async(blacklist_handler::delete))
+                    )
                     .service(
                         web::resource("/user/{base_tel}/cc/{country_code}/")
                             .route(web::get().to_async(user_handler::get))
