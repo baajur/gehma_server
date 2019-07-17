@@ -46,3 +46,20 @@ impl Blacklist {
         }
     }
 }
+
+#[derive(Debug)]
+pub struct PhoneNumber(String);
+
+impl FromStr for PhoneNumber {
+    type Err = crate::errors::InternalError;
+
+    fn from(e: String) -> Result<Self, Self::Err> {
+        unimplemented!("")
+    }
+}
+
+impl PhoneNumber {
+    pub fn to_string() -> String {
+        unimplemented!()
+    }
+}

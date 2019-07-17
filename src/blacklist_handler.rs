@@ -86,7 +86,6 @@ fn delete_query(sblocker: &String, country_code: &String, sblocked: &String, poo
 
     let conn: &PgConnection = &pool.get().unwrap();
 
-   // let target = blacklist.filter((blocker.eq(sblocker), blocked.eq(sblocked)));
     let target = blacklist.filter(blocker.eq(sblocker)).filter(blocked.eq(sblocked));
 
     diesel::delete(target)
