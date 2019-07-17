@@ -110,9 +110,13 @@ fn get_entry_by_tel_query(
     use crate::schema::users::dsl::{description, is_autofahrer, led, id, users, tele_num};
 
     let conn: &PgConnection = &pool.get().unwrap();
+
+    let tele = tele.to_string();
+
+    dbg!(&tele);
     
     let res = users
-        .filter(tele_num.eq(tele.to_string()))
+        .filter(tele_num.eq(tele))
         .load::<User>(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
         .and_then(|result| {
@@ -160,7 +164,7 @@ fn create_query(
 }
 
 fn update_user_query(
-    id: Uuid,
+    myid: Uuid,
     user: &UpdateUser,
     pool: web::Data<Pool>,
 ) -> Result<Vec<User>, crate::errors::ServiceError> {
@@ -168,7 +172,7 @@ fn update_user_query(
 
     let conn: &PgConnection = &pool.get().unwrap();
     
-    let target = users.filter(id.eq(id));
+    let target = users.filter(id.eq(myid));
 
     let my_led = match &*user.led {
         "true" => true,
@@ -193,7 +197,7 @@ fn update_user_query(
         .map_err(|_db_error| ServiceError::BadRequest("Updating state failed".into()))?;
 
     users
-        .filter(id.eq(id))
+        .filter(id.eq(myid))
         .load::<User>(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
         .and_then(|result| {
@@ -203,7 +207,7 @@ fn update_user_query(
 }
 
 fn get_query(
-    id: Uuid,
+    myid: Uuid,
     pool: web::Data<Pool>,
 ) -> Result<Vec<User>, crate::errors::ServiceError> {
     use crate::schema::users::dsl::{id, users};
@@ -211,7 +215,7 @@ fn get_query(
     let conn: &PgConnection = &pool.get().unwrap();
 
     users
-        .filter(id.eq(id))
+        .filter(id.eq(myid))
         .load::<User>(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
         .and_then(|result| {
