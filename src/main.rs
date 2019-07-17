@@ -15,9 +15,9 @@ mod models;
 mod schema;
 //mod invitation_handler;
 //mod register_handler;
+mod blacklist_handler;
 mod exists_handler;
 mod user_handler;
-mod blacklist_handler;
 //mod contacts_handler;
 mod utils;
 
@@ -47,25 +47,20 @@ fn main() {
             .service(web::scope("/test").service(web::resource("/").route(web::get().to(index))))
             .service(
                 web::scope("/api")
-                /*
+                    .service(web::resource("/user").route(web::post().to_async(user_handler::add)))
                     .service(
-                        web::resource("/user/{base_tel}/cc/{country_code}/led/{led}")
-                            .route(web::put().to_async(user_handler::update_led)),
-                    )
-                    */
-                    .service(
-                        web::resource("/user/{base_tel}/cc/{country_code}/blacklist")
+                        web::resource("/user/{uid}/blacklist")
                             .route(web::post().to_async(blacklist_handler::add))
-                            .route(web::delete().to_async(blacklist_handler::delete))
+                            .route(web::delete().to_async(blacklist_handler::delete)),
                     )
                     .service(
-                        web::resource("/user/{base_tel}/cc/{country_code}/")
+                        web::resource("/user/{uid}")
                             .route(web::get().to_async(user_handler::get))
-                            .route(web::post().to_async(user_handler::add))
+                            //.route(web::post().to_async(user_handler::add))
                             .route(web::put().to_async(user_handler::update)),
                     )
                     .service(
-                        web::resource("/exists/{base_tel}/cc/{country_code}/")
+                        web::resource("/exists/{uid}")
                             .route(web::post().to_async(exists_handler::get)),
                     ),
             )

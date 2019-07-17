@@ -1,18 +1,20 @@
 use actix_web::{error::BlockingError, web, HttpResponse};
 use diesel::{prelude::*, PgConnection};
 use futures::Future;
+use uuid::Uuid;
 
 use crate::errors::ServiceError;
-use crate::models::{Pool, User};
+use crate::models::{Pool, User, PhoneNumber};
 use crate::utils::phonenumber_to_international;
 
 pub fn add(
-    info: web::Path<(String, String)>,
+    info: web::Path<()>,
+    body: web::Json<PostUser>,
     pool: web::Data<Pool>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
-    dbg!(&info);
-    web::block(move || create_entry(&info.0, &info.1, pool)).then(|res| match res {
-        Ok(_) => Ok(HttpResponse::Ok().finish()),
+    dbg!(&body);
+    web::block(move || create_entry(body.into_inner(), pool)).then(|res| match res {
+        Ok(user) => Ok(HttpResponse::Ok().json(user)),
         Err(err) => match err {
             BlockingError::Error(service_error) => Err(service_error),
             BlockingError::Canceled => Err(ServiceError::InternalServerError),
@@ -21,17 +23,24 @@ pub fn add(
 }
 
 pub fn get(
-    info: web::Path<(String, String)>,
+    info: web::Path<(String)>,
     pool: web::Data<Pool>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
     dbg!(&info);
-    web::block(move || get_entry(&info.0, &info.1, pool)).then(|res| match res {
+    web::block(move || get_entry(&info.into_inner(), pool)).then(|res| match res {
         Ok(users) => Ok(HttpResponse::Ok().json(&users)),
         Err(err) => match err {
             BlockingError::Error(service_error) => Err(service_error),
             BlockingError::Canceled => Err(ServiceError::InternalServerError),
         },
     })
+}
+
+
+#[derive(Debug, Deserialize)]
+pub struct PostUser{
+    pub tele_num: String,
+    pub country_code: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -42,13 +51,13 @@ pub struct UpdateUser {
 }
 
 pub fn update(
-    info: web::Path<(String, String)>,
+    info: web::Path<(String)>,
     data: web::Json<UpdateUser>,
     pool: web::Data<Pool>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
     dbg!(&info);
     dbg!(&data);
-    web::block(move || update_user(&info.0, &info.1, &data.into_inner(), pool)).then(
+    web::block(move || update_user(&info.into_inner(), &data.into_inner(), pool)).then(
         |res| match res {
             Ok(user) => Ok(HttpResponse::Ok().json(&user)),
             Err(err) => match err {
@@ -60,21 +69,23 @@ pub fn update(
 }
 
 fn create_entry(
-    tel: &String,
-    country_code: &String,
+    body: PostUser,
     pool: web::Data<Pool>,
 ) -> Result<User, crate::errors::ServiceError> {
-    let user = create_query(tel, country_code, pool)?;
+    let tele = body.tele_num;
+    let country_code = &body.country_code;
+
+    let user = create_query(PhoneNumber::my_from(&tele, country_code)?, &country_code, pool)?;
     dbg!(&user);
     Ok(user)
 }
 
 fn get_entry(
-    tele_num: &String,
-    country_code: &String,
+    uid: &String,
     pool: web::Data<Pool>,
 ) -> Result<User, crate::errors::ServiceError> {
-    let users = get_query(tele_num, country_code, pool)?;
+    let parsed = Uuid::parse_str(uid)?;
+    let users = get_query(parsed, pool)?;
     dbg!(&users);
 
     match users.len() {
@@ -84,12 +95,12 @@ fn get_entry(
 }
 
 fn update_user(
-    tel: &String,
-    country_code: &String,
+    uid: &String,
     user: &UpdateUser,
     pool: web::Data<Pool>,
 ) -> Result<User, crate::errors::ServiceError> {
-    let user = update_user_query(tel, country_code, user, pool)?;
+    let parsed = Uuid::parse_str(uid)?;
+    let user = update_user_query(parsed, user, pool)?;
 
     dbg!(&user);
 
@@ -99,13 +110,13 @@ fn update_user(
 }
 
 fn create_query(
-    tel: &String,
+    tel: PhoneNumber,
     country_code: &String,
     pool: web::Data<Pool>,
 ) -> Result<User, crate::errors::ServiceError> {
     use crate::schema::users::dsl::users;
 
-    let new_inv: User = User::my_from(tel, country_code);
+    let new_inv: User = User::my_from(&tel.to_string(), country_code);
     let conn: &PgConnection = &pool.get().unwrap();
 
     let ins = diesel::insert_into(users)
@@ -118,29 +129,15 @@ fn create_query(
 }
 
 fn update_user_query(
-    tel: &String,
-    country_code: &String,
+    id: Uuid,
     user: &UpdateUser,
     pool: web::Data<Pool>,
 ) -> Result<Vec<User>, crate::errors::ServiceError> {
-    use crate::schema::users::dsl::{description, is_autofahrer, led, tele_num, users};
+    use crate::schema::users::dsl::{description, is_autofahrer, led, id, users};
 
     let conn: &PgConnection = &pool.get().unwrap();
-
-    let ttarget = phonenumber_to_international(tel, &country_code)
-        .map_err(|err| {
-            ServiceError::BadRequest(format!("Invalid number {}", tel))
-        })?
-        .replace("+", "")
-        .replace(" ", "");
-
-        /*
-    let ttarget = phonenumber_to_international(&tel, &country_code)
-        .replace("+", "")
-        .replace(" ", "");
-        */
-
-    let target = users.filter(tele_num.eq(ttarget));
+    
+    let target = users.filter(id.eq(id));
 
     let my_led = match &*user.led {
         "true" => true,
@@ -165,7 +162,7 @@ fn update_user_query(
         .map_err(|_db_error| ServiceError::BadRequest("Updating state failed".into()))?;
 
     users
-        .filter(tele_num.eq(tel))
+        .filter(id.eq(id))
         .load::<User>(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
         .and_then(|result| {
@@ -175,25 +172,15 @@ fn update_user_query(
 }
 
 fn get_query(
-    para_num: &String,
-    country_code: &String,
+    id: Uuid,
     pool: web::Data<Pool>,
 ) -> Result<Vec<User>, crate::errors::ServiceError> {
-    use crate::schema::users::dsl::{tele_num, users};
+    use crate::schema::users::dsl::{id, users};
 
     let conn: &PgConnection = &pool.get().unwrap();
 
-    let tel = phonenumber_to_international(&format!("+{}", para_num), &country_code)
-        .map_err(|err| {
-            ServiceError::BadRequest(format!("Invalid number {}", para_num))
-        })?
-        .chars()
-        .into_iter()
-        .skip(1) //skip plus
-        .collect::<String>();
-
     users
-        .filter(tele_num.eq(tel))
+        .filter(id.eq(id))
         .load::<User>(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
         .and_then(|result| {

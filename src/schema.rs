@@ -1,7 +1,7 @@
 table! {
     blacklist (blocker, blocked) {
-        blocker -> Varchar,
-        blocked -> Varchar,
+        blocker -> Uuid,
+        blocked -> Uuid,
         created_at -> Timestamp,
     }
 }

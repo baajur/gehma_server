@@ -1,25 +1,27 @@
 use actix_web::{error::BlockingError, web, HttpResponse};
 use diesel::{prelude::*, PgConnection};
 use futures::Future;
+use uuid::Uuid;
 
-use crate::errors::{ServiceError, InternalError};
+use crate::errors::{InternalError, ServiceError};
 use crate::models::{Pool, User};
 use crate::utils::phonenumber_to_international;
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct ResponseUser { 
+pub struct ResponseUser {
     pub calculated_tele: String,
     pub old: String,
-    pub user: Option<User> 
+    pub user: Option<User>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct Payload {
     pub numbers: Vec<String>,
+    pub country_code: String,
 }
 
 pub fn get(
-    info: web::Path<(String, String)>,
+    info: web::Path<(String)>,
     mut payload: web::Json<Payload>,
     pool: web::Data<Pool>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
@@ -27,8 +29,8 @@ pub fn get(
     //dbg!(&payload);
     web::block(move || {
         get_entry(
-            &info.0,
-            &info.1,
+            &info.into_inner(),
+            &payload.country_code.clone(),
             &mut payload.numbers,
             pool,
         )
@@ -43,14 +45,12 @@ pub fn get(
 }
 
 fn get_entry(
-    tel: &String,
+    uid: &String,
     country_code: &String,
     phone_numbers: &mut Vec<String>,
     pool: web::Data<Pool>,
 ) -> Result<Vec<ResponseUser>, crate::errors::ServiceError> {
-    dbg!(&tel);
-    dbg!(&country_code);
-    //dbg!(&phone_numbers);
+    let parsed = Uuid::parse_str(uid)?;
 
     let users = get_query(phone_numbers, country_code, pool)?;
 
@@ -62,6 +62,7 @@ fn get_query(
     country_code: &String,
     pool: web::Data<Pool>,
 ) -> Result<Vec<ResponseUser>, crate::errors::ServiceError> {
+    use crate::models::PhoneNumber;
     use crate::schema::users::dsl::{tele_num, users};
 
     let conn: &PgConnection = &pool.get().unwrap();
@@ -73,38 +74,40 @@ fn get_query(
     let mut numbers: Vec<ResponseUser> = phone_numbers
         .into_iter()
         .filter(|w| w.len() > 3)
-        .filter_map(|w| match phonenumber_to_international(w, &country_code) {
+        .filter_map(|w| match PhoneNumber::my_from(w, country_code) {
             Ok(number) => Some(ResponseUser {
-                calculated_tele: number.replace("+", ""),
+                calculated_tele: number.to_string(),
                 old: w.to_string(),
-                user: None
+                user: None,
             }),
             Err(err) => {
                 eprintln!("{}", err);
                 None
             }
         })
-        /*ResponseUser {
-            calculated_tele: replace("+", ""),
-            old: w.to_string(),
-            user: None
-        }*/
         .collect();
-        //.filter(tele_num.eq(phonenumber_to_international(&para_num).replace("+", "")))
-
-    //dbg!(&numbers);
 
     users
-        .filter(tele_num.eq_any(numbers.iter_mut().map(|w| w.calculated_tele.clone()).collect::<Vec<String>>()))
+        .filter(
+            tele_num.eq_any(
+                numbers
+                    .iter_mut()
+                    .map(|w| w.calculated_tele.clone())
+                    .collect::<Vec<String>>(),
+            ),
+        )
         .load::<User>(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
         .and_then(|mut result| {
             //I is user
             for i in result.iter_mut() {
-                let mut res : Vec<_> = numbers.iter_mut().filter(|w| w.calculated_tele == i.tele_num).collect();
+                let mut res: Vec<_> = numbers
+                    .iter_mut()
+                    .filter(|w| w.calculated_tele == i.tele_num)
+                    .collect();
 
                 if let Some(mut res_user) = res.first_mut() {
-                    res_user.user = Some(i.clone()); 
+                    res_user.user = Some(i.clone());
                 }
             }
 

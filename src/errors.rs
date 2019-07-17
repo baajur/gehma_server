@@ -42,6 +42,12 @@ impl From<ParseError> for ServiceError {
     }
 }
 
+impl From<InternalError> for ServiceError {
+    fn from(err: InternalError) -> ServiceError {
+        ServiceError::BadRequest(format!("{}", err))
+    }
+}
+
 impl From<DBError> for ServiceError {
     fn from(error: DBError) -> ServiceError {
         match error {

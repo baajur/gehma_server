@@ -1,3 +1,5 @@
-ALTER TABLE users DROP CONTRAINT tele_num_index;
+ALTER TABLE blacklist DROP COLUMN blocker;
+ALTER TABLE blacklist DROP COLUMN blocked;
+ALTER TABLE users DROP CONSTRAINT id_num_index;
 
 DROP TABLE blacklist;
