@@ -107,7 +107,7 @@ fn get_entry_by_tel_query(
     tele: &PhoneNumber,
     pool: &web::Data<Pool>,
 ) -> Result<User, crate::errors::ServiceError> {
-    use crate::schema::users::dsl::{description, is_autofahrer, led, id, users, tele_num};
+    use crate::schema::users::dsl::*;
 
     let conn: &PgConnection = &pool.get().unwrap();
 
@@ -168,7 +168,7 @@ fn update_user_query(
     user: &UpdateUser,
     pool: web::Data<Pool>,
 ) -> Result<Vec<User>, crate::errors::ServiceError> {
-    use crate::schema::users::dsl::{description, is_autofahrer, led, id, users};
+    use crate::schema::users::dsl::{description, is_autofahrer, led, id, users, changed_at};
 
     let conn: &PgConnection = &pool.get().unwrap();
     
@@ -192,6 +192,7 @@ fn update_user_query(
             description.eq(user.description.to_string()),
             led.eq(my_led),
             is_autofahrer.eq(my_is_autofahrer),
+            changed_at.eq(chrono::Local::now().naive_local())
         ))
         .execute(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Updating state failed".into()))?;

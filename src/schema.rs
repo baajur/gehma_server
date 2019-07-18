@@ -16,6 +16,7 @@ table! {
         country_code -> Varchar,
         description -> Varchar,
         is_autofahrer -> Bool,
+        changed_at -> Timestamp,
     }
 }
 

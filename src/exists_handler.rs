@@ -59,7 +59,7 @@ fn get_query(
 ) -> Result<Vec<ResponseUser>, crate::errors::ServiceError> {
     use crate::models::PhoneNumber;
     use crate::schema::blacklist::dsl::{blacklist, blocked, blocker, *};
-    use crate::schema::users::dsl::{id, tele_num, users};
+    use crate::schema::users::dsl::{id, tele_num, users, changed_at};
 
     let conn: &PgConnection = &pool.get().unwrap();
 
@@ -111,6 +111,7 @@ fn get_query(
                                         .collect::<Vec<String>>(),
                                 ),
                             )
+                            .order(changed_at.desc())
                             .load::<User>(conn)
                             .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
                             .and_then(|mut result| {
