@@ -52,7 +52,7 @@ fn main() {
                         web::resource("/user/{uid}/blacklist")
                             .route(web::get().to_async(blacklist_handler::get_all))
                             .route(web::post().to_async(blacklist_handler::add))
-                            .route(web::delete().to_async(blacklist_handler::delete)),
+                            .route(web::put().to_async(blacklist_handler::delete)), //deletes
                     )
                     .service(
                         web::resource("/user/{uid}")

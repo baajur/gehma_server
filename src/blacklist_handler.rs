@@ -165,9 +165,6 @@ fn delete_entry(
     let blocker2 = Uuid::parse_str(blocker)?;
     let blocked = PhoneNumber::my_from(&data.blocked, &data.country_code)?;
 
-    dbg!(&blocked);
-    dbg!(&blocker2);
-
     let conn: &PgConnection = &pool.get().unwrap();
 
     let myusers = users
