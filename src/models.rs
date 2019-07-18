@@ -32,8 +32,8 @@ impl User {
 }
 
 #[derive(Debug, Serialize, Deserialize, Queryable, Insertable, Clone, Identifiable, Associations)]
-#[belongs_to(User, foreign_key="blocker")]
 #[table_name = "blacklist"]
+#[belongs_to(User, foreign_key="blocker")]
 pub struct Blacklist {
     pub id: uuid::Uuid,
     pub blocker: String,

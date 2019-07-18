@@ -4,7 +4,7 @@ use futures::Future;
 use uuid::Uuid;
 
 use crate::errors::{InternalError, ServiceError};
-use crate::models::{Pool, User};
+use crate::models::{Blacklist, Pool, User};
 use crate::utils::phonenumber_to_international;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -28,12 +28,7 @@ pub fn get(
     //dbg!(&payload);
     web::block(move || {
         let info = info.into_inner();
-        get_entry(
-            &info.0,
-            &info.1,
-            &mut payload.numbers,
-            pool,
-        )
+        get_entry(&info.0, &info.1, &mut payload.numbers, pool)
     })
     .then(|res| match res {
         Ok(users) => Ok(HttpResponse::Ok().json(&users)),
@@ -51,19 +46,20 @@ fn get_entry(
     pool: web::Data<Pool>,
 ) -> Result<Vec<ResponseUser>, crate::errors::ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
-
-    let users = get_query(phone_numbers, country_code, pool)?;
+    let users = get_query(parsed, phone_numbers, country_code, pool)?;
 
     Ok(users)
 }
 
 fn get_query(
+    uid: Uuid,
     phone_numbers: &mut Vec<String>,
     country_code: &String,
     pool: web::Data<Pool>,
 ) -> Result<Vec<ResponseUser>, crate::errors::ServiceError> {
     use crate::models::PhoneNumber;
-    use crate::schema::users::dsl::{tele_num, users};
+    use crate::schema::blacklist::dsl::{blacklist, blocked, blocker, *};
+    use crate::schema::users::dsl::{id, tele_num, users};
 
     let conn: &PgConnection = &pool.get().unwrap();
 
@@ -88,30 +84,64 @@ fn get_query(
         .collect();
 
     users
-        .filter(
-            tele_num.eq_any(
-                numbers
-                    .iter_mut()
-                    .map(|w| w.calculated_tele.clone())
-                    .collect::<Vec<String>>(),
-            ),
-        )
+        .filter(id.eq(uid))
         .load::<User>(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
         .and_then(|mut result| {
-            //I is user
-            for i in result.iter_mut() {
-                let mut res: Vec<_> = numbers
-                    .iter_mut()
-                    .filter(|w| w.calculated_tele == i.tele_num)
-                    .collect();
+            if let Some(user) = result.first() {
+                blacklist
+                    .filter(blocked.eq(&user.tele_num).or(blocker.eq(&user.tele_num)))
+                    .load::<Blacklist>(conn)
+                    .map_err(|_db_error| ServiceError::BadRequest("Cannot find blacklists".into()))
+                    .and_then(|mut lists| {
+                        let people_who_blacklisted_user: Vec<_> = lists
+                            .into_iter()
+                            .map(|w| match w.blocker == user.tele_num {
+                                true => w.blocked.clone(), //jener der blockiert soll sie auch nicht sehen
+                                false => w.blocker.clone(),
+                            })
+                            .collect();
 
-                if let Some(mut res_user) = res.first_mut() {
-                    res_user.user = Some(i.clone());
-                }
+                        users
+                            .filter(
+                                tele_num.eq_any(
+                                    numbers
+                                        .iter_mut()
+                                        .map(|w| w.calculated_tele.clone())
+                                        .collect::<Vec<String>>(),
+                                ),
+                            )
+                            .load::<User>(conn)
+                            .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
+                            .and_then(|mut result| {
+                                //i are contacts
+                                for i in result.iter_mut() {
+                                    let mut res: Vec<_> = numbers
+                                        .iter_mut()
+                                        .filter(|w| w.calculated_tele == i.tele_num)
+                                        .collect();
+
+                                    if let Some(mut res_user) = res.first_mut() {
+                                        res_user.user = Some(i.clone());
+                                    }
+                                }
+
+                                numbers
+                                    .iter_mut()
+                                    .filter(|w| {
+                                        people_who_blacklisted_user.contains(&w.calculated_tele)
+                                    })
+                                    .for_each(|ref mut w| match &mut w.user {
+                                        Some(ref mut u) => u.led = false, //Ignoring happens here
+                                        None => {}
+                                    });
+
+                                Ok(numbers.into_iter().filter(|w| w.user.is_some()).collect())
+                                //Err(ServiceError::BadRequest("Invalid Invitation".into()))
+                            })
+                    })
+            } else {
+                Err(ServiceError::BadRequest("No user found".into()))
             }
-
-            Ok(numbers.into_iter().filter(|w| w.user.is_some()).collect())
-            //Err(ServiceError::BadRequest("Invalid Invitation".into()))
         })
 }
