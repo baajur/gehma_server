@@ -5,7 +5,7 @@ use diesel::{r2d2::ConnectionManager, PgConnection};
 
 pub type Pool = r2d2::Pool<ConnectionManager<PgConnection>>;
 
-#[derive(Debug, Serialize, Deserialize, Queryable, Insertable, Clone, Identifiable, Associations)]
+#[derive(Debug, Serialize, Deserialize, Queryable, Insertable, Clone, Identifiable)]
 #[table_name = "users"]
 pub struct User {
     pub id: uuid::Uuid,
@@ -31,9 +31,9 @@ impl User {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Queryable, Insertable, Clone, Identifiable, Associations)]
+#[derive(Debug, Serialize, Deserialize, Queryable, Insertable, Clone, Identifiable)]
 #[table_name = "blacklist"]
-#[belongs_to(User, foreign_key="blocker")]
+//#[belongs_to(User, foreign_key="blocker")]
 pub struct Blacklist {
     pub id: uuid::Uuid,
     pub blocker: String,
