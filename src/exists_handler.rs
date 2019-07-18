@@ -132,7 +132,10 @@ fn get_query(
                                         people_who_blacklisted_user.contains(&w.calculated_tele)
                                     })
                                     .for_each(|ref mut w| match &mut w.user {
-                                        Some(ref mut u) => u.led = false, //Ignoring happens here
+                                        Some(ref mut u) => {
+                                            u.led = false; //Ignoring happens here
+                                            u.description = String::new();
+                                        }, 
                                         None => {}
                                     });
 
