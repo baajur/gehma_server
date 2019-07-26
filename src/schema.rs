@@ -14,7 +14,7 @@ table! {
         led -> Bool,
         created_at -> Timestamp,
         country_code -> Varchar,
-        description -> Varchar,
+        description -> Text,
         is_autofahrer -> Bool,
         changed_at -> Timestamp,
     }
