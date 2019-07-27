@@ -5,6 +5,7 @@ extern crate serde_derive;
 
 use actix_identity::{CookieIdentityPolicy, IdentityService};
 use actix_web::{middleware, web, App, HttpServer, Responder};
+use actix_web::guard;
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
 
@@ -68,6 +69,7 @@ fn main() {
                     )
                     .service(
                         web::resource("/exists/{uid}/{country_code}")
+                            //.route(web::post().guard(guard::Header("Content-Type", "application/json")).to_async(exists_handler::get)),
                             .route(web::post().to_async(exists_handler::get)),
                     ),
             )
