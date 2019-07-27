@@ -24,7 +24,12 @@ mod utils;
 fn main() {
     dotenv::dotenv().ok();
     std::env::set_var("RUST_LOG", "actix_web=info,actix_server=info");
+    env_logger::init();
+
     let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL expected");
+    let port = std::env::var("PORT").unwrap_or("3000".to_string());
+    let debug = std::env::var("DEBUG").unwrap_or("1".to_string());
+    let addr = std::env::var("BINDING_ADDR").unwrap_or("localhost".to_string());
 
     let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
     builder
@@ -36,9 +41,10 @@ fn main() {
     let pool: models::Pool = r2d2::Pool::builder()
         .build(manager)
         .expect("Failed to create a pool");
-    let domain: String = std::env::var("DOMAIN").unwrap_or_else(|_| "localhost".into());
 
-    HttpServer::new(move || {
+    //let domain: String = std::env::var("DOMAIN").unwrap_or_else(|_| "localhost".into());
+
+    let server = HttpServer::new(move || {
         App::new()
             .data(pool.clone())
             .wrap(middleware::Logger::default())
@@ -65,9 +71,17 @@ fn main() {
                             .route(web::post().to_async(exists_handler::get)),
                     ),
             )
-    })
+    });
+
+    let listener = match debug.as_str()  {
+        "0" => server.bind_ssl(format!("{}:{}", addr, port), builder),
+        "1" => server.bind(format!("{}:{}", addr, port)),
+        _ => panic!("debug state not defined")
+    };
+
     //.bind_ssl("0.0.0.0:443", builder)
-    .bind("0.0.0.0:3000")
+    //.bind("0.0.0.0:3000")
+    listener
     .unwrap()
     .run()
     .unwrap()
