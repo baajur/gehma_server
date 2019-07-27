@@ -21,7 +21,7 @@ pub fn get_all(
     let info = info.into_inner();
     web::block(move || get_entry(&info, pool)).then(|res| {
         match res {
-            Ok(users) => Ok(HttpResponse::Ok().json(users)),
+            Ok(users) => Ok(HttpResponse::Ok().content_type("application/json").json(users)),
             Err(err) => match err {
                 BlockingError::Error(service_error) => Err(service_error),
                 BlockingError::Canceled => Err(ServiceError::InternalServerError),

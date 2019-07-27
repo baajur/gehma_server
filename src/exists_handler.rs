@@ -31,7 +31,7 @@ pub fn get(
         get_entry(&info.0, &info.1, &mut payload.numbers, pool)
     })
     .then(|res| match res {
-        Ok(users) => Ok(HttpResponse::Ok().json(&users)),
+        Ok(users) => Ok(HttpResponse::Ok().content_type("application/json").json(&users)),
         Err(err) => match err {
             BlockingError::Error(service_error) => Err(service_error),
             BlockingError::Canceled => Err(ServiceError::InternalServerError),

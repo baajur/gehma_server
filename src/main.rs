@@ -71,7 +71,8 @@ fn main() {
                             .route(web::post().to_async(exists_handler::get)),
                     ),
             )
-    });
+    })
+    .keep_alive(None);
 
     let listener = match debug.as_str()  {
         "0" => server.bind_ssl(format!("{}:{}", addr, port), builder),
