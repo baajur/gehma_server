@@ -72,6 +72,7 @@ fn create_entry(
     body: PostUser,
     pool: web::Data<Pool>,
 ) -> Result<User, crate::errors::ServiceError> {
+    dbg!(&body);
     let tele = body.tele_num;
     let country_code = &body.country_code;
 

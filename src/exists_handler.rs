@@ -12,12 +12,20 @@ pub struct ResponseUser {
     pub calculated_tele: String,
     pub old: String,
     pub user: Option<User>,
+    pub name: String,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct Payload {
-    pub numbers: Vec<String>,
+    pub numbers: Vec<PayloadUser>,
 }
+
+#[derive(Debug, Deserialize)]
+pub struct PayloadUser {
+    pub name: String,
+    pub telephone: String
+}
+
 
 pub fn get(
     info: web::Path<(String, String)>,
@@ -42,7 +50,7 @@ pub fn get(
 fn get_entry(
     uid: &String,
     country_code: &String,
-    phone_numbers: &mut Vec<String>,
+    phone_numbers: &mut Vec<PayloadUser>,
     pool: web::Data<Pool>,
 ) -> Result<Vec<ResponseUser>, crate::errors::ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
@@ -53,7 +61,7 @@ fn get_entry(
 
 fn get_query(
     uid: Uuid,
-    phone_numbers: &mut Vec<String>,
+    phone_numbers: &mut Vec<PayloadUser>,
     country_code: &String,
     pool: web::Data<Pool>,
 ) -> Result<Vec<ResponseUser>, crate::errors::ServiceError> {
@@ -69,12 +77,13 @@ fn get_query(
 
     let mut numbers: Vec<ResponseUser> = phone_numbers
         .into_iter()
-        .filter(|w| w.len() > 3)
-        .filter_map(|w| match PhoneNumber::my_from(w, country_code) {
+        .filter(|w| w.telephone.len() > 3)
+        .filter_map(|w| match PhoneNumber::my_from(&w.telephone, country_code) {
             Ok(number) => Some(ResponseUser {
                 calculated_tele: number.to_string(),
-                old: w.to_string(),
+                old: w.telephone.clone(),
                 user: None,
+                name: w.name.clone(),
             }),
             Err(err) => {
                 eprintln!("{}", err);
@@ -136,6 +145,9 @@ fn get_query(
                                         Some(ref mut u) => {
                                             u.led = false; //Ignoring happens here
                                             u.description = String::new();
+
+                                            //TODO to cross self blocked users cross here the
+                                            //people
                                         }, 
                                         None => {}
                                     });
