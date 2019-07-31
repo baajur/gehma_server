@@ -4,7 +4,7 @@ use futures::Future;
 use uuid::Uuid;
 
 use crate::errors::ServiceError;
-use crate::models::{Pool, User, PhoneNumber, Analytic};
+use crate::models::{Pool, User, PhoneNumber, Analytic, UsageStatisticEntry};
 
 pub fn add(
     _info: web::Path<()>,
@@ -86,6 +86,9 @@ fn create_entry(
     }?;
 
     dbg!(&user);
+
+    analytics_usage_statistics(&pool, &user)?;
+
     Ok(user)
 }
 
@@ -94,13 +97,17 @@ fn get_entry(
     pool: web::Data<Pool>,
 ) -> Result<User, crate::errors::ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
-    let users = get_query(parsed, pool)?;
+    let users = get_query(parsed, &pool)?;
     dbg!(&users);
 
-    match users.len() {
+    let user = match users.len() {
         0 => Err(ServiceError::BadRequest("No user found".to_string())),
         _ => Ok(users.get(0).unwrap().clone()),
-    }
+    }?;
+
+    //analytics_usage_statistics(&pool, &user)?; not logging every refresh
+    
+    Ok(user)
 }
 
 fn get_entry_by_tel_query(
@@ -184,6 +191,23 @@ fn create_query(
     Ok(ins)
 }
 
+fn analytics_usage_statistics(pool: &web::Data<Pool>, user: &User) -> Result<UsageStatisticEntry, crate::errors::ServiceError> {
+    use crate::schema::usage_statistics::dsl::usage_statistics;
+
+    let ana = UsageStatisticEntry::my_from(user);
+    let conn: &PgConnection = &pool.get().unwrap();
+
+    let w = diesel::insert_into(usage_statistics)
+        .values(&ana)
+        .get_result(conn)
+        .map_err(|_db_error| {
+            eprintln!("{}", _db_error);
+            ServiceError::BadRequest("Could not log change".into())
+        })?;
+
+    Ok(w)
+}
+
 fn update_user_query(
     myid: Uuid,
     user: &UpdateUser,
@@ -230,7 +254,7 @@ fn update_user_query(
 
 fn get_query(
     myid: Uuid,
-    pool: web::Data<Pool>,
+    pool: &web::Data<Pool>,
 ) -> Result<Vec<User>, crate::errors::ServiceError> {
     use crate::schema::users::dsl::{id, users};
 

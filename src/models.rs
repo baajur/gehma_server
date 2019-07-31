@@ -104,3 +104,27 @@ impl Analytic {
         }
     }
 }
+
+#[derive(Debug, Serialize, Deserialize, Queryable, Clone, Identifiable)]
+#[table_name = "usage_statistics"]
+pub struct UsageStatisticEntry {
+    pub id: i32,
+    pub tele_num: String,
+    pub created_at: chrono::NaiveDateTime,
+}
+
+#[derive(Debug, Serialize, Deserialize, Insertable)]
+#[table_name = "usage_statistics"]
+pub struct InsertUsageStatisticEntry {
+    pub tele_num: String,
+    pub created_at: chrono::NaiveDateTime,
+}
+
+impl UsageStatisticEntry {
+    pub fn my_from(user: &User) -> InsertUsageStatisticEntry {
+        InsertUsageStatisticEntry {
+            tele_num: user.tele_num.clone(),
+            created_at: chrono::Local::now().naive_local(),
+        }
+    }
+}

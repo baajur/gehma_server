@@ -19,6 +19,14 @@ table! {
 }
 
 table! {
+    usage_statistics (id) {
+        id -> Int4,
+        tele_num -> Varchar,
+        created_at -> Timestamp,
+    }
+}
+
+table! {
     users (id) {
         id -> Uuid,
         tele_num -> Varchar,
@@ -34,5 +42,6 @@ table! {
 allow_tables_to_appear_in_same_query!(
     analytics,
     blacklist,
+    usage_statistics,
     users,
 );
