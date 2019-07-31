@@ -11,8 +11,8 @@ use crate::utils::phonenumber_to_international;
 pub struct ResponseUser {
     pub calculated_tele: String,
     pub old: String,
-    pub user: Option<User>,
     pub name: String,
+    pub user: Option<User>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -23,7 +23,7 @@ pub struct Payload {
 #[derive(Debug, Deserialize)]
 pub struct PayloadUser {
     pub name: String,
-    pub telephone: String
+    pub tele_num: String
 }
 
 
@@ -33,13 +33,16 @@ pub fn get(
     pool: web::Data<Pool>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
     dbg!(&info);
-    //dbg!(&payload);
+    dbg!(&payload);
     web::block(move || {
         let info = info.into_inner();
         get_entry(&info.0, &info.1, &mut payload.numbers, pool)
     })
     .then(|res| match res {
-        Ok(users) => Ok(HttpResponse::Ok().content_type("application/json").json(&users)),
+        Ok(users) => {  
+            dbg!(&users);
+            Ok(HttpResponse::Ok().content_type("application/json").json(&users)) 
+        },
         Err(err) => match err {
             BlockingError::Error(service_error) => Err(service_error),
             BlockingError::Canceled => Err(ServiceError::InternalServerError),
@@ -77,11 +80,11 @@ fn get_query(
 
     let mut numbers: Vec<ResponseUser> = phone_numbers
         .into_iter()
-        .filter(|w| w.telephone.len() > 3)
-        .filter_map(|w| match PhoneNumber::my_from(&w.telephone, country_code) {
+        .filter(|w| w.tele_num.len() > 3)
+        .filter_map(|w| match PhoneNumber::my_from(&w.tele_num, country_code) {
             Ok(number) => Some(ResponseUser {
                 calculated_tele: number.to_string(),
-                old: w.telephone.clone(),
+                old: w.tele_num.clone(),
                 user: None,
                 name: w.name.clone(),
             }),
