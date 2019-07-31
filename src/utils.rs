@@ -1,5 +1,4 @@
-use crate::errors::{ServiceError, InternalError};
-use phonenumber::Mode;
+use crate::errors::{InternalError};
 
 pub fn phonenumber_to_international(number: &str, country: &str) -> Result<phonenumber::PhoneNumber, InternalError> {
 

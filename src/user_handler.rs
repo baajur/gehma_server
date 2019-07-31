@@ -5,10 +5,9 @@ use uuid::Uuid;
 
 use crate::errors::ServiceError;
 use crate::models::{Pool, User, PhoneNumber};
-use crate::utils::phonenumber_to_international;
 
 pub fn add(
-    info: web::Path<()>,
+    _info: web::Path<()>,
     body: web::Json<PostUser>,
     pool: web::Data<Pool>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {

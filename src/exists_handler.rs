@@ -3,9 +3,8 @@ use diesel::{prelude::*, PgConnection};
 use futures::Future;
 use uuid::Uuid;
 
-use crate::errors::{InternalError, ServiceError};
+use crate::errors::{ServiceError};
 use crate::models::{Blacklist, Pool, User};
-use crate::utils::phonenumber_to_international;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ResponseUser {
@@ -39,7 +38,7 @@ pub fn get(
         get_entry(&info.0, &info.1, &mut payload.numbers, pool)
     })
     .then(|res| match res {
-        Ok(users) => {  
+        Ok(users) => {
             dbg!(&users);
             Ok(HttpResponse::Ok().content_type("application/json").json(&users)) 
         },
@@ -69,7 +68,7 @@ fn get_query(
     pool: web::Data<Pool>,
 ) -> Result<Vec<ResponseUser>, crate::errors::ServiceError> {
     use crate::models::PhoneNumber;
-    use crate::schema::blacklist::dsl::{blacklist, blocked, blocker, *};
+    use crate::schema::blacklist::dsl::{blacklist, blocked, blocker};
     use crate::schema::users::dsl::{id, tele_num, users, changed_at};
 
     let conn: &PgConnection = &pool.get().unwrap();
@@ -99,13 +98,13 @@ fn get_query(
         .filter(id.eq(uid))
         .load::<User>(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
-        .and_then(|mut result| {
+        .and_then(|result| {
             if let Some(user) = result.first() {
                 blacklist
                     .filter(blocked.eq(&user.tele_num).or(blocker.eq(&user.tele_num)))
                     .load::<Blacklist>(conn)
                     .map_err(|_db_error| ServiceError::BadRequest("Cannot find blacklists".into()))
-                    .and_then(|mut lists| {
+                    .and_then(|lists| {
                         let people_who_blacklisted_user: Vec<_> = lists
                             .into_iter()
                             .map(|w| match w.blocker == user.tele_num {
@@ -151,7 +150,7 @@ fn get_query(
 
                                             //TODO to cross self blocked users cross here the
                                             //people
-                                        }, 
+                                        },
                                         None => {}
                                     });
 

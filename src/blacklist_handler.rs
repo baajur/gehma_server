@@ -5,7 +5,6 @@ use uuid::Uuid;
 
 use crate::errors::ServiceError;
 use crate::models::{Blacklist, PhoneNumber, Pool, User};
-use crate::utils::phonenumber_to_international;
 
 #[derive(Debug, Deserialize)]
 pub struct GetAllData {
@@ -82,9 +81,8 @@ fn get_entry(blocker: &String, pool: web::Data<Pool>) -> Result<Vec<Blacklist>, 
 }
 
 fn get_query(sblocker: Uuid, pool: web::Data<Pool>) -> Result<Vec<Blacklist>, crate::errors::ServiceError> {
-use crate::models::PhoneNumber;
     use crate::schema::users::dsl::{id, users};
-    use crate::schema::blacklist::dsl::{blacklist, blocker, blocked};
+    use crate::schema::blacklist::dsl::{blacklist, blocker};
 
     let conn: &PgConnection = &pool.get().unwrap();
 
@@ -106,7 +104,7 @@ fn create_entry(
     data: &PostData,
     pool: web::Data<Pool>,
 ) -> Result<Blacklist, crate::errors::ServiceError> {
-    use crate::schema::users::dsl::{id, tele_num, users};
+    use crate::schema::users::dsl::{id, users};
 
     let blocker2 = Uuid::parse_str(blocker)?;
     let blocked = PhoneNumber::my_from(&data.blocked, &data.country_code)?;
@@ -160,7 +158,7 @@ fn delete_entry(
     data: &PostData,
     pool: web::Data<Pool>,
 ) -> Result<(), crate::errors::ServiceError> {
-    use crate::schema::users::dsl::{id, tele_num, users};
+    use crate::schema::users::dsl::{id, users};
 
     let blocker2 = Uuid::parse_str(blocker)?;
     let blocked = PhoneNumber::my_from(&data.blocked, &data.country_code)?;

@@ -3,9 +3,9 @@ extern crate diesel;
 #[macro_use]
 extern crate serde_derive;
 
-use actix_identity::{CookieIdentityPolicy, IdentityService};
+use actix_cors::Cors;
 use actix_web::{middleware, web, App, HttpServer, Responder};
-use actix_web::guard;
+use actix_web::{http::header};
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
 
@@ -14,12 +14,9 @@ use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 mod errors;
 mod models;
 mod schema;
-//mod invitation_handler;
-//mod register_handler;
 mod blacklist_handler;
 mod exists_handler;
 mod user_handler;
-//mod contacts_handler;
 mod utils;
 
 fn main() {
@@ -48,6 +45,15 @@ fn main() {
     let server = HttpServer::new(move || {
         App::new()
             .data(pool.clone())
+            .wrap(
+                Cors::new()
+                    .allowed_origin("http://localhost:3000")
+                    .allowed_origin("https://gehma.xyz")
+                    .allowed_methods(vec!["GET", "POST", "PUT", "DELETE"])
+                    .allowed_headers(vec![header::AUTHORIZATION, header::ACCEPT])
+                    .allowed_header(header::CONTENT_TYPE)
+                    .max_age(3600),
+            )
             .wrap(middleware::Logger::default())
             //.data(web::JsonConfig::default().limit(4096))
             .data(web::JsonConfig::default())
