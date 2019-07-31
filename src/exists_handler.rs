@@ -32,7 +32,7 @@ pub fn get(
     pool: web::Data<Pool>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
     dbg!(&info);
-    dbg!(&payload);
+    //dbg!(&payload);
     web::block(move || {
         let info = info.into_inner();
         get_entry(&info.0, &info.1, &mut payload.numbers, pool)

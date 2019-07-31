@@ -4,7 +4,7 @@ use futures::Future;
 use uuid::Uuid;
 
 use crate::errors::ServiceError;
-use crate::models::{Pool, User, PhoneNumber};
+use crate::models::{Pool, User, PhoneNumber, Analytic};
 
 pub fn add(
     _info: web::Path<()>,
@@ -135,13 +135,34 @@ fn update_user(
     pool: web::Data<Pool>,
 ) -> Result<User, crate::errors::ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
-    let user = update_user_query(parsed, user, pool)?;
+    let users = update_user_query(parsed, user, &pool)?;
 
-    dbg!(&user);
+    dbg!(&users);
 
-    user.first()
+    let res = users.first()
         .map(|w| w.clone())
-        .ok_or(ServiceError::BadRequest("No user found".into()))
+        .ok_or(ServiceError::BadRequest("No user found".into()))?;
+
+    analytics_user(&pool, &res)?;
+
+    Ok(res)
+}
+
+fn analytics_user(pool: &web::Data<Pool>, user: &User) -> Result<Analytic, crate::errors::ServiceError> {
+    use crate::schema::analytics::dsl::analytics;
+
+    let ana = Analytic::my_from(user);
+    let conn: &PgConnection = &pool.get().unwrap();
+
+    let w = diesel::insert_into(analytics)
+        .values(&ana)
+        .get_result(conn)
+        .map_err(|_db_error| {
+            eprintln!("{}", _db_error);
+            ServiceError::BadRequest("Could not log change".into())
+        })?;
+
+    Ok(w)
 }
 
 fn create_query(
@@ -157,7 +178,7 @@ fn create_query(
     let ins = diesel::insert_into(users)
         .values(&new_inv)
         .get_result(conn)?;
-
+                
     dbg!(&ins);
 
     Ok(ins)
@@ -166,7 +187,7 @@ fn create_query(
 fn update_user_query(
     myid: Uuid,
     user: &UpdateUser,
-    pool: web::Data<Pool>,
+    pool: &web::Data<Pool>,
 ) -> Result<Vec<User>, crate::errors::ServiceError> {
     use crate::schema::users::dsl::{description, is_autofahrer, led, id, users, changed_at};
 
