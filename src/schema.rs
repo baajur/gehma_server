@@ -1,4 +1,15 @@
 table! {
+    analytics (id) {
+        id -> Int4,
+        tele_num -> Varchar,
+        led -> Bool,
+        is_autofahrer -> Bool,
+        description -> Text,
+        created_at -> Timestamp,
+    }
+}
+
+table! {
     blacklist (id) {
         id -> Uuid,
         blocker -> Varchar,
@@ -21,6 +32,7 @@ table! {
 }
 
 allow_tables_to_appear_in_same_query!(
+    analytics,
     blacklist,
     users,
 );

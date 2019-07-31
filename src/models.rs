@@ -71,3 +71,27 @@ impl PhoneNumber {
         )?))
     }
 }
+
+#[derive(Debug, Serialize, Deserialize, Queryable, Insertable, Clone, Identifiable)]
+#[table_name = "analytics"]
+pub struct Analytic {
+    pub id: i32,
+    pub tele_num: String,
+    pub led: bool,
+    pub is_autofahrer: bool,
+    pub description: String,
+    pub created_at: chrono::NaiveDateTime,
+}
+
+impl Analytic {
+    pub fn my_from(user: &User) -> Self {
+        Analytic {
+            id: 0,
+            tele_num: user.tele_num.clone(),
+            led: user.led,
+            is_autofahrer: user.is_autofahrer,
+            description: user.description.clone(),
+            created_at: chrono::Local::now().naive_local(),
+        }
+    }
+}
