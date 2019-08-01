@@ -6,6 +6,9 @@ use uuid::Uuid;
 use crate::errors::{ServiceError};
 use crate::models::{Blacklist, Pool, User};
 
+const MAX_ALLOWED_CONTACTS : usize = 10000;
+const MIN_TELE_NUM_LENGTH : usize = 3;
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ResponseUser {
     pub calculated_tele: String,
@@ -39,8 +42,9 @@ pub fn get(
     })
     .then(|res| match res {
         Ok(users) => {
-            dbg!(&users);
-            Ok(HttpResponse::Ok().content_type("application/json").json(&users)) 
+            let mut res = HttpResponse::Ok().content_type("application/json").json(users);
+            crate::utils::set_response_headers(&mut res);
+            Ok(res)
         },
         Err(err) => match err {
             BlockingError::Error(service_error) => Err(service_error),
@@ -77,9 +81,13 @@ fn get_query(
         return Ok(Vec::new());
     }
 
+    if phone_numbers.len() == MAX_ALLOWED_CONTACTS {
+        return Err(ServiceError::BadRequest("Too many contacts".into()));
+    }
+
     let mut numbers: Vec<ResponseUser> = phone_numbers
         .into_iter()
-        .filter(|w| w.tele_num.len() > 3)
+        .filter(|w| w.tele_num.len() > MIN_TELE_NUM_LENGTH)
         .filter_map(|w| match PhoneNumber::my_from(&w.tele_num, country_code) {
             Ok(number) => Some(ResponseUser {
                 calculated_tele: number.to_string(),

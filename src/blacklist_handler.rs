@@ -18,14 +18,19 @@ pub fn get_all(
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
     dbg!(&info);
     let info = info.into_inner();
-    web::block(move || get_entry(&info, pool)).then(|res| {
-        match res {
-            Ok(users) => Ok(HttpResponse::Ok().content_type("application/json").json(users)),
-            Err(err) => match err {
-                BlockingError::Error(service_error) => Err(service_error),
-                BlockingError::Canceled => Err(ServiceError::InternalServerError),
-            },
+    web::block(move || get_entry(&info, pool)).then(|res| match res {
+        Ok(users) => {
+            let mut res = HttpResponse::Ok()
+                .content_type("application/json")
+                .json(users);
+            crate::utils::set_response_headers(&mut res);
+            Ok(res)
         }
+
+        Err(err) => match err {
+            BlockingError::Error(service_error) => Err(service_error),
+            BlockingError::Canceled => Err(ServiceError::InternalServerError),
+        },
     })
 }
 
@@ -44,7 +49,11 @@ pub fn add(
     dbg!(&data);
     web::block(move || create_entry(&info.into_inner(), &data.into_inner(), pool)).then(|res| {
         match res {
-            Ok(_) => Ok(HttpResponse::Ok().finish()),
+            Ok(_) => {
+                let mut res = HttpResponse::Ok().content_type("application/json").finish();
+                crate::utils::set_response_headers(&mut res);
+                Ok(res)
+            }
             Err(err) => match err {
                 BlockingError::Error(service_error) => Err(service_error),
                 BlockingError::Canceled => Err(ServiceError::InternalServerError),
@@ -61,7 +70,11 @@ pub fn delete(
     dbg!(&info);
     web::block(move || delete_entry(&info.into_inner(), &data.into_inner(), pool)).then(|res| {
         match res {
-            Ok(_) => Ok(HttpResponse::Ok().finish()),
+            Ok(_) => {
+                let mut res = HttpResponse::Ok().content_type("application/json").finish();
+                crate::utils::set_response_headers(&mut res);
+                Ok(res)
+            }
             Err(err) => match err {
                 BlockingError::Error(service_error) => Err(service_error),
                 BlockingError::Canceled => Err(ServiceError::InternalServerError),
@@ -70,7 +83,10 @@ pub fn delete(
     })
 }
 
-fn get_entry(blocker: &String, pool: web::Data<Pool>) -> Result<Vec<Blacklist>, crate::errors::ServiceError>  {
+fn get_entry(
+    blocker: &String,
+    pool: web::Data<Pool>,
+) -> Result<Vec<Blacklist>, crate::errors::ServiceError> {
     let blocker = Uuid::parse_str(blocker)?;
 
     let bl = get_query(blocker, pool)?;
@@ -80,21 +96,25 @@ fn get_entry(blocker: &String, pool: web::Data<Pool>) -> Result<Vec<Blacklist>, 
     Ok(bl)
 }
 
-fn get_query(sblocker: Uuid, pool: web::Data<Pool>) -> Result<Vec<Blacklist>, crate::errors::ServiceError> {
-    use crate::schema::users::dsl::{id, users};
+fn get_query(
+    sblocker: Uuid,
+    pool: web::Data<Pool>,
+) -> Result<Vec<Blacklist>, crate::errors::ServiceError> {
     use crate::schema::blacklist::dsl::{blacklist, blocker};
+    use crate::schema::users::dsl::{id, users};
 
     let conn: &PgConnection = &pool.get().unwrap();
 
-    let user = users.filter(id.eq(sblocker))
+    let user = users
+        .filter(id.eq(sblocker))
         .load::<User>(conn)
         .map_err(|_db_err| ServiceError::BadRequest("Invalid User".into()))?
         .first()
         .map(|w| w.clone())
         .ok_or(ServiceError::BadRequest("No user found".into()))?;
 
-
-    blacklist.filter(blocker.eq(user.tele_num))
+    blacklist
+        .filter(blocker.eq(user.tele_num))
         .load::<Blacklist>(conn)
         .map_err(|_db_err| ServiceError::BadRequest("Invalid User".into()))
 }
@@ -146,7 +166,7 @@ fn create_query(
     let ins = diesel::insert_into(blacklist)
         .values(&new_inv)
         .get_result(conn)?;
-        //.map_err(|_db_error| ServiceError::BadRequest("Cannot insert into blacklist".into()))?;
+    //.map_err(|_db_error| ServiceError::BadRequest("Cannot insert into blacklist".into()))?;
 
     dbg!(&ins);
 

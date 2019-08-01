@@ -6,6 +6,7 @@ extern crate serde_derive;
 use actix_cors::Cors;
 use actix_web::{middleware, web, App, HttpServer, Responder};
 use actix_web::{http::header};
+use actix_web::guard;
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
 
@@ -54,9 +55,10 @@ fn main() {
                     .allowed_header(header::CONTENT_TYPE)
                     .max_age(3600),
             )
+
             .wrap(middleware::Logger::default())
-            //.data(web::JsonConfig::default().limit(4096))
-            .data(web::JsonConfig::default())
+            .data(web::JsonConfig::default().limit(50_000))
+            //.data(web::JsonConfig::default())
             .service(web::scope("/test").service(web::resource("/").route(web::get().to(index))))
             .service(
                 web::scope("/api")

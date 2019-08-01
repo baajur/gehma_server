@@ -13,7 +13,11 @@ pub fn add(
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
     dbg!(&body);
     web::block(move || create_entry(body.into_inner(), pool)).then(|res| match res {
-        Ok(user) => Ok(HttpResponse::Ok().content_type("application/json").json(user)),
+        Ok(user) => {
+            let mut res = HttpResponse::Ok().content_type("application/json").json(user);
+            crate::utils::set_response_headers(&mut res);
+            Ok(res)
+        },
         Err(err) => match err {
             BlockingError::Error(service_error) => Err(service_error),
             BlockingError::Canceled => Err(ServiceError::InternalServerError),
@@ -27,7 +31,11 @@ pub fn get(
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
     dbg!(&info);
     web::block(move || get_entry(&info.into_inner(), pool)).then(|res| match res {
-        Ok(users) => Ok(HttpResponse::Ok().content_type("application/json").json(&users)),
+        Ok(users) => {
+            let mut res = HttpResponse::Ok().content_type("application/json").json(users);
+            crate::utils::set_response_headers(&mut res);
+            Ok(res)
+        },
         Err(err) => match err {
             BlockingError::Error(service_error) => Err(service_error),
             BlockingError::Canceled => Err(ServiceError::InternalServerError),
