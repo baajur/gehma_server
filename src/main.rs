@@ -4,19 +4,20 @@ extern crate diesel;
 extern crate serde_derive;
 
 use actix_cors::Cors;
+use actix_files::NamedFile;
+use actix_web::http::header;
 use actix_web::{middleware, web, App, HttpServer, Responder};
-use actix_web::{http::header};
-use actix_web::guard;
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
+use std::path::PathBuf;
 
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 
+mod blacklist_handler;
 mod errors;
+mod exists_handler;
 mod models;
 mod schema;
-mod blacklist_handler;
-mod exists_handler;
 mod user_handler;
 mod utils;
 
@@ -55,11 +56,14 @@ fn main() {
                     .allowed_header(header::CONTENT_TYPE)
                     .max_age(3600),
             )
-
             .wrap(middleware::Logger::default())
             .data(web::JsonConfig::default().limit(50_000))
             //.data(web::JsonConfig::default())
-            .service(web::scope("/test").service(web::resource("/").route(web::get().to(index))))
+            .service(web::resource("/").route(web::get().to(load_index_file)))
+            .service(
+                web::scope("/static")
+                    .service(web::resource("/{filename:.*}").route(web::get().to(load_file))),
+            )
             .service(
                 web::scope("/api")
                     .service(web::resource("/user").route(web::post().to_async(user_handler::add)))
@@ -84,20 +88,31 @@ fn main() {
     })
     .keep_alive(None);
 
-    let listener = match debug.as_str()  {
+    let listener = match debug.as_str() {
         "0" => server.bind_ssl(format!("{}:{}", addr, port), builder),
         "1" => server.bind(format!("{}:{}", addr, port)),
-        _ => panic!("debug state not defined")
+        _ => panic!("debug state not defined"),
     };
 
     //.bind_ssl("0.0.0.0:443", builder)
     //.bind("0.0.0.0:3000")
-    listener
-    .unwrap()
-    .run()
-    .unwrap()
+    listener.unwrap().run().unwrap()
 }
 
 fn index() -> impl Responder {
     format!("Hello")
+}
+
+fn load_index_file(_req: actix_web::HttpRequest) -> actix_web::Result<NamedFile> {
+    println!("HHEHREHRHEHRE");
+    let path: PathBuf = PathBuf::from("static/index.html");
+    Ok(NamedFile::open(path)?)
+}
+
+fn load_file(req: actix_web::HttpRequest) -> actix_web::Result<NamedFile> {
+    let path: PathBuf = req.match_info().query("filename").parse().unwrap();
+    let mut dir = PathBuf::from("static");
+    dir.push(path);
+    println!("{}", dir.to_str().unwrap());
+    Ok(NamedFile::open(dir)?)
 }
