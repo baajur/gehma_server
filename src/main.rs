@@ -21,6 +21,8 @@ mod schema;
 mod user_handler;
 mod utils;
 
+pub const ALLOWED_CLIENT_VERSIONS : &'static [&'static str] = &["0.1"];
+
 fn main() {
     dotenv::dotenv().ok();
     std::env::set_var("RUST_LOG", "actix_web=info,actix_server=info");

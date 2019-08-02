@@ -1,0 +1,1 @@
+ALTER TABLE users ADD COLUMN client_version VARCHAR(10) NOT NULL DEFAULT '0.1';

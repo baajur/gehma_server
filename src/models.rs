@@ -16,6 +16,7 @@ pub struct User {
     pub description: String,
     pub is_autofahrer: bool,
     pub changed_at: chrono::NaiveDateTime,
+    pub client_version: String
 }
 
 impl User {
@@ -29,6 +30,7 @@ impl User {
             country_code: country_code.to_string(),
             description: "".to_string(),
             is_autofahrer: false,
+            client_version: "".to_string(),
         }
     }
 }

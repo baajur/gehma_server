@@ -4,7 +4,7 @@ use futures::Future;
 use uuid::Uuid;
 
 use crate::errors::ServiceError;
-use crate::models::{Pool, User, PhoneNumber, Analytic, UsageStatisticEntry};
+use crate::models::{Analytic, PhoneNumber, Pool, UsageStatisticEntry, User};
 
 pub fn add(
     _info: web::Path<()>,
@@ -14,10 +14,12 @@ pub fn add(
     dbg!(&body);
     web::block(move || create_entry(body.into_inner(), pool)).then(|res| match res {
         Ok(user) => {
-            let mut res = HttpResponse::Ok().content_type("application/json").json(user);
+            let mut res = HttpResponse::Ok()
+                .content_type("application/json")
+                .json(user);
             crate::utils::set_response_headers(&mut res);
             Ok(res)
-        },
+        }
         Err(err) => match err {
             BlockingError::Error(service_error) => Err(service_error),
             BlockingError::Canceled => Err(ServiceError::InternalServerError),
@@ -32,10 +34,12 @@ pub fn get(
     dbg!(&info);
     web::block(move || get_entry(&info.into_inner(), pool)).then(|res| match res {
         Ok(users) => {
-            let mut res = HttpResponse::Ok().content_type("application/json").json(users);
+            let mut res = HttpResponse::Ok()
+                .content_type("application/json")
+                .json(users);
             crate::utils::set_response_headers(&mut res);
             Ok(res)
-        },
+        }
         Err(err) => match err {
             BlockingError::Error(service_error) => Err(service_error),
             BlockingError::Canceled => Err(ServiceError::InternalServerError),
@@ -43,11 +47,11 @@ pub fn get(
     })
 }
 
-
 #[derive(Debug, Deserialize)]
-pub struct PostUser{
+pub struct PostUser {
     pub tele_num: String,
     pub country_code: String,
+    pub client_version: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -55,6 +59,7 @@ pub struct UpdateUser {
     pub description: String,
     pub led: String,
     pub is_autofahrer: Option<String>,
+    pub client_version: Option<String>,
 }
 
 pub fn update(
@@ -64,15 +69,17 @@ pub fn update(
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
     dbg!(&info);
     dbg!(&data);
-    web::block(move || update_user(&info.into_inner(), &data.into_inner(), pool)).then(
-        |res| match res {
-            Ok(user) => Ok(HttpResponse::Ok().content_type("application/json").json(&user)),
+    web::block(move || update_user(&info.into_inner(), &data.into_inner(), &pool)).then(|res| {
+        match res {
+            Ok(user) => Ok(HttpResponse::Ok()
+                .content_type("application/json")
+                .json(&user)),
             Err(err) => match err {
                 BlockingError::Error(service_error) => Err(service_error),
                 BlockingError::Canceled => Err(ServiceError::InternalServerError),
             },
-        },
-    )
+        }
+    })
 }
 
 fn create_entry(
@@ -80,7 +87,12 @@ fn create_entry(
     pool: web::Data<Pool>,
 ) -> Result<User, crate::errors::ServiceError> {
     dbg!(&body);
-    let tele = body.tele_num;
+
+    if !crate::ALLOWED_CLIENT_VERSIONS.contains(&body.client_version.as_str()) {
+            return Err(ServiceError::BadRequest(format!("Version mismatch. The supported versions are {:?}", crate::ALLOWED_CLIENT_VERSIONS)));
+    }
+
+    let tele = &body.tele_num;
     let country_code = &body.country_code;
 
     let tele2 = PhoneNumber::my_from(&tele, country_code)?;
@@ -93,6 +105,20 @@ fn create_entry(
         Err(err) => Err(err),
     }?;
 
+
+    if user.client_version != body.client_version {
+        update_user(
+            &user.id.to_string(),
+            &UpdateUser {
+                description: user.description.clone(),
+                led: format!("{}", user.led),
+                is_autofahrer: Some(format!("{}", user.is_autofahrer)),
+                client_version: Some(body.client_version.clone()),
+            },
+            &pool,
+        )?;
+    }
+
     dbg!(&user);
 
     analytics_usage_statistics(&pool, &user)?;
@@ -100,10 +126,7 @@ fn create_entry(
     Ok(user)
 }
 
-fn get_entry(
-    uid: &String,
-    pool: web::Data<Pool>,
-) -> Result<User, crate::errors::ServiceError> {
+fn get_entry(uid: &String, pool: web::Data<Pool>) -> Result<User, crate::errors::ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
     let users = get_query(parsed, &pool)?;
     dbg!(&users);
@@ -114,7 +137,7 @@ fn get_entry(
     }?;
 
     //analytics_usage_statistics(&pool, &user)?; not logging every refresh
-    
+
     Ok(user)
 }
 
@@ -129,7 +152,7 @@ fn get_entry_by_tel_query(
     let tele = tele.to_string();
 
     dbg!(&tele);
-    
+
     let res = users
         .filter(tele_num.eq(tele))
         .load::<User>(conn)
@@ -147,14 +170,15 @@ fn get_entry_by_tel_query(
 fn update_user(
     uid: &String,
     user: &UpdateUser,
-    pool: web::Data<Pool>,
+    pool: &web::Data<Pool>,
 ) -> Result<User, crate::errors::ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
     let users = update_user_query(parsed, user, &pool)?;
 
     dbg!(&users);
 
-    let res = users.first()
+    let res = users
+        .first()
         .map(|w| w.clone())
         .ok_or(ServiceError::BadRequest("No user found".into()))?;
 
@@ -163,7 +187,10 @@ fn update_user(
     Ok(res)
 }
 
-fn analytics_user(pool: &web::Data<Pool>, user: &User) -> Result<Analytic, crate::errors::ServiceError> {
+fn analytics_user(
+    pool: &web::Data<Pool>,
+    user: &User,
+) -> Result<Analytic, crate::errors::ServiceError> {
     use crate::schema::analytics::dsl::analytics;
 
     let ana = Analytic::my_from(user);
@@ -193,13 +220,16 @@ fn create_query(
     let ins = diesel::insert_into(users)
         .values(&new_inv)
         .get_result(conn)?;
-                
+
     dbg!(&ins);
 
     Ok(ins)
 }
 
-fn analytics_usage_statistics(pool: &web::Data<Pool>, user: &User) -> Result<UsageStatisticEntry, crate::errors::ServiceError> {
+fn analytics_usage_statistics(
+    pool: &web::Data<Pool>,
+    user: &User,
+) -> Result<UsageStatisticEntry, crate::errors::ServiceError> {
     use crate::schema::usage_statistics::dsl::usage_statistics;
 
     let ana = UsageStatisticEntry::my_from(user);
@@ -221,10 +251,10 @@ fn update_user_query(
     user: &UpdateUser,
     pool: &web::Data<Pool>,
 ) -> Result<Vec<User>, crate::errors::ServiceError> {
-    use crate::schema::users::dsl::{description, is_autofahrer, led, id, users, changed_at};
+    use crate::schema::users::dsl::{changed_at, description, id, is_autofahrer, led, users};
 
     let conn: &PgConnection = &pool.get().unwrap();
-    
+
     let target = users.filter(id.eq(myid));
 
     let my_led = match &*user.led {
@@ -245,7 +275,7 @@ fn update_user_query(
             description.eq(user.description.to_string()),
             led.eq(my_led),
             is_autofahrer.eq(my_is_autofahrer),
-            changed_at.eq(chrono::Local::now().naive_local())
+            changed_at.eq(chrono::Local::now().naive_local()),
         ))
         .execute(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Updating state failed".into()))?;
@@ -260,10 +290,7 @@ fn update_user_query(
         })
 }
 
-fn get_query(
-    myid: Uuid,
-    pool: &web::Data<Pool>,
-) -> Result<Vec<User>, crate::errors::ServiceError> {
+fn get_query(myid: Uuid, pool: &web::Data<Pool>) -> Result<Vec<User>, crate::errors::ServiceError> {
     use crate::schema::users::dsl::{id, users};
 
     let conn: &PgConnection = &pool.get().unwrap();

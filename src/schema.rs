@@ -36,6 +36,7 @@ table! {
         description -> Text,
         is_autofahrer -> Bool,
         changed_at -> Timestamp,
+        client_version -> Varchar,
     }
 }
 
