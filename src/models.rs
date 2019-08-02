@@ -20,7 +20,7 @@ pub struct User {
 }
 
 impl User {
-    pub fn my_from(e: &String, country_code: &String) -> Self {
+    pub fn my_from(e: &String, country_code: &String, version: &String) -> Self {
         User {
             id: uuid::Uuid::new_v4(),
             tele_num: e.to_string(),
@@ -30,7 +30,7 @@ impl User {
             country_code: country_code.to_string(),
             description: "".to_string(),
             is_autofahrer: false,
-            client_version: "".to_string(),
+            client_version: version.to_string(),
         }
     }
 }

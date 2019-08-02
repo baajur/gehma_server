@@ -99,14 +99,15 @@ fn create_entry(
 
     dbg!(&tele2.to_string());
 
-    let user = match create_query(&tele2, &country_code, &pool) {
+    let user = match create_query(&tele2, &country_code, &body.client_version, &pool) {
         Ok(u) => Ok(u),
         Err(ServiceError::AlreadyExists(_)) => get_entry_by_tel_query(&tele2, &pool),
         Err(err) => Err(err),
     }?;
 
-
     if user.client_version != body.client_version {
+        println!("HERHEHREHREHEHER");
+
         update_user(
             &user.id.to_string(),
             &UpdateUser {
@@ -210,11 +211,12 @@ fn analytics_user(
 fn create_query(
     tel: &PhoneNumber,
     country_code: &String,
+    version: &String,
     pool: &web::Data<Pool>,
 ) -> Result<User, crate::errors::ServiceError> {
     use crate::schema::users::dsl::users;
 
-    let new_inv: User = User::my_from(&tel.to_string(), country_code);
+    let new_inv: User = User::my_from(&tel.to_string(), country_code, version);
     let conn: &PgConnection = &pool.get().unwrap();
 
     let ins = diesel::insert_into(users)
@@ -251,7 +253,7 @@ fn update_user_query(
     user: &UpdateUser,
     pool: &web::Data<Pool>,
 ) -> Result<Vec<User>, crate::errors::ServiceError> {
-    use crate::schema::users::dsl::{changed_at, description, id, is_autofahrer, led, users};
+    use crate::schema::users::dsl::{changed_at, description, id, is_autofahrer, led, users, client_version};
 
     let conn: &PgConnection = &pool.get().unwrap();
 
@@ -276,6 +278,7 @@ fn update_user_query(
             led.eq(my_led),
             is_autofahrer.eq(my_is_autofahrer),
             changed_at.eq(chrono::Local::now().naive_local()),
+            client_version.eq(user.client_version.clone().unwrap_or("".to_string()))
         ))
         .execute(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Updating state failed".into()))?;
