@@ -106,7 +106,6 @@ fn index() -> impl Responder {
 }
 
 fn load_index_file(_req: actix_web::HttpRequest) -> actix_web::Result<NamedFile> {
-    println!("HHEHREHRHEHRE");
     let path: PathBuf = PathBuf::from("static/index.html");
     Ok(NamedFile::open(path)?)
 }
@@ -115,6 +114,5 @@ fn load_file(req: actix_web::HttpRequest) -> actix_web::Result<NamedFile> {
     let path: PathBuf = req.match_info().query("filename").parse().unwrap();
     let mut dir = PathBuf::from("static");
     dir.push(path);
-    println!("{}", dir.to_str().unwrap());
     Ok(NamedFile::open(dir)?)
 }
