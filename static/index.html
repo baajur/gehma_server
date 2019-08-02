@@ -50,6 +50,9 @@
 <li><a href="#android">Android</a></li>
 <li><a href="#iphone">iPhone</a></li>
 </ul></li>
+<li><a href="#datenschutz-anmerkungen">Datenschutz-Anmerkungen</a></li>
+<li><a href="#builds">Builds</a></li>
+<li><a href="#bugs">Bugs</a></li>
 </ul>
 </div>
 <hr />
@@ -74,5 +77,67 @@
 <p>Da die App aus Kostengründen nicht über den Google Play Store distributiert wird, sondern selbständig über das .apk File installiert werden muss, verhindert Google die Standard-Installation. Um die Sperre zu umgehen muss in Optionsmenü &gt; <em>Play Protect</em> &gt; Zahnrad rechts oben &gt; <em>Gerät auf Sicherheitsbedrohungen prüfen</em> deaktivieren.</p>
 <h3 id="iphone">iPhone</h3>
 <p>Es existiert ein Build für iPhones. Jedoch durch massive Apple Einschränkungen von Nicht-Apple-Store-Apps ist es nicht möglich diese zum Download anzubieten. Alle iPhone BesitzerInnen sind herzlich dazu einladen mich zu kontakieren und ich werde die App dann über den Laptop auf sein/ihr Handy laden.</p>
+<h2 id="datenschutz-anmerkungen">Datenschutz-Anmerkungen</h2>
+<p>Im folgenden findest du einen unvollständigen Auszug der Datenbank-Modelle (von 1. August 2019 - Version 0.1). Außerdem möchte ich anmerken, dass um herauszufinden welche Kontakte auch Gehma besitzen, müssen alle Kontakte (Name + Telenummer) an den Server geschickt werden. Diese werden nicht in der Datenbank gespeichert und können sich höchstens in den Log-Dateien wiederfinden. Die Log-Dateien werden jedoch regelmäßig gelöscht.</p>
+<pre><code>table! {
+    blacklist (id) {
+        id -&gt; Uuid,
+        blocker -&gt; Varchar,
+        blocked -&gt; Varchar,
+        created_at -&gt; Timestamp,
+    }
+}
+
+table! {
+    users (id) {
+        id -&gt; Uuid,
+        tele_num -&gt; Varchar,
+        led -&gt; Bool,
+        created_at -&gt; Timestamp,
+        country_code -&gt; Varchar,
+        description -&gt; Text,
+        is_autofahrer -&gt; Bool,
+        changed_at -&gt; Timestamp,
+        client_version -&gt; Varchar,
+    }
+}</code></pre>
+<h2 id="builds">Builds</h2>
+<p>Der aktuelle Client Build ist v0.1 (2. August 2019).</p>
+<p>sha256: bab2a97d16aa886d58c486e646e272f6e626598fd9eab272924f2e84b6b45bbf gehma_0v1.apk</p>
+<h2 id="bugs">Bugs</h2>
+<p>Bugs Reports sind höchst erwünscht. Dazu bitte eine Email an kevin.per@protonmail.com</p>
+<pre><code>-----BEGIN PGP PUBLIC KEY BLOCK-----
+Version: OpenPGP.js v3.1.3
+Comment: https://openpgpjs.org
+
+xsBNBFwILdoBCADKw/MidbY5nqqDSUbGRNTSUijKHX09xPpbEPhS+Lggp1xB
+de4UZd8dyXARjOkqFNMFf7ROX9NIERqv60jsl1pkZLxZgJzJ82ceKvnF5dO/
+Ap6fVs+7ruerzeSWYe0SOB9yf/aRYBRXKd6t/NEkYAN3XXP16Ssw+9y6SQMT
+dV6L1GC+lGNX3H1foz7+VNdzaq9GGJDGnIxZfyMi9Vjfx1WyO8F9Z08MtTyv
+WP5z3L2Y20oJu0XvWwnVXO3vhmfvZEQfgH7zvIFNk+jE7dcL90P+kHNlhdPr
+IrUr7YZMscZathL2pr2Oxi80aMukj/tDTL516iAkzjrtG1VwU7UE1NjrABEB
+AAHNNSJrZXZpbi5wZXJAcHJvdG9ubWFpbC5jb20iIDxrZXZpbi5wZXJAcHJv
+dG9ubWFpbC5jb20+wsB1BBABCAApBQJcCC3aBgsJBwgDAgkQcZKB49FlJG4E
+FQgKAgMWAgECGQECGwMCHgEAABCdCACEUcTWe4cSFBzamnKRlW+NpA5NieTs
+2q8enPOX9JLhe0MOq5VKQiw3P5Md3cAUwtzoOxPk7hVV57VMhp6vWCVe+yE0
+E/LXahzOV/eR+lchVf1urpJzg/QLVE04xB1yUuewAZv1+Ao2ityXdRlrK2Ht
+Um1Mc24e/tX34Sz+OIGExyhKLnPJA/59G5aRzpZMi3SeRyg7p/lrAciA6csU
+G8KZ9+fjtKwxjqhe/QzgNAIBmlZz3ykcyQXls/DkDTK+5oVDoeAKv10JaNyO
+cfd85vqMuA7A1hCW2vuP4C47C8YnXNL3N7UBZwZOHvAVh67fc1piNOeg9N8m
+UxXW8CV0DU9mzsBNBFwILdoBCADPj6IRanO92hisZxB6pL6lhYh5vAR2rsV3
+WEypLh1LVV7AYoJxh1qWe7ynmW9yQ9N3ZaS86q21kByVe56DNeKY6Vc+NGtN
+hLF78+TkRe+jn04oeaYxbWrDjhloPFT6qJijka45JOZTg2MnbHQUARW+njM0
+AxPXl3H4NWVBzSYpFlBemkPxKXbB+W2PytECS5nzQ7G0M4fBS9hyn8nWFbDS
+IIF41abE2FSvlQIqBdjssD7oxeAIOQdHLT2n7KWm/js6RmjtRiZASMtAR0V1
+vRH3cH9Kd60X1ZtKe1UTxtJHDmS34HF9KnAPw1JC/fakvqmv9ZQNwgAgLZnZ
+UjTtKJBxABEBAAHCwF8EGAEIABMFAlwILdoJEHGSgePRZSRuAhsMAAApQAf+
+Nl5ZmyrloDLicKpjD5l9mhymzCea5lD2nzsFk32QEh7Kqd2MDJ2P01vQ8E2h
+S2PD4hY8DpjKQj3WD/7ItZ3CON3Nv34n7VXzclXLtuki1dVSv2VX+BT9QTSD
+ujC55iM0R7yhaX4o7CRTdiWfytjmt+euO8RiGcW556NEPYieg2LRUDapcVFx
+GPU4yw14SrLgoaSBtVNU6WGnPXkOwodwyjNi49YzISHATM0gntK39vyKxxuo
+6OznW4TeHErQTZ3zs8WOlCrZpEzsfZXSHPGMCB3wk5u8yI667pYx5l91r9Ud
+fyKH8bGp/YjXC7Z1CRAWSSQS3v/9boVsJDU6y/F1Nw==
+=Hp+0
+-----END PGP PUBLIC KEY BLOCK-----</code></pre>
 </body>
 </html>
