@@ -1,6 +1,7 @@
 use actix_web::{error::BlockingError, web, HttpResponse};
 use diesel::{prelude::*, PgConnection};
 use futures::Future;
+use serde_json::json;
 use uuid::Uuid;
 
 use crate::errors::ServiceError;
@@ -175,19 +176,13 @@ fn update_user(
     pool: &web::Data<Pool>,
 ) -> Result<User, crate::errors::ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
-    let users = update_user_query(parsed, user, &pool)?;
+    let user = update_user_query(parsed, user, &pool)?;
 
     dbg!(&user);
-    dbg!(&users);
 
-    let res = users
-        .first()
-        .map(|w| w.clone())
-        .ok_or(ServiceError::BadRequest("No user found".into()))?;
+    analytics_user(&pool, &user)?;
 
-    analytics_user(&pool, &res)?;
-
-    Ok(res)
+    Ok(user)
 }
 
 fn analytics_user(
@@ -254,7 +249,7 @@ fn update_user_query(
     myid: Uuid,
     user: &UpdateUser,
     pool: &web::Data<Pool>,
-) -> Result<Vec<User>, crate::errors::ServiceError> {
+) -> Result<User, crate::errors::ServiceError> {
     use crate::schema::users::dsl::{
         changed_at, client_version, description, id, is_autofahrer, led, users,
     };
@@ -275,7 +270,6 @@ fn update_user_query(
         _ => false,
     };
 
-    //FIXME update und danach query ist extrem teuer
     diesel::update(target)
         .set((
             description.eq(user.description.to_string()),
@@ -287,14 +281,97 @@ fn update_user_query(
         .execute(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Updating state failed".into()))?;
 
-    users
+    let db_user = users
         .filter(id.eq(myid))
+        .load::<User>(conn)
+        .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
+        .and_then(|res_users| {
+            Ok(res_users
+                .first()
+                .map(|w| w.clone())
+                .ok_or(ServiceError::BadRequest("No user found".into()))?)
+        })
+        .and_then(|user| {
+            if my_led {
+                //Sending push notification
+                sending_push_notifications(&user, pool)?;
+            }
+
+            Ok(user)
+        });
+
+    db_user
+}
+
+fn sending_push_notifications(
+    user: &User,
+    pool: &web::Data<Pool>,
+) -> Result<(), crate::errors::ServiceError> {
+    use crate::models::Contact;
+    use crate::schema::contacts::dsl::{contacts, from_id};
+    use crate::schema::users::dsl::{tele_num, users};
+    use reqwest::header::{AUTHORIZATION, CONTENT_TYPE};
+    use reqwest::{Client, Response};
+
+    let conn: &PgConnection = &pool.get().unwrap();
+
+    let targets: Vec<_> = contacts
+        .filter(from_id.eq(user.id))
+        .load::<Contact>(conn)
+        .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
+        .and_then(|result| {
+            Ok(result)
+            //Err(ServiceError::BadRequest("Invalid Invitation".into()))
+        })?
+        .into_iter()
+        .map(|w| w.target_tele_num)
+        .collect();
+
+    let tokens: Vec<_> = users
+        .filter(tele_num.eq_any(targets))
         .load::<User>(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
         .and_then(|result| {
             Ok(result)
             //Err(ServiceError::BadRequest("Invalid Invitation".into()))
-        })
+        })?
+        .into_iter()
+        .filter(|w| w.firebase_token.is_some())
+        .map(|w| w.firebase_token.unwrap())
+        .take(crate::LIMIT_PUSH_NOTIFICATION_CONTACTS)
+        .collect();
+
+    dbg!(&tokens);
+
+    let api_token = std::env::var("FCM_TOKEN").expect("No FCM_TOKEN configured");
+
+    let echo_json= reqwest::Client::new()
+        .post("https://fcm.googleapis.com/fcm/send")
+        .header(CONTENT_TYPE, "application/json")
+        .header(AUTHORIZATION, format!("key={}", api_token))
+        .json(&json!({
+            "notification": {
+                "title": "test",
+                "body": "test"
+            },
+            "registration_ids": tokens
+        }))
+        .send()
+        .map_err(|err| {
+            eprintln!("{}", err);
+            ServiceError::BadRequest(
+                "Cannot send push notifications".into(),
+            )
+        })?
+        .json()
+        .map_err(|err| {
+            eprintln!("{}", err);
+            ServiceError::BadRequest("Cannot convert json".into())
+        })?;
+
+    println!("{:#?}", echo_json);
+
+    Ok(())
 }
 
 fn get_query(myid: Uuid, pool: &web::Data<Pool>) -> Result<Vec<User>, crate::errors::ServiceError> {

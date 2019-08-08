@@ -170,9 +170,21 @@ fn get_query(
                                     .collect::<Vec<ResponseUser>>())
                             })
                         .and_then(|numbers| {
-                            use crate::schema::contacts::dsl::{contacts};
+                            use crate::schema::contacts::dsl::{contacts, from_id};
                             
                             let user_contacts : Vec<_> = numbers.iter().map(|n| Contact::my_from(&user, n.calculated_tele.clone())).collect();
+
+                            let target = contacts.filter(from_id.eq(user.id));
+
+                            //We need to delete all numbers, because
+                            //user shall not receive push notifications
+                            //for contacts he deleted
+                            let _ = diesel::delete(target)
+                                .execute(conn)
+                                .map_err(|_db_err| {
+                                    eprintln!("{}", _db_err);
+                                    ServiceError::BadRequest("Could reset contacts".into())
+                                })?;
 
                             let _ = diesel::insert_into(contacts)
                                 .values(user_contacts)
