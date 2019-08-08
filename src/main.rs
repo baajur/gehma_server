@@ -23,7 +23,7 @@ mod user_handler;
 mod utils;
 mod push_notification_handler;
 
-pub const ALLOWED_CLIENT_VERSIONS: &'static [&'static str] = &["0.1"];
+pub const ALLOWED_CLIENT_VERSIONS: &'static [&'static str] = &["0.2"];
 pub const LIMIT_PUSH_NOTIFICATION_CONTACTS: usize = 128;
 
 fn main() {
