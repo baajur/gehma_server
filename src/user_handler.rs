@@ -351,8 +351,8 @@ fn sending_push_notifications(
         .header(AUTHORIZATION, format!("key={}", api_token))
         .json(&json!({
             "notification": {
-                "title": "test",
-                "body": "test"
+                "title": "Jemand ist motiviert",
+                "body": ""
             },
             "registration_ids": tokens
         }))
