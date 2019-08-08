@@ -1,11 +1,11 @@
+use crate::errors::ServiceError;
+use crate::models::{Analytic, PhoneNumber, Pool, UsageStatisticEntry, User};
 use actix_web::{error::BlockingError, web, HttpResponse};
 use diesel::{prelude::*, PgConnection};
 use futures::Future;
 use serde_json::json;
+use tokio;
 use uuid::Uuid;
-
-use crate::errors::ServiceError;
-use crate::models::{Analytic, PhoneNumber, Pool, UsageStatisticEntry, User};
 
 pub fn add(
     _info: web::Path<()>,
@@ -294,7 +294,7 @@ fn update_user_query(
         .and_then(|user| {
             if my_led {
                 //Sending push notification
-                sending_push_notifications(&user, pool)?;
+                sending_push_notifications(&user, pool);
             }
 
             Ok(user)
@@ -310,8 +310,10 @@ fn sending_push_notifications(
     use crate::models::Contact;
     use crate::schema::contacts::dsl::{contacts, from_id};
     use crate::schema::users::dsl::{tele_num, users};
+    use futures::stream::Stream;
     use reqwest::header::{AUTHORIZATION, CONTENT_TYPE};
-    use reqwest::{Client, Response};
+    use reqwest::r#async::{Client, Response};
+    use std::io::Write;
 
     let conn: &PgConnection = &pool.get().unwrap();
 
@@ -327,7 +329,7 @@ fn sending_push_notifications(
         .map(|w| w.target_tele_num)
         .collect();
 
-    let tokens: Vec<_> = users
+    let user_contacts: Vec<_> = users
         .filter(tele_num.eq_any(targets))
         .load::<User>(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
@@ -337,43 +339,46 @@ fn sending_push_notifications(
         })?
         .into_iter()
         .filter(|w| w.firebase_token.is_some())
-        .map(|w| w.firebase_token.unwrap())
+        //.map(|w| w.firebase_token.unwrap())
         .take(crate::LIMIT_PUSH_NOTIFICATION_CONTACTS)
         .collect();
 
-    dbg!(&tokens);
+    dbg!(&user_contacts);
 
     let api_token = std::env::var("FCM_TOKEN").expect("No FCM_TOKEN configured");
 
-    let mut echo_json= reqwest::Client::new()
-        .post("https://fcm.googleapis.com/fcm/send")
-        .header(CONTENT_TYPE, "application/json")
-        .header(AUTHORIZATION, format!("key={}", api_token))
-        .json(&json!({
-            "notification": {
-                "title": "Jemand ist motiviert",
-                "body": ""
-            },
-            "registration_ids": tokens
-        }))
-        .send()
-        .map_err(|err| {
-            eprintln!("{}", err);
-            ServiceError::BadRequest(
-                "Cannot send push notifications".into(),
-            )
-        })?;
+    let client = Client::new();
 
-    std::io::copy(&mut echo_json, &mut std::io::stdout()).unwrap();
-        //.json()
-        //.map_err(|err| {
-            //eprintln!("{}", err);
-            //ServiceError::BadRequest("Cannot convert json".into())
-        //})?;
+    let work = futures::stream::iter_ok(user_contacts)
+        .map(move |contact| {
+            client
+                .post("https://fcm.googleapis.com/fcm/send")
+                .header(CONTENT_TYPE, "application/json")
+                .header(AUTHORIZATION, format!("key={}", api_token))
+                .json(&json!({
+                    "notification": {
+                        "title": "Jemand ist motiviert",
+                        "body": ""
+                    },
+                    "registration_ids": [contact.firebase_token]
+                }))
+                .send()
+        })
+        .buffer_unordered(10)
+        .and_then(|mut res| {
+            println!("Response: {}", res.status());
+            futures::future::ok(res.json::<serde_json::Value>())
+        })
+        .for_each(|_| {
+            Ok(())
+        })
+        .map_err(|e| eprintln!("{}", e));
 
-    //println!("{:#?}", echo_json);
+    tokio::run(work);
 
     Ok(())
+
+    //Ok(work)
 }
 
 fn get_query(myid: Uuid, pool: &web::Data<Pool>) -> Result<Vec<User>, crate::errors::ServiceError> {
