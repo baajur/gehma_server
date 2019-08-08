@@ -362,14 +362,16 @@ fn sending_push_notifications(
             ServiceError::BadRequest(
                 "Cannot send push notifications".into(),
             )
-        })?
-        .json()
-        .map_err(|err| {
-            eprintln!("{}", err);
-            ServiceError::BadRequest("Cannot convert json".into())
         })?;
 
-    println!("{:#?}", echo_json);
+    std::io::copy(&mut echo_json, &mut std::io::stdout())?;
+        //.json()
+        //.map_err(|err| {
+            //eprintln!("{}", err);
+            //ServiceError::BadRequest("Cannot convert json".into())
+        //})?;
+
+    //println!("{:#?}", echo_json);
 
     Ok(())
 }
