@@ -317,7 +317,8 @@ fn sending_push_notifications(
 
     let conn: &PgConnection = &pool.get().unwrap();
 
-    let targets: Vec<_> = contacts
+    /*
+    let current_user: Vec<_> = contacts
         .filter(from_id.eq(user.id))
         .load::<Contact>(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
@@ -328,8 +329,17 @@ fn sending_push_notifications(
         .into_iter()
         .map(|w| w.target_tele_num)
         .collect();
+        */
 
-    let user_contacts: Vec<_> = users
+    let mut my_contacts = Contact::belonging_to(user)
+        .load::<Contact>(conn)
+        .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))?;
+
+    my_contacts.sort_by(|a, b| a.target_tele_num.partial_cmp(&b.target_tele_num).unwrap());
+
+    let targets : Vec<_> = my_contacts.iter().map(|w| &w.target_tele_num).collect();
+
+    let mut user_contacts: Vec<_> = users
         .filter(tele_num.eq_any(targets))
         .load::<User>(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
@@ -340,28 +350,29 @@ fn sending_push_notifications(
         .into_iter()
         .filter(|w| w.firebase_token.is_some())
         //.map(|w| w.firebase_token.unwrap())
-        .take(crate::LIMIT_PUSH_NOTIFICATION_CONTACTS)
+        //.take(crate::LIMIT_PUSH_NOTIFICATION_CONTACTS)
         .collect();
 
-    dbg!(&user_contacts);
+    user_contacts.sort_by(|a, b| a.tele_num.partial_cmp(&b.tele_num).unwrap());
+
+   // dbg!(&user_contacts);
 
     let api_token = std::env::var("FCM_TOKEN").expect("No FCM_TOKEN configured");
 
     let client = Client::new();
 
-    let work = futures::stream::iter_ok(user_contacts)
-        .map(move |contact| {
+    let work = futures::stream::iter_ok(user_contacts.into_iter().zip(my_contacts).take(crate::LIMIT_PUSH_NOTIFICATION_CONTACTS))
+        .map(move |(user, contact)| {
             client
                 .post("https://fcm.googleapis.com/fcm/send")
                 .header(CONTENT_TYPE, "application/json")
                 .header(AUTHORIZATION, format!("key={}", api_token))
                 .json(&json!({
                     "notification": {
-                        //"title": format!("{} ist motiviert", contact.name),
-                        "title": "jemand ist motiviert",
+                        "title": format!("{} ist motiviert", contact.name),
                         "body": ""
                     },
-                    "registration_ids": [contact.firebase_token]
+                    "registration_ids": [user.firebase_token]
                 }))
                 .send()
         })
@@ -378,8 +389,6 @@ fn sending_push_notifications(
     tokio::run(work);
 
     Ok(())
-
-    //Ok(work)
 }
 
 fn get_query(myid: Uuid, pool: &web::Data<Pool>) -> Result<Vec<User>, crate::errors::ServiceError> {
