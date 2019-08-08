@@ -364,7 +364,7 @@ fn sending_push_notifications(
             )
         })?;
 
-    std::io::copy(&mut echo_json, &mut std::io::stdout())?;
+    std::io::copy(&mut echo_json, &mut std::io::stdout()).unwrap();
         //.json()
         //.map_err(|err| {
             //eprintln!("{}", err);
