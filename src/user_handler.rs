@@ -345,7 +345,7 @@ fn sending_push_notifications(
 
     let api_token = std::env::var("FCM_TOKEN").expect("No FCM_TOKEN configured");
 
-    let echo_json= reqwest::Client::new()
+    let mut echo_json= reqwest::Client::new()
         .post("https://fcm.googleapis.com/fcm/send")
         .header(CONTENT_TYPE, "application/json")
         .header(AUTHORIZATION, format!("key={}", api_token))
