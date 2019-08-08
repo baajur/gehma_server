@@ -34,15 +34,13 @@ fn main() {
     let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL expected");
     let port = std::env::var("PORT").unwrap_or("3000".to_string());
     let debug = std::env::var("DEBUG").unwrap_or("1".to_string());
-    let key = std::env::var("PRIVATE_KEY_PATH").unwrap_or("key.pem".to_string());
-    let cert = std::env::var("CERT_PATH").unwrap_or("cert.pem".to_string());
     let addr = std::env::var("BINDING_ADDR").unwrap_or("localhost".to_string());
 
     let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
     builder
-        .set_private_key_file(key, SslFiletype::PEM)
+        .set_private_key_file("key.pem", SslFiletype::PEM)
         .unwrap();
-    builder.set_certificate_chain_file(cert).unwrap();
+    builder.set_certificate_chain_file("cert.pem").unwrap();
 
     let manager = ConnectionManager::<PgConnection>::new(database_url);
     let pool: models::Pool = r2d2::Pool::builder()

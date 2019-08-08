@@ -28,7 +28,3 @@ uuid = { version = "0.7", features = ["serde", "v4"] }
 phonenumber = "0.1"
 openssl = { version="0.10" }
 reqwest = "0.9"
-
-
-[build]
-target="x86_64-unknown-linux-musl"
