@@ -10,7 +10,9 @@ edition = "2018"
 actix-identity = "0.1.0"
 actix-cors = "0.1.0"
 actix-files = "0.1.0"
+actix-web-actors = "1.0.0"
 actix-web = { version="1.0.3", features=["ssl"] }
+actix = "0.8"
 chrono = { version = "0.4.6", features = ["serde"] }
 derive_more = "0.15.0"
 diesel = { version = "1.4.*", features = ["postgres","uuidv07", "r2d2", "chrono"] }

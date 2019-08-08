@@ -19,6 +19,15 @@ table! {
 }
 
 table! {
+    contacts (id) {
+        id -> Int4,
+        from_id -> Uuid,
+        target_tele_num -> Varchar,
+        created_at -> Timestamp,
+    }
+}
+
+table! {
     usage_statistics (id) {
         id -> Int4,
         tele_num -> Varchar,
@@ -37,12 +46,14 @@ table! {
         is_autofahrer -> Bool,
         changed_at -> Timestamp,
         client_version -> Varchar,
+        firebase_token -> Nullable<Varchar>,
     }
 }
 
 allow_tables_to_appear_in_same_query!(
     analytics,
     blacklist,
+    contacts,
     usage_statistics,
     users,
 );

@@ -3,13 +3,13 @@ use diesel::{prelude::*, PgConnection};
 use futures::Future;
 use uuid::Uuid;
 
-use crate::errors::{ServiceError};
+use crate::errors::ServiceError;
 use crate::models::{Blacklist, Pool, User};
 
-const MAX_ALLOWED_CONTACTS : usize = 10000;
-const MIN_TELE_NUM_LENGTH : usize = 3;
+const MAX_ALLOWED_CONTACTS: usize = 10000;
+const MIN_TELE_NUM_LENGTH: usize = 3;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResponseUser {
     pub calculated_tele: String,
     pub old: String,
@@ -25,11 +25,10 @@ pub struct Payload {
 #[derive(Debug, Deserialize)]
 pub struct PayloadUser {
     pub name: String,
-    pub tele_num: String
+    pub tele_num: String,
 }
 
-
-pub fn get(
+pub fn exists(
     info: web::Path<(String, String)>,
     mut payload: web::Json<Payload>,
     pool: web::Data<Pool>,
@@ -42,10 +41,12 @@ pub fn get(
     })
     .then(|res| match res {
         Ok(users) => {
-            let mut res = HttpResponse::Ok().content_type("application/json").json(users);
+            let mut res = HttpResponse::Ok()
+                .content_type("application/json")
+                .json(users);
             crate::utils::set_response_headers(&mut res);
             Ok(res)
-        },
+        }
         Err(err) => match err {
             BlockingError::Error(service_error) => Err(service_error),
             BlockingError::Canceled => Err(ServiceError::InternalServerError),
@@ -72,8 +73,9 @@ fn get_query(
     pool: web::Data<Pool>,
 ) -> Result<Vec<ResponseUser>, crate::errors::ServiceError> {
     use crate::models::PhoneNumber;
+    use crate::models::Contact;
     use crate::schema::blacklist::dsl::{blacklist, blocked, blocker};
-    use crate::schema::users::dsl::{id, tele_num, users, changed_at};
+    use crate::schema::users::dsl::{changed_at, id, tele_num, users};
 
     let conn: &PgConnection = &pool.get().unwrap();
 
@@ -158,13 +160,31 @@ fn get_query(
 
                                             //TODO to cross self blocked users cross here the
                                             //people
-                                        },
+                                        }
                                         None => {}
                                     });
 
-                                Ok(numbers.into_iter().filter(|w| w.user.is_some()).collect())
-                                //Err(ServiceError::BadRequest("Invalid Invitation".into()))
+                                Ok(numbers
+                                    .into_iter()
+                                    .filter(|w| w.user.is_some())
+                                    .collect::<Vec<ResponseUser>>())
                             })
+                        .and_then(|numbers| {
+                            use crate::schema::contacts::dsl::{contacts};
+                            
+                            let user_contacts : Vec<_> = numbers.iter().map(|n| Contact::my_from(&user, n.calculated_tele.clone())).collect();
+
+                            let _ = diesel::insert_into(contacts)
+                                .values(user_contacts)
+                                .on_conflict_do_nothing()
+                                .execute(conn)
+                                .map_err(|_db_err| {
+                                    eprintln!("{}", _db_err);
+                                    ServiceError::BadRequest("Could set contacts".into())
+                                })?;
+
+                            Ok(numbers)
+                        })
                     })
             } else {
                 Err(ServiceError::BadRequest("No user found".into()))

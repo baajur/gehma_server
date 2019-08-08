@@ -17,11 +17,13 @@ mod blacklist_handler;
 mod errors;
 mod exists_handler;
 mod models;
+//mod push_notifications;
 mod schema;
 mod user_handler;
 mod utils;
+mod push_notification_handler;
 
-pub const ALLOWED_CLIENT_VERSIONS : &'static [&'static str] = &["0.1"];
+pub const ALLOWED_CLIENT_VERSIONS: &'static [&'static str] = &["0.1"];
 
 fn main() {
     dotenv::dotenv().ok();
@@ -69,6 +71,12 @@ fn main() {
             .service(
                 web::scope("/api")
                     .service(web::resource("/user").route(web::post().to_async(user_handler::add)))
+                    .service(web::resource("/user/{uid}/token").route(web::put().to_async(push_notification_handler::update_token)))
+                    /*.service(
+                        web::resource("/ws/{uid}")
+                            .route(web::get().to_async(push_notifications::ws_route)),
+                    )
+                    */
                     .service(
                         web::resource("/user/{uid}/blacklist")
                             .route(web::get().to_async(blacklist_handler::get_all))
@@ -78,13 +86,11 @@ fn main() {
                     .service(
                         web::resource("/user/{uid}")
                             .route(web::get().to_async(user_handler::get))
-                            //.route(web::post().to_async(user_handler::add))
                             .route(web::put().to_async(user_handler::update)),
                     )
                     .service(
                         web::resource("/exists/{uid}/{country_code}")
-                            //.route(web::post().guard(guard::Header("Content-Type", "application/json")).to_async(exists_handler::get)),
-                            .route(web::post().to_async(exists_handler::get)),
+                            .route(web::post().to_async(exists_handler::exists)),
                     ),
             )
     })
@@ -96,8 +102,6 @@ fn main() {
         _ => panic!("debug state not defined"),
     };
 
-    //.bind_ssl("0.0.0.0:443", builder)
-    //.bind("0.0.0.0:3000")
     listener.unwrap().run().unwrap()
 }
 
@@ -115,6 +119,5 @@ fn load_file(req: actix_web::HttpRequest) -> actix_web::Result<NamedFile> {
     let path: PathBuf = req.match_info().query("filename").parse().unwrap();
     let mut dir = PathBuf::from("static");
     dir.push(path);
-    println!("{}", dir.to_str().unwrap());
     Ok(NamedFile::open(dir)?)
 }

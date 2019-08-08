@@ -1,0 +1,8 @@
+CREATE TABLE contacts(
+    id SERIAL NOt NULL PRIMARY KEY,
+    from_id UUID NOT NULL,
+    target_tele_num VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP NOT NULL,
+    FOREIGN KEY (from_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (target_tele_num) REFERENCES users(tele_num) ON DELETE CASCADE ON UPDATE CASCADE
+);

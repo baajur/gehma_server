@@ -59,7 +59,7 @@ pub struct UpdateUser {
     pub description: String,
     pub led: String,
     pub is_autofahrer: Option<String>,
-    pub client_version: Option<String>,
+    pub client_version: String,
 }
 
 pub fn update(
@@ -89,7 +89,10 @@ fn create_entry(
     dbg!(&body);
 
     if !crate::ALLOWED_CLIENT_VERSIONS.contains(&body.client_version.as_str()) {
-            return Err(ServiceError::BadRequest(format!("Version mismatch. The supported versions are {:?}", crate::ALLOWED_CLIENT_VERSIONS)));
+        return Err(ServiceError::BadRequest(format!(
+            "Version mismatch. The supported versions are {:?}",
+            crate::ALLOWED_CLIENT_VERSIONS
+        )));
     }
 
     let tele = &body.tele_num;
@@ -106,15 +109,13 @@ fn create_entry(
     }?;
 
     if user.client_version != body.client_version {
-        println!("HERHEHREHREHEHER");
-
         update_user(
             &user.id.to_string(),
             &UpdateUser {
                 description: user.description.clone(),
                 led: format!("{}", user.led),
                 is_autofahrer: Some(format!("{}", user.is_autofahrer)),
-                client_version: Some(body.client_version.clone()),
+                client_version: body.client_version.clone(),
             },
             &pool,
         )?;
@@ -176,6 +177,7 @@ fn update_user(
     let parsed = Uuid::parse_str(uid)?;
     let users = update_user_query(parsed, user, &pool)?;
 
+    dbg!(&user);
     dbg!(&users);
 
     let res = users
@@ -253,7 +255,9 @@ fn update_user_query(
     user: &UpdateUser,
     pool: &web::Data<Pool>,
 ) -> Result<Vec<User>, crate::errors::ServiceError> {
-    use crate::schema::users::dsl::{changed_at, description, id, is_autofahrer, led, users, client_version};
+    use crate::schema::users::dsl::{
+        changed_at, client_version, description, id, is_autofahrer, led, users,
+    };
 
     let conn: &PgConnection = &pool.get().unwrap();
 
@@ -278,7 +282,7 @@ fn update_user_query(
             led.eq(my_led),
             is_autofahrer.eq(my_is_autofahrer),
             changed_at.eq(chrono::Local::now().naive_local()),
-            client_version.eq(user.client_version.clone().unwrap_or("".to_string()))
+            client_version.eq(user.client_version.clone()),
         ))
         .execute(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Updating state failed".into()))?;
