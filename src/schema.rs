@@ -24,6 +24,7 @@ table! {
         from_id -> Uuid,
         target_tele_num -> Varchar,
         created_at -> Timestamp,
+        name -> Varchar,
     }
 }
 

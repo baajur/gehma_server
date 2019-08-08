@@ -72,8 +72,8 @@ fn get_query(
     country_code: &String,
     pool: web::Data<Pool>,
 ) -> Result<Vec<ResponseUser>, crate::errors::ServiceError> {
-    use crate::models::PhoneNumber;
     use crate::models::Contact;
+    use crate::models::PhoneNumber;
     use crate::schema::blacklist::dsl::{blacklist, blocked, blocker};
     use crate::schema::users::dsl::{changed_at, id, tele_num, users};
 
@@ -169,34 +169,42 @@ fn get_query(
                                     .filter(|w| w.user.is_some())
                                     .collect::<Vec<ResponseUser>>())
                             })
-                        .and_then(|numbers| {
-                            use crate::schema::contacts::dsl::{contacts, from_id};
-                            
-                            let user_contacts : Vec<_> = numbers.iter().map(|n| Contact::my_from(&user, n.calculated_tele.clone())).collect();
+                            .and_then(|numbers| {
+                                use crate::schema::contacts::dsl::{contacts, from_id};
 
-                            let target = contacts.filter(from_id.eq(user.id));
+                                let user_contacts: Vec<_> = numbers
+                                    .iter()
+                                    .map(|n| {
+                                        Contact::my_from(
+                                            n.name.clone(),
+                                            &user,
+                                            n.calculated_tele.clone(),
+                                        )
+                                    })
+                                    .collect();
 
-                            //We need to delete all numbers, because
-                            //user shall not receive push notifications
-                            //for contacts he deleted
-                            let _ = diesel::delete(target)
-                                .execute(conn)
-                                .map_err(|_db_err| {
-                                    eprintln!("{}", _db_err);
-                                    ServiceError::BadRequest("Could reset contacts".into())
-                                })?;
+                                let target = contacts.filter(from_id.eq(user.id));
 
-                            let _ = diesel::insert_into(contacts)
-                                .values(user_contacts)
-                                .on_conflict_do_nothing()
-                                .execute(conn)
-                                .map_err(|_db_err| {
-                                    eprintln!("{}", _db_err);
-                                    ServiceError::BadRequest("Could set contacts".into())
-                                })?;
+                                //We need to delete all numbers, because
+                                //user shall not receive push notifications
+                                //for contacts he deleted
+                                let _ =
+                                    diesel::delete(target).execute(conn).map_err(|_db_err| {
+                                        eprintln!("{}", _db_err);
+                                        ServiceError::BadRequest("Could reset contacts".into())
+                                    })?;
 
-                            Ok(numbers)
-                        })
+                                let _ = diesel::insert_into(contacts)
+                                    .values(user_contacts)
+                                    .on_conflict_do_nothing()
+                                    .execute(conn)
+                                    .map_err(|_db_err| {
+                                        eprintln!("{}", _db_err);
+                                        ServiceError::BadRequest("Could set contacts".into())
+                                    })?;
+
+                                Ok(numbers)
+                            })
                     })
             } else {
                 Err(ServiceError::BadRequest("No user found".into()))

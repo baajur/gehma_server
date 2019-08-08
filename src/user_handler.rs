@@ -357,7 +357,8 @@ fn sending_push_notifications(
                 .header(AUTHORIZATION, format!("key={}", api_token))
                 .json(&json!({
                     "notification": {
-                        "title": "Jemand ist motiviert",
+                        //"title": format!("{} ist motiviert", contact.name),
+                        "title": "jemand ist motiviert",
                         "body": ""
                     },
                     "registration_ids": [contact.firebase_token]

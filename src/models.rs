@@ -162,13 +162,15 @@ impl PushNotificationListener {
 }
 */
 
-#[derive(Debug, Serialize, Deserialize, Queryable, Clone, Identifiable)]
+#[derive(Debug, Serialize, Deserialize, Queryable, Clone, Identifiable, Associations)]
+#[belongs_to(User, foreign_key="from_id")]
 #[table_name = "contacts"]
 pub struct Contact {
     pub id: i32,
     pub from_id: uuid::Uuid,
     pub target_tele_num: String,
     pub created_at: chrono::NaiveDateTime,
+    pub name: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Insertable , Clone)]
@@ -177,14 +179,16 @@ pub struct ContactInsert {
     pub from_id: uuid::Uuid,
     pub target_tele_num: String,
     pub created_at: chrono::NaiveDateTime,
+    pub name: String,
 }
 
 impl Contact {
-    pub fn my_from(user: &User, target_tele_num: String) -> ContactInsert {
+    pub fn my_from(name: String, user: &User, target_tele_num: String) -> ContactInsert {
         ContactInsert {
             from_id: user.id.clone(),
             target_tele_num: target_tele_num,
             created_at: chrono::Local::now().naive_local(),
+            name: name,
         }
     }
 }
