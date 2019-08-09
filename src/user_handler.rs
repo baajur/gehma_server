@@ -309,7 +309,7 @@ fn sending_push_notifications(
 ) -> Result<(), crate::errors::ServiceError> {
     use crate::models::Contact;
     use crate::schema::contacts::dsl::{contacts, from_id, target_tele_num};
-    use crate::schema::users::dsl::{tele_num, users};
+    use crate::schema::users::dsl::{id, tele_num, users};
     use futures::stream::Stream;
     use reqwest::header::{AUTHORIZATION, CONTENT_TYPE};
     use reqwest::r#async::{Client, Response};
@@ -342,12 +342,12 @@ fn sending_push_notifications(
         .load::<Contact>(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))?;
 
-    my_contacts.sort_by(|a, b| a.target_tele_num.partial_cmp(&b.target_tele_num).unwrap());
+    my_contacts.sort_by(|a, b| a.from_id.partial_cmp(&b.from_id).unwrap());
 
-    let targets: Vec<_> = my_contacts.iter().map(|w| &w.target_tele_num).collect();
+    let targets: Vec<_> = my_contacts.iter().map(|w| &w.from_id).collect();
 
     let mut user_contacts: Vec<_> = users
-        .filter(tele_num.eq_any(targets))
+        .filter(id.eq_any(targets))
         .load::<User>(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
         .and_then(|result| {
@@ -360,13 +360,24 @@ fn sending_push_notifications(
         //.take(crate::LIMIT_PUSH_NOTIFICATION_CONTACTS)
         .collect();
 
-    user_contacts.sort_by(|a, b| a.tele_num.partial_cmp(&b.tele_num).unwrap());
+    user_contacts.sort_by(|a, b| a.id.partial_cmp(&b.id).unwrap());
 
-    dbg!(&user_contacts);
+    println!("{:#?}", user_contacts);
+    println!("{:#?}", my_contacts);
 
     let api_token = std::env::var("FCM_TOKEN").expect("No FCM_TOKEN configured");
 
     let client = Client::new();
+
+    let test = user_contacts
+            .clone()
+            .into_iter()
+            .zip(my_contacts.clone())
+            .take(crate::LIMIT_PUSH_NOTIFICATION_CONTACTS);
+
+    for (user, contact) in test {
+        println!("{} ist motiviert zu {}", contact.name, user.tele_num);
+    }
 
     let work = futures::stream::iter_ok(
         user_contacts
