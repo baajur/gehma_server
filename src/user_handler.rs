@@ -308,7 +308,7 @@ fn sending_push_notifications(
     pool: &web::Data<Pool>,
 ) -> Result<(), crate::errors::ServiceError> {
     use crate::models::Contact;
-    use crate::schema::contacts::dsl::{contacts, from_id};
+    use crate::schema::contacts::dsl::{contacts, from_id, target_tele_num};
     use crate::schema::users::dsl::{tele_num, users};
     use futures::stream::Stream;
     use reqwest::header::{AUTHORIZATION, CONTENT_TYPE};
@@ -331,13 +331,20 @@ fn sending_push_notifications(
         .collect();
         */
 
+    /*
     let mut my_contacts = Contact::belonging_to(user)
+        .load::<Contact>(conn)
+        .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))?;
+        */
+
+    let mut my_contacts = contacts
+        .filter(target_tele_num.eq(&user.tele_num))
         .load::<Contact>(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))?;
 
     my_contacts.sort_by(|a, b| a.target_tele_num.partial_cmp(&b.target_tele_num).unwrap());
 
-    let targets : Vec<_> = my_contacts.iter().map(|w| &w.target_tele_num).collect();
+    let targets: Vec<_> = my_contacts.iter().map(|w| &w.target_tele_num).collect();
 
     let mut user_contacts: Vec<_> = users
         .filter(tele_num.eq_any(targets))
@@ -355,36 +362,39 @@ fn sending_push_notifications(
 
     user_contacts.sort_by(|a, b| a.tele_num.partial_cmp(&b.tele_num).unwrap());
 
-   // dbg!(&user_contacts);
+    dbg!(&user_contacts);
 
     let api_token = std::env::var("FCM_TOKEN").expect("No FCM_TOKEN configured");
 
     let client = Client::new();
 
-    let work = futures::stream::iter_ok(user_contacts.into_iter().zip(my_contacts).take(crate::LIMIT_PUSH_NOTIFICATION_CONTACTS))
-        .map(move |(user, contact)| {
-            client
-                .post("https://fcm.googleapis.com/fcm/send")
-                .header(CONTENT_TYPE, "application/json")
-                .header(AUTHORIZATION, format!("key={}", api_token))
-                .json(&json!({
-                    "notification": {
-                        "title": format!("{} ist motiviert", contact.name),
-                        "body": ""
-                    },
-                    "registration_ids": [user.firebase_token]
-                }))
-                .send()
-        })
-        .buffer_unordered(10)
-        .and_then(|mut res| {
-            println!("Response: {}", res.status());
-            futures::future::ok(res.json::<serde_json::Value>())
-        })
-        .for_each(|_| {
-            Ok(())
-        })
-        .map_err(|e| eprintln!("{}", e));
+    let work = futures::stream::iter_ok(
+        user_contacts
+            .into_iter()
+            .zip(my_contacts)
+            .take(crate::LIMIT_PUSH_NOTIFICATION_CONTACTS),
+    )
+    .map(move |(user, contact)| {
+        client
+            .post("https://fcm.googleapis.com/fcm/send")
+            .header(CONTENT_TYPE, "application/json")
+            .header(AUTHORIZATION, format!("key={}", api_token))
+            .json(&json!({
+                "notification": {
+                    "title": format!("{} ist motiviert", contact.name),
+                    "body": ""
+                },
+                "registration_ids": [user.firebase_token]
+            }))
+            .send()
+    })
+    .buffer_unordered(10)
+    .and_then(|mut res| {
+        println!("Response: {}", res.status());
+        futures::future::ok(res.json::<serde_json::Value>())
+    })
+    .for_each(|_| Ok(()))
+    .map_err(|e| eprintln!("{}", e));
 
     tokio::run(work);
 
