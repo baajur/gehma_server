@@ -167,10 +167,10 @@ impl PushNotificationListener {
 #[table_name = "contacts"]
 pub struct Contact {
     pub id: i32,
+    pub from_id: uuid::Uuid,
     pub target_tele_num: String,
     pub created_at: chrono::NaiveDateTime,
     pub name: String,
-    pub from_id: uuid::Uuid,
     pub from_tele_num: String,
 }
 
@@ -178,10 +178,10 @@ pub struct Contact {
 #[belongs_to(User, foreign_key="from_tele_num")]
 #[table_name = "contacts"]
 pub struct ContactInsert {
+    pub from_id: uuid::Uuid,
     pub target_tele_num: String,
     pub created_at: chrono::NaiveDateTime,
     pub name: String,
-    pub from_id: uuid::Uuid,
     pub from_tele_num: String,
 }
 
