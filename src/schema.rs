@@ -21,10 +21,11 @@ table! {
 table! {
     contacts (id) {
         id -> Int4,
-        from_id -> Uuid,
         target_tele_num -> Varchar,
         created_at -> Timestamp,
         name -> Varchar,
+        from_id -> Uuid,
+        from_tele_num -> Varchar,
     }
 }
 

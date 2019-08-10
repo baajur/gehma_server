@@ -1,5 +1,5 @@
 use crate::errors::ServiceError;
-use crate::models::{Analytic, PhoneNumber, Pool, UsageStatisticEntry, User};
+use crate::models::{Analytic, PhoneNumber, Pool, UsageStatisticEntry, User, Blacklist};
 use actix_web::{error::BlockingError, web, HttpResponse};
 use diesel::{prelude::*, PgConnection};
 use futures::Future;
@@ -308,39 +308,39 @@ fn sending_push_notifications(
     pool: &web::Data<Pool>,
 ) -> Result<(), crate::errors::ServiceError> {
     use crate::models::Contact;
+    use crate::schema::blacklist::dsl::{blacklist, blocker, blocked};
     use crate::schema::contacts::dsl::{contacts, from_id, target_tele_num};
     use crate::schema::users::dsl::{id, tele_num, users};
     use futures::stream::Stream;
     use reqwest::header::{AUTHORIZATION, CONTENT_TYPE};
     use reqwest::r#async::{Client, Response};
-    use std::io::Write;
 
     let conn: &PgConnection = &pool.get().unwrap();
-
-    /*
-    let current_user: Vec<_> = contacts
-        .filter(from_id.eq(user.id))
-        .load::<Contact>(conn)
-        .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
-        .and_then(|result| {
-            Ok(result)
-            //Err(ServiceError::BadRequest("Invalid Invitation".into()))
-        })?
-        .into_iter()
-        .map(|w| w.target_tele_num)
-        .collect();
-        */
-
-    /*
-    let mut my_contacts = Contact::belonging_to(user)
-        .load::<Contact>(conn)
-        .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))?;
-        */
 
     let mut my_contacts = contacts
         .filter(target_tele_num.eq(&user.tele_num))
         .load::<Contact>(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))?;
+
+    let my_filtered_contacts = blacklist
+        .filter(blocker.eq(&user.tele_num).and(blocked.eq(&user.tele_num)))
+        .load::<Blacklist>(conn)
+        .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))?;
+
+    for ignoring in my_filtered_contacts.iter() {
+        if ignoring.blocker == user.tele_num {
+            let index = my_contacts.iter().position(|x| *x.target_tele_num == ignoring.blocker);
+            if let Some(index) = index {
+                my_contacts.remove(index);
+            }
+        }
+        else if ignoring.blocked == user.tele_num {
+            let index = my_contacts.iter().position(|x| *x.target_tele_num == user.tele_num);
+            if let Some(index) = index {
+                my_contacts.remove(index);
+            }
+        }
+    }
 
     my_contacts.sort_by(|a, b| a.from_id.partial_cmp(&b.from_id).unwrap());
 
@@ -376,6 +376,7 @@ fn sending_push_notifications(
             .take(crate::LIMIT_PUSH_NOTIFICATION_CONTACTS);
 
     for (user, contact) in test {
+        assert_eq!(user.id, contact.from_id);
         println!("{} ist motiviert zu {}", contact.name, user.tele_num);
     }
 
