@@ -317,34 +317,26 @@ fn sending_push_notifications(
 
     let conn: &PgConnection = &pool.get().unwrap();
 
-    let mut my_contacts = contacts
+    let mut contacts_who_saved_user = contacts
         .filter(target_tele_num.eq(&user.tele_num))
         .load::<Contact>(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))?;
 
     let my_filtered_contacts = blacklist
-        .filter(blocker.eq(&user.tele_num).and(blocked.eq(&user.tele_num)))
+        .filter(blocker.eq(&user.tele_num).or(blocked.eq(&user.tele_num)))
         .load::<Blacklist>(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))?;
 
-    for ignoring in my_filtered_contacts.iter() {
-        if ignoring.blocker == user.tele_num {
-            let index = my_contacts.iter().position(|x| *x.target_tele_num == ignoring.blocker);
-            if let Some(index) = index {
-                my_contacts.remove(index);
-            }
-        }
-        else if ignoring.blocked == user.tele_num {
-            let index = my_contacts.iter().position(|x| *x.target_tele_num == user.tele_num);
-            if let Some(index) = index {
-                my_contacts.remove(index);
-            }
-        }
+    dbg!(&my_filtered_contacts);
+
+    for i in my_filtered_contacts.iter() {
+       contacts_who_saved_user.retain(|c| (c.target_tele_num != i.blocker && c.from_tele_num != i.blocked) &&
+                       (c.target_tele_num != i.blocked && c.from_tele_num != i.blocker));
     }
 
-    my_contacts.sort_by(|a, b| a.from_id.partial_cmp(&b.from_id).unwrap());
+    contacts_who_saved_user.sort_by(|a, b| a.from_id.partial_cmp(&b.from_id).unwrap());
 
-    let targets: Vec<_> = my_contacts.iter().map(|w| &w.from_id).collect();
+    let targets: Vec<_> = contacts_who_saved_user.iter().map(|w| &w.from_id).collect();
 
     let mut user_contacts: Vec<_> = users
         .filter(id.eq_any(targets))
@@ -363,7 +355,7 @@ fn sending_push_notifications(
     user_contacts.sort_by(|a, b| a.id.partial_cmp(&b.id).unwrap());
 
     println!("{:#?}", user_contacts);
-    println!("{:#?}", my_contacts);
+    println!("{:#?}", contacts_who_saved_user);
 
     let api_token = std::env::var("FCM_TOKEN").expect("No FCM_TOKEN configured");
 
@@ -372,8 +364,12 @@ fn sending_push_notifications(
     let test = user_contacts
             .clone()
             .into_iter()
-            .zip(my_contacts.clone())
+            .zip(contacts_who_saved_user.clone())
             .take(crate::LIMIT_PUSH_NOTIFICATION_CONTACTS);
+
+    if test.len() == 0 {
+        println!("Nix zu senden");
+    }
 
     for (user, contact) in test {
         assert_eq!(user.id, contact.from_id);
@@ -383,7 +379,7 @@ fn sending_push_notifications(
     let work = futures::stream::iter_ok(
         user_contacts
             .into_iter()
-            .zip(my_contacts)
+            .zip(contacts_who_saved_user)
             .take(crate::LIMIT_PUSH_NOTIFICATION_CONTACTS),
     )
     .map(move |(user, contact)| {
