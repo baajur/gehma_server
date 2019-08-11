@@ -18,10 +18,10 @@ mod errors;
 mod exists_handler;
 mod models;
 //mod push_notifications;
+mod push_notification_handler;
 mod schema;
 mod user_handler;
 mod utils;
-mod push_notification_handler;
 
 pub const ALLOWED_CLIENT_VERSIONS: &'static [&'static str] = &["0.2"];
 pub const LIMIT_PUSH_NOTIFICATION_CONTACTS: usize = 128;
@@ -67,12 +67,16 @@ fn main() {
             .service(web::resource("/").route(web::get().to(load_index_file)))
             .service(
                 web::scope("/static")
-                    .service(web::resource("/{filename:.*}").route(web::get().to(load_file))),
+                    .service(actix_files::Files::new("/browse", "static/browse").show_files_listing().use_last_modified(true))
+                    .service(web::resource("/{filename:.*}").route(web::get().to(load_file)))
             )
             .service(
                 web::scope("/api")
                     .service(web::resource("/user").route(web::post().to_async(user_handler::add)))
-                    .service(web::resource("/user/{uid}/token").route(web::put().to_async(push_notification_handler::update_token)))
+                    .service(
+                        web::resource("/user/{uid}/token")
+                            .route(web::put().to_async(push_notification_handler::update_token)),
+                    )
                     /*.service(
                         web::resource("/ws/{uid}")
                             .route(web::get().to_async(push_notifications::ws_route)),
