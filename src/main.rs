@@ -14,17 +14,15 @@ use std::path::PathBuf;
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 
 mod blacklist_handler;
-mod errors;
 mod exists_handler;
-mod models;
-//mod push_notifications;
-mod push_notification_handler;
-mod schema;
-mod user_handler;
 mod utils;
+mod push_notification_handler;
+mod user_handler;
 
 pub const ALLOWED_CLIENT_VERSIONS: &'static [&'static str] = &["0.2"];
 pub const LIMIT_PUSH_NOTIFICATION_CONTACTS: usize = 128;
+
+pub type Pool = r2d2::Pool<ConnectionManager<PgConnection>>;
 
 fn main() {
     dotenv::dotenv().ok();
@@ -43,7 +41,7 @@ fn main() {
     builder.set_certificate_chain_file("cert.pem").unwrap();
 
     let manager = ConnectionManager::<PgConnection>::new(database_url);
-    let pool: models::Pool = r2d2::Pool::builder()
+    let pool: Pool = r2d2::Pool::builder()
         .build(manager)
         .expect("Failed to create a pool");
 

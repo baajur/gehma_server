@@ -3,8 +3,9 @@ use diesel::{prelude::*, PgConnection};
 use futures::Future;
 use uuid::Uuid;
 
-use crate::errors::ServiceError;
-use crate::models::{Analytic, PhoneNumber, Pool, UsageStatisticEntry, User};
+use super::Pool;
+use ::core::errors::ServiceError;
+use ::core::models::{Analytic, PhoneNumber, UsageStatisticEntry, User};
 
 #[derive(Debug, Deserialize)]
 pub struct Payload {
@@ -49,7 +50,7 @@ fn update_token_query(
     token: String,
     pool: &web::Data<Pool>,
 ) -> Result<(), ServiceError> {
-    use crate::schema::users::dsl::*;
+    use ::core::schema::users::dsl::*;
     let conn: &PgConnection = &pool.get().unwrap();
 
     let target = users.filter(id.eq(uid));

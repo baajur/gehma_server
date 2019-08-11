@@ -3,8 +3,10 @@ use diesel::{prelude::*, PgConnection};
 use futures::Future;
 use uuid::Uuid;
 
-use crate::errors::ServiceError;
-use crate::models::{Blacklist, PhoneNumber, Pool, User};
+use ::core::errors::ServiceError;
+use ::core::models::{Blacklist, PhoneNumber, User};
+
+use super::Pool;
 
 #[derive(Debug, Deserialize)]
 pub struct GetAllData {
@@ -86,7 +88,7 @@ pub fn delete(
 fn get_entry(
     blocker: &String,
     pool: web::Data<Pool>,
-) -> Result<Vec<Blacklist>, crate::errors::ServiceError> {
+) -> Result<Vec<Blacklist>, ServiceError> {
     let blocker = Uuid::parse_str(blocker)?;
 
     let bl = get_query(blocker, pool)?;
@@ -99,9 +101,9 @@ fn get_entry(
 fn get_query(
     sblocker: Uuid,
     pool: web::Data<Pool>,
-) -> Result<Vec<Blacklist>, crate::errors::ServiceError> {
-    use crate::schema::blacklist::dsl::{blacklist, blocker};
-    use crate::schema::users::dsl::{id, users};
+) -> Result<Vec<Blacklist>, ServiceError> {
+    use ::core::schema::blacklist::dsl::{blacklist, blocker};
+    use ::core::schema::users::dsl::{id, users};
 
     let conn: &PgConnection = &pool.get().unwrap();
 
@@ -123,8 +125,8 @@ fn create_entry(
     blocker: &String,
     data: &PostData,
     pool: web::Data<Pool>,
-) -> Result<Blacklist, crate::errors::ServiceError> {
-    use crate::schema::users::dsl::{id, users};
+) -> Result<Blacklist, ServiceError> {
+    use ::core::schema::users::dsl::{id, users};
 
     let blocker2 = Uuid::parse_str(blocker)?;
     let blocked = PhoneNumber::my_from(&data.blocked, &data.country_code)?;
@@ -157,8 +159,8 @@ fn create_query(
     blocker: &PhoneNumber,
     blocked: &PhoneNumber,
     pool: web::Data<Pool>,
-) -> Result<Blacklist, crate::errors::ServiceError> {
-    use crate::schema::blacklist::dsl::blacklist;
+) -> Result<Blacklist, ServiceError> {
+    use ::core::schema::blacklist::dsl::blacklist;
 
     let conn: &PgConnection = &pool.get().unwrap();
     let new_inv: Blacklist = Blacklist::my_from(blocker, blocked);
@@ -177,8 +179,8 @@ fn delete_entry(
     blocker: &String,
     data: &PostData,
     pool: web::Data<Pool>,
-) -> Result<(), crate::errors::ServiceError> {
-    use crate::schema::users::dsl::{id, users};
+) -> Result<(), ServiceError> {
+    use ::core::schema::users::dsl::{id, users};
 
     let blocker2 = Uuid::parse_str(blocker)?;
     let blocked = PhoneNumber::my_from(&data.blocked, &data.country_code)?;
@@ -206,8 +208,8 @@ fn delete_query(
     sblocker: &PhoneNumber,
     sblocked: &PhoneNumber,
     pool: web::Data<Pool>,
-) -> Result<(), crate::errors::ServiceError> {
-    use crate::schema::blacklist::dsl::{blacklist, blocked, blocker};
+) -> Result<(), ServiceError> {
+    use ::core::schema::blacklist::dsl::{blacklist, blocked, blocker};
     let conn: &PgConnection = &pool.get().unwrap();
 
     let target = blacklist

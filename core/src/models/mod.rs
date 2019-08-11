@@ -3,7 +3,6 @@ use crate::errors::InternalError;
 use crate::utils::phonenumber_to_international;
 use diesel::{r2d2::ConnectionManager, PgConnection};
 
-pub type Pool = r2d2::Pool<ConnectionManager<PgConnection>>;
 
 #[derive(Debug, Serialize, Deserialize, Queryable, Insertable, Clone, Identifiable, AsChangeset)]
 #[table_name = "users"]

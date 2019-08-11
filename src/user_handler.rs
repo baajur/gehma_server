@@ -1,5 +1,6 @@
-use crate::errors::ServiceError;
-use crate::models::{Analytic, PhoneNumber, Pool, UsageStatisticEntry, User, Blacklist};
+use super::Pool;
+use ::core::errors::ServiceError;
+use ::core::models::{Analytic, PhoneNumber, UsageStatisticEntry, User, Blacklist};
 use actix_web::{error::BlockingError, web, HttpResponse};
 use diesel::{prelude::*, PgConnection};
 use futures::Future;
@@ -86,7 +87,7 @@ pub fn update(
 fn create_entry(
     body: PostUser,
     pool: web::Data<Pool>,
-) -> Result<User, crate::errors::ServiceError> {
+) -> Result<User, ServiceError> {
     dbg!(&body);
 
     if !crate::ALLOWED_CLIENT_VERSIONS.contains(&body.client_version.as_str()) {
@@ -129,7 +130,7 @@ fn create_entry(
     Ok(user)
 }
 
-fn get_entry(uid: &String, pool: web::Data<Pool>) -> Result<User, crate::errors::ServiceError> {
+fn get_entry(uid: &String, pool: web::Data<Pool>) -> Result<User, ::core::errors::ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
     let users = get_query(parsed, &pool)?;
     dbg!(&users);
@@ -147,8 +148,8 @@ fn get_entry(uid: &String, pool: web::Data<Pool>) -> Result<User, crate::errors:
 fn get_entry_by_tel_query(
     tele: &PhoneNumber,
     pool: &web::Data<Pool>,
-) -> Result<User, crate::errors::ServiceError> {
-    use crate::schema::users::dsl::*;
+) -> Result<User, ::core::errors::ServiceError> {
+    use ::core::schema::users::dsl::*;
 
     let conn: &PgConnection = &pool.get().unwrap();
 
@@ -174,7 +175,7 @@ fn update_user(
     uid: &String,
     user: &UpdateUser,
     pool: &web::Data<Pool>,
-) -> Result<User, crate::errors::ServiceError> {
+) -> Result<User, ::core::errors::ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
     let user = update_user_query(parsed, user, &pool)?;
 
@@ -188,8 +189,8 @@ fn update_user(
 fn analytics_user(
     pool: &web::Data<Pool>,
     user: &User,
-) -> Result<Analytic, crate::errors::ServiceError> {
-    use crate::schema::analytics::dsl::analytics;
+) -> Result<Analytic, ::core::errors::ServiceError> {
+    use ::core::schema::analytics::dsl::analytics;
 
     let ana = Analytic::my_from(user);
     let conn: &PgConnection = &pool.get().unwrap();
@@ -210,8 +211,8 @@ fn create_query(
     country_code: &String,
     version: &String,
     pool: &web::Data<Pool>,
-) -> Result<User, crate::errors::ServiceError> {
-    use crate::schema::users::dsl::users;
+) -> Result<User, ServiceError> {
+    use ::core::schema::users::dsl::users;
 
     let new_inv: User = User::my_from(&tel.to_string(), country_code, version);
     let conn: &PgConnection = &pool.get().unwrap();
@@ -228,8 +229,8 @@ fn create_query(
 fn analytics_usage_statistics(
     pool: &web::Data<Pool>,
     user: &User,
-) -> Result<UsageStatisticEntry, crate::errors::ServiceError> {
-    use crate::schema::usage_statistics::dsl::usage_statistics;
+) -> Result<UsageStatisticEntry, ::core::errors::ServiceError> {
+    use ::core::schema::usage_statistics::dsl::usage_statistics;
 
     let ana = UsageStatisticEntry::my_from(user);
     let conn: &PgConnection = &pool.get().unwrap();
@@ -249,8 +250,8 @@ fn update_user_query(
     myid: Uuid,
     user: &UpdateUser,
     pool: &web::Data<Pool>,
-) -> Result<User, crate::errors::ServiceError> {
-    use crate::schema::users::dsl::{
+) -> Result<User, ::core::errors::ServiceError> {
+    use ::core::schema::users::dsl::{
         changed_at, client_version, description, id, is_autofahrer, led, users,
     };
 
@@ -306,11 +307,11 @@ fn update_user_query(
 fn sending_push_notifications(
     user: &User,
     pool: &web::Data<Pool>,
-) -> Result<(), crate::errors::ServiceError> {
-    use crate::models::Contact;
-    use crate::schema::blacklist::dsl::{blacklist, blocker, blocked};
-    use crate::schema::contacts::dsl::{contacts, from_id, target_tele_num};
-    use crate::schema::users::dsl::{id, tele_num, users};
+) -> Result<(), ServiceError> {
+    use ::core::models::Contact;
+    use ::core::schema::blacklist::dsl::{blacklist, blocker, blocked};
+    use ::core::schema::contacts::dsl::{contacts, from_id, target_tele_num};
+    use ::core::schema::users::dsl::{id, tele_num, users};
     use futures::stream::Stream;
     use reqwest::header::{AUTHORIZATION, CONTENT_TYPE};
     use reqwest::r#async::{Client, Response};
@@ -409,8 +410,8 @@ fn sending_push_notifications(
     Ok(())
 }
 
-fn get_query(myid: Uuid, pool: &web::Data<Pool>) -> Result<Vec<User>, crate::errors::ServiceError> {
-    use crate::schema::users::dsl::{id, users};
+fn get_query(myid: Uuid, pool: &web::Data<Pool>) -> Result<Vec<User>, ServiceError> {
+    use ::core::schema::users::dsl::{id, users};
 
     let conn: &PgConnection = &pool.get().unwrap();
 

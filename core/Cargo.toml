@@ -1,0 +1,17 @@
+[package]
+name = "core"
+version = "0.1.0"
+authors = ["Kevin Per <kevin.per@protonmail.com>"]
+edition = "2018"
+
+[dependencies]
+chrono = { version = "0.4.6", features = ["serde"] }
+diesel = { version = "1.4.*", features = ["postgres","uuidv07", "r2d2", "chrono"] }
+serde = "1.0"
+serde_derive = "1.0"
+serde_json = "1.0"
+uuid = { version = "0.7", features = ["serde", "v4"] }
+derive_more = "0.15.0"
+actix = "0.8"
+actix-web = { version="1.0.3", features=["ssl"] }
+phonenumber = "0.1"

@@ -3,8 +3,9 @@ use diesel::{prelude::*, PgConnection};
 use futures::Future;
 use uuid::Uuid;
 
-use crate::errors::ServiceError;
-use crate::models::{Blacklist, Pool, User};
+use ::core::errors::ServiceError;
+use ::core::models::{Blacklist, User};
+use super::Pool;
 
 const MAX_ALLOWED_CONTACTS: usize = 10000;
 const MIN_TELE_NUM_LENGTH: usize = 3;
@@ -59,7 +60,7 @@ fn get_entry(
     country_code: &String,
     phone_numbers: &mut Vec<PayloadUser>,
     pool: web::Data<Pool>,
-) -> Result<Vec<ResponseUser>, crate::errors::ServiceError> {
+) -> Result<Vec<ResponseUser>, ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
     let users = get_query(parsed, phone_numbers, country_code, pool)?;
 
@@ -71,11 +72,11 @@ fn get_query(
     phone_numbers: &mut Vec<PayloadUser>,
     country_code: &String,
     pool: web::Data<Pool>,
-) -> Result<Vec<ResponseUser>, crate::errors::ServiceError> {
-    use crate::models::Contact;
-    use crate::models::PhoneNumber;
-    use crate::schema::blacklist::dsl::{blacklist, blocked, blocker};
-    use crate::schema::users::dsl::{changed_at, id, tele_num, users};
+) -> Result<Vec<ResponseUser>, ServiceError> {
+    use ::core::models::Contact;
+    use ::core::models::PhoneNumber;
+    use ::core::schema::blacklist::dsl::{blacklist, blocked, blocker};
+    use ::core::schema::users::dsl::{changed_at, id, tele_num, users};
 
     let conn: &PgConnection = &pool.get().unwrap();
 
@@ -170,7 +171,7 @@ fn get_query(
                                     .collect::<Vec<ResponseUser>>())
                             })
                             .and_then(|numbers| {
-                                use crate::schema::contacts::dsl::{contacts, from_id};
+                                use ::core::schema::contacts::dsl::{contacts, from_id};
 
                                 let user_contacts: Vec<_> = numbers
                                     .iter()
