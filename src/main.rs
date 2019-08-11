@@ -19,6 +19,9 @@ mod utils;
 mod push_notification_handler;
 mod user_handler;
 
+#[cfg(test)]
+mod tests;
+
 pub const ALLOWED_CLIENT_VERSIONS: &'static [&'static str] = &["0.2"];
 pub const LIMIT_PUSH_NOTIFICATION_CONTACTS: usize = 128;
 
@@ -60,7 +63,7 @@ fn main() {
                     .max_age(3600),
             )
             .wrap(middleware::Logger::default())
-            .data(web::JsonConfig::default().limit(50_000))
+            .data(web::JsonConfig::default().limit(1024))
             //.data(web::JsonConfig::default())
             .service(web::resource("/").route(web::get().to(load_index_file)))
             .service(
@@ -75,11 +78,6 @@ fn main() {
                         web::resource("/user/{uid}/token")
                             .route(web::put().to_async(push_notification_handler::update_token)),
                     )
-                    /*.service(
-                        web::resource("/ws/{uid}")
-                            .route(web::get().to_async(push_notifications::ws_route)),
-                    )
-                    */
                     .service(
                         web::resource("/user/{uid}/blacklist")
                             .route(web::get().to_async(blacklist_handler::get_all))
@@ -106,10 +104,6 @@ fn main() {
     };
 
     listener.unwrap().run().unwrap()
-}
-
-fn index() -> impl Responder {
-    format!("Hello")
 }
 
 fn load_index_file(_req: actix_web::HttpRequest) -> actix_web::Result<NamedFile> {
