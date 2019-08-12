@@ -4,15 +4,23 @@
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
   <meta http-equiv="Content-Style-Type" content="text/css" />
   <meta name="generator" content="pandoc" />
-  <meta name="author" content="1. August 2019" />
+  <meta name="author" content="12. August 2019" />
   <title>Gehma</title>
   <style type="text/css">code{white-space: pre;}</style>
+  <link href="https://fonts.googleapis.com/css?family=Libre+Baskerville&display=swap" rel="stylesheet"> 
   <style type="text/css">
+  
   html {
       margin-left: 25%;
       margin-right: 25%;
+      /*font-family: "Palatino", serif;*/
+      /*font-family: Baskerville, regular;*/
+  }
+  
+  body {
+      font-family: 'Libre Baskerville', serif;
       font-color: #212121;
-      font-family: "Palatino", serif;
+      font-stretch: semi-expanded;
   }
   
   #header {
@@ -38,7 +46,7 @@
 <body>
 <div id="header">
 <h1 class="title">Gehma</h1>
-<h2 class="author">1. August 2019</h2>
+<h2 class="author">12. August 2019</h2>
 </div>
 <h1 class="toctitle">Table of contents</h1>
 <div id="TOC">
@@ -48,11 +56,17 @@
 </ul></li>
 <li><a href="#targets">Targets</a><ul>
 <li><a href="#android">Android</a></li>
+<li><a href="#android-1">Android</a></li>
 <li><a href="#iphone">iPhone</a></li>
 </ul></li>
-<li><a href="#datenschutz-anmerkungen">Datenschutz-Anmerkungen</a></li>
-<li><a href="#builds">Builds</a></li>
 <li><a href="#bugs">Bugs</a></li>
+<li><a href="#impressum">Impressum</a><ul>
+<li><a href="#kontakt">Kontakt</a></li>
+<li><a href="#cookies">Cookies</a></li>
+<li><a href="#datenschutzerklärung">Datenschutzerklärung</a></li>
+<li><a href="#medienherausgeber">Medienherausgeber</a></li>
+<li><a href="#grundlegende-richtung">Grundlegende Richtung</a></li>
+</ul></li>
 </ul>
 </div>
 <hr />
@@ -74,38 +88,13 @@
 <p>Die App verfügt über drei Tabs. Im ersten Tab “Ego” lässt sich der eigene Status auslesen. Außerdem ändert man dort seinen/ihren “Status” indem man auf den Schalter betätigt. Im zweiten Tab “Kontakte” sind alle Kontakte aufgelistet, die auch die App verwenden. In diesem Tab sieht man wer gerade motiviert ist und über den “Join” Button kann man ihm/ihr mitteilen dass man selber mitkommt. Der dritte und letzte Tab ist der “Ignorieren”-Tab. Dort lassen sich bestimmte Kontakte ignorieren. Man selbst und er/sie kann dann nicht mehr den Status des jeweils Anderen sehen.</p>
 <p><img src="static/Android.jpg" width="250" /> <img src="static/Android1.jpg" width="250" /> <img src="static/Android2.jpg" width="250" /></p>
 <h4 id="installation">Installation</h4>
-<p>Da die App aus Kostengründen nicht über den Google Play Store distributiert wird, sondern selbständig über das .apk File installiert werden muss, verhindert Google die Standard-Installation. Um die Sperre zu umgehen muss in Optionsmenü &gt; <em>Play Protect</em> &gt; Zahnrad rechts oben &gt; <em>Gerät auf Sicherheitsbedrohungen prüfen</em> deaktivieren.</p>
+<p><del>Da die App aus Kostengründen nicht über den Google Play Store distributiert wird, sondern selbständig über das .apk File installiert werden muss, verhindert Google die Standard-Installation. Um die Sperre zu umgehen muss in Optionsmenü &gt; <em>Play Protect</em> &gt; Zahnrad rechts oben &gt; <em>Gerät auf Sicherheitsbedrohungen prüfen</em> deaktivieren.</del></p>
+<h3 id="android-1">Android</h3>
+<p>Die App ist für die Länder Österreich, Deutschland und Polen im Google Playstore verfügbar.</p>
 <h3 id="iphone">iPhone</h3>
 <p>Es existiert ein Build für iPhones. Jedoch durch massive Apple Einschränkungen von Nicht-Apple-Store-Apps ist es nicht möglich diese zum Download anzubieten. Alle iPhone BesitzerInnen sind herzlich dazu einladen mich zu kontakieren und ich werde die App dann über den Laptop auf sein/ihr Handy laden.</p>
-<h2 id="datenschutz-anmerkungen">Datenschutz-Anmerkungen</h2>
-<p>Im folgenden findest du einen unvollständigen Auszug der Datenbank-Modelle (von 1. August 2019 - Version 0.1).</p>
-<pre><code>table! {
-    blacklist (id) {
-        id -&gt; Uuid,
-        blocker -&gt; Varchar,
-        blocked -&gt; Varchar,
-        created_at -&gt; Timestamp,
-    }
-}
-
-table! {
-    users (id) {
-        id -&gt; Uuid,
-        tele_num -&gt; Varchar,
-        led -&gt; Bool,
-        created_at -&gt; Timestamp,
-        country_code -&gt; Varchar,
-        description -&gt; Text,
-        is_autofahrer -&gt; Bool,
-        changed_at -&gt; Timestamp,
-        client_version -&gt; Varchar,
-    }
-}</code></pre>
-<h2 id="builds">Builds</h2>
-<p>Der aktuelle Client Build ist v0.1 (2. August 2019).</p>
-<p>sha256: bab2a97d16aa886d58c486e646e272f6e626598fd9eab272924f2e84b6b45bbf gehma_0v1.apk</p>
 <h2 id="bugs">Bugs</h2>
-<p>Bugs Reports sind höchst erwünscht. Dazu bitte eine Email an kevin.per@protonmail.com</p>
+<p>Bug Reports sind höchst erwünscht. Dazu bitte eine Email an kevin.per@protonmail.com</p>
 <pre><code>-----BEGIN PGP PUBLIC KEY BLOCK-----
 Version: OpenPGP.js v3.1.3
 Comment: https://openpgpjs.org
@@ -139,5 +128,18 @@ GPU4yw14SrLgoaSBtVNU6WGnPXkOwodwyjNi49YzISHATM0gntK39vyKxxuo
 fyKH8bGp/YjXC7Z1CRAWSSQS3v/9boVsJDU6y/F1Nw==
 =Hp+0
 -----END PGP PUBLIC KEY BLOCK-----</code></pre>
+<hr />
+<h1 id="impressum">Impressum</h1>
+<h2 id="kontakt">Kontakt</h2>
+<p>Email: kevin.per@protonmail.com</p>
+<h2 id="cookies">Cookies</h2>
+<p>Die Webseite verwendet keine Cookies.</p>
+<h2 id="datenschutzerklärung">Datenschutzerklärung</h2>
+<p>Jeder Besuch einer Webseite führt dazu, das sogenannte Request an einen Server geschickt werden. Jeder Request speichert Ihre IP-Adresse, URL, Datum &amp; Uhrzeit und Browser-Informationen. In der Regel werden die Serverlogs alle drei Monate wieder gelöscht.</p>
+<p><a href="static/datenschutz.html">Datenschutzerklärung für die Gehma-App</a></p>
+<h2 id="medienherausgeber">Medienherausgeber</h2>
+<p>Kevin Per (aus Schutz vor Identitätsdiebstahl wird die Adresse nur über Email herausgegeben - ich bitte um Verständnis)</p>
+<h2 id="grundlegende-richtung">Grundlegende Richtung</h2>
+<p>Diese Webseite dient als Informationsquelle für die Gehma-App.</p>
 </body>
 </html>

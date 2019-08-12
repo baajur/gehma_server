@@ -5,14 +5,22 @@
   <meta http-equiv="Content-Style-Type" content="text/css" />
   <meta name="generator" content="pandoc" />
   <meta name="author" content="12. August 2019" />
-  <title>Datenschutz-Erklärung</title>
+  <title>Datenschutz-Erklärung (v0.2.1)</title>
   <style type="text/css">code{white-space: pre;}</style>
+  <link href="https://fonts.googleapis.com/css?family=Libre+Baskerville&display=swap" rel="stylesheet"> 
   <style type="text/css">
+  
   html {
       margin-left: 25%;
       margin-right: 25%;
+      /*font-family: "Palatino", serif;*/
+      /*font-family: Baskerville, regular;*/
+  }
+  
+  body {
+      font-family: 'Libre Baskerville', serif;
       font-color: #212121;
-      font-family: "Palatino", serif;
+      font-stretch: semi-expanded;
   }
   
   #header {
@@ -37,21 +45,87 @@
 </head>
 <body>
 <div id="header">
-<h1 class="title">Datenschutz-Erklärung</h1>
+<h1 class="title">Datenschutz-Erklärung (v0.2.1)</h1>
 <h2 class="author">12. August 2019</h2>
 </div>
 <hr />
 <h1 id="erklärung-zur-informationspflicht-datenschutzerklärung">Erklärung zur Informationspflicht (Datenschutzerklärung)</h1>
-<p>Der Schutz Ihrer persönlichen Daten ist uns ein besonderes Anliegen. Wir verarbeiten Ihre Daten daher ausschließlich auf Grundlage der gesetzlichen Bestimmungen (DSGVO, TKG 2003). In diesen Datenschutzinformationen informieren wir Sie über die wichtigsten Aspekte der Datenverarbeitung im Rahmen unserer Website.</p>
+<p>Der Schutz Ihrer persönlichen Daten ist uns ein besonderes Anliegen. Wir verarbeiten Ihre Daten daher ausschließlich auf Grundlage der gesetzlichen Bestimmungen (DSGVO, TKG 2003). In diesen Datenschutzinformationen informieren wir Sie über die wichtigsten Aspekte der Datenverarbeitung im Rahmen unserer App.</p>
 <h2 id="kontakt-mit-uns">Kontakt mit uns</h2>
-<p>Wenn per E-Mail Kontakt mit uns aufnehmen, werden Ihre angegebenen Daten zwecks Bearbeitung der Anfrage und für den Fall von Anschlussfragen sechs Monate bei uns gespeichert. Diese Daten geben wir nicht ohne Ihre Einwilligung weiter.</p>
+<p>Wenn Sie per E-Mail Kontakt mit uns aufnehmen, werden Ihre angegebenen Daten zwecks Bearbeitung der Anfrage und für den Fall von Anschlussfragen sechs Monate bei uns gespeichert. Diese Daten geben wir nicht ohne Ihre Einwilligung weiter.</p>
 <h2 id="datenspeicherung">Datenspeicherung</h2>
-<h3 id="analyse">Analyse</h3>
-<p>Unsere App verwendet Funktionen des Webanalysedienstes Google Analytics (USA). Dazu werden Cookies verwendet, die eine Analyse der Benutzung der Analyse durch Ihre Benutzer ermöglicht. Die dadurch erzeugten Informationen werden auf den Server des Anbieters übertragen und dort gespeichert.</p>
-<p>Ihre IP-Adresse wird erfasst nur in Logs erfasst. Diese werden regelmäßig gelöscht und werden nicht weitergegeben.</p>
+<h3 id="requests">Requests</h3>
+<p>Bei der Verwendung der App wird regelmäßig Kontakt mit einem Server aufgenommen. Bei jedem Zugriff werden ihre IP-Adresse, Uhrzeit und sonstige HTTP-Felder in Logs gespeichert. Diese werden regelmäßig gelöscht und nicht weitergegeben. Wir können jedoch nicht ausschließen, dass bei rechtswidrigem Verhalten diese eingesehen oder an Behörden weitergeben werden.</p>
+<h3 id="persönliche-informationen">Persönliche Informationen</h3>
+<p>Die Datenbank speichert ihre Telefonnummer mit Ländercode, ihren aktuellen Status, den Autofahrer-Status und die Beschreibung die Sie in der App kundgegeben haben. Außerdem speichert die App die zu letzt verwendete Client-Version. Sie finden einen vollständigen Auszug der Datenbank-Informationen für die Version 0.2.1 im Anhang.</p>
+<p>Außerdem sendet die App all Ihre Kontakte an den Server damit ermittelt werden kann welche Kontakte auch die App besitzen. Diese werden Informationen werden auch in der Datenbank speichert. Diese Daten werden jedes Mal beim Aufruf der “Kontakte” (in der App) gelöscht und neu angelegt. Eine vollständige Löschung findet aber erst beim Opt-Out statt.</p>
+<p>Des Weiteren wird erfasst welche Kontakte Sie gerade ignorieren beziehungsweise von welchen Personen Sie gerade ignoriert werden. Diese werden nach Bedarf erstellt und gelöscht. Das bedeutet, dass keine nachträgliche Speicherung erfolgt.</p>
+<h3 id="nutzungsverhalten">Nutzungsverhalten</h3>
+<p>Wie im Punkt “Analyse und Push-Notifications” bereits angekündigt wird der Webanalysedienst Google Analytics in die App eingebunden. Jedoch wird dieser nicht aktiv zur Analyse des Nutzungsverhalten verwendet, sondern wird für Google Firebase Messaging benötigt. Google Firebase Messaging wird zum Senden und Empfangen von Push-Notfications verwendet.</p>
+<p>Die Gehma-App speichert das Nutzungsverhalten der App-User eigenständig und verwendet dazu keine Dritt-Anbieter. Es wird mitgespeichert, wann Sie die App öffnen und alle Änderungen an Ihrem Status zu Analyse-Zwecken mitgespeichert. Die Löschung erfolgt ungefähr jährlich, kann aber auch öfters stattfinden.</p>
+<h3 id="analyse-und-push-notifications">Analyse und Push-Notifications</h3>
+<p>Unsere App verwendet Funktionen des Webanalysedienstes Google Analytics (USA). Die Verwendung ist notwendig, um Ihnen Push-Nachrichten zu senden. Google wird ausschließlich ein Token, das ihr Gerät identifiziert und der Inhalt der Push-Nachricht, mitgeteilt. Das wäre im Normalfall der Kontakt-Name.</p>
 <p>Die Datenverarbeitung erfolgt auf Basis der gesetzlichen Bestimmungen des § 96 Abs 3 TKG sowie des Art 6 Abs 1 lit a (Einwilligung) und/oder f (berechtigtes Interesse) der DSGVO.</p>
+<h3 id="backups">Backups</h3>
+<p>Um bei technische Ausfällen einen Datenverlust zu verhindern, werden regelmäßig sogenannte “Database Dumps” angelegt. Das sind Sicherungskopien der Datenbank, welche jederzeit wieder eingespielt werden können. Wir möchten Ihnen mitteilen, dass nachdem Sie Ihr Recht auf “Opt-out”, also das Recht auf Löschung, wahrgenommen haben, noch immer Ihre Daten in den Sicherungskopien vorhanden sein könnten. Unsere Backups sind verschlüsselt und werden nicht weitergegeben. Alte Backups werden spätestens nach drei Monaten gelöscht.</p>
 <h2 id="ihre-rechte">Ihre Rechte</h2>
 <p>Ihnen stehen bezüglich Ihrer bei uns gespeicherten Daten grundsätzlich die Rechte auf Auskunft, Berichtigung, Löschung, Einschränkung, Datenübertragbarkeit, Widerruf und Widerspruch zu. Wenn Sie glauben, dass die Verarbeitung Ihrer Daten gegen das Datenschutzrecht verstößt oder Ihre datenschutzrechtlichen Ansprüche sonst in einer Weise verletzt worden sind, können Sie sich bei der uns kevin.per@protonmail.com oder der Datenschutzbehörde beschweren.</p>
 <p>Sie erreichen uns unter folgenden Kontaktdaten: Kevin Per kevin.per@protonmail.com</p>
+<p>Sie können dieses Dokument auch als <a href="datenschutz.pdf">Pdf</a> abrufen.</p>
+<h2 id="anhang">Anhang</h2>
+<p>Hier finden Sie das Datenbank-Schema.</p>
+<pre><code>table! {
+    analytics (id) {
+        id -&gt; Int4,
+        tele_num -&gt; Varchar,
+        led -&gt; Bool,
+        is_autofahrer -&gt; Bool,
+        description -&gt; Text,
+        created_at -&gt; Timestamp,
+    }
+}
+
+table! {
+    blacklist (id) {
+        id -&gt; Uuid,
+        blocker -&gt; Varchar,
+        blocked -&gt; Varchar,
+        created_at -&gt; Timestamp,
+    }
+}
+
+table! {
+    contacts (id) {
+        id -&gt; Int4,
+        from_id -&gt; Uuid,
+        target_tele_num -&gt; Varchar,
+        created_at -&gt; Timestamp,
+        name -&gt; Varchar,
+        from_tele_num -&gt; Varchar,
+    }
+}
+
+table! {
+    usage_statistics (id) {
+        id -&gt; Int4,
+        tele_num -&gt; Varchar,
+        created_at -&gt; Timestamp,
+    }
+}
+
+table! {
+    users (id) {
+        id -&gt; Uuid,
+        tele_num -&gt; Varchar,
+        led -&gt; Bool,
+        created_at -&gt; Timestamp,
+        country_code -&gt; Varchar,
+        description -&gt; Text,
+        is_autofahrer -&gt; Bool,
+        changed_at -&gt; Timestamp,
+        client_version -&gt; Varchar,
+        firebase_token -&gt; Nullable&lt;Varchar&gt;,
+    }
+}</code></pre>
 </body>
 </html>
