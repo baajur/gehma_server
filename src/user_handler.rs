@@ -372,7 +372,7 @@ fn sending_push_notifications(
     }
 
     for (user, contact) in test {
-        assert_eq!(user.id, contact.from_id);
+        //assert_eq!(user.id, contact.from_id);
         println!("{} ist motiviert zu {}", contact.name, user.tele_num);
     }
 
