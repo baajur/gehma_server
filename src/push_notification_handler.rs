@@ -7,9 +7,9 @@ use super::Pool;
 use ::core::errors::ServiceError;
 use ::core::models::{Analytic, PhoneNumber, UsageStatisticEntry, User};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Payload {
-    token: String,
+    pub token: String,
 }
 
 pub fn update_token(

@@ -49,14 +49,14 @@ pub fn get(
     })
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct PostUser {
     pub tele_num: String,
     pub country_code: String,
     pub client_version: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct UpdateUser {
     pub description: String,
     pub led: String,

@@ -4,7 +4,7 @@ use crate::utils::phonenumber_to_international;
 use diesel::{r2d2::ConnectionManager, PgConnection};
 
 
-#[derive(Debug, Serialize, Deserialize, Queryable, Insertable, Clone, Identifiable, AsChangeset)]
+#[derive(Debug, Serialize, Deserialize, Queryable, Insertable, Clone, Identifiable, AsChangeset, Eq, PartialEq)]
 #[table_name = "users"]
 pub struct User {
     pub id: uuid::Uuid,

@@ -22,3 +22,27 @@ fn test_load_file() {
 
     assert!(resp.status().is_success());
 }
+
+#[test]
+fn test_load_datenschutz_HTML() {
+    let mut app =
+        test::init_service(App::new().route("/static/{filename:.*}", web::get().to(load_file)));
+    let req = test::TestRequest::get()
+        .uri("/static/datenschutz.html")
+        .to_request();
+    let resp = test::block_on(app.call(req)).unwrap();
+
+    assert!(resp.status().is_success());
+}
+
+#[test]
+fn test_load_datenschutz_pdf() {
+    let mut app =
+        test::init_service(App::new().route("/static/{filename:.*}", web::get().to(load_file)));
+    let req = test::TestRequest::get()
+        .uri("/static/datenschutz.pdf")
+        .to_request();
+    let resp = test::block_on(app.call(req)).unwrap();
+
+    assert!(resp.status().is_success());
+}

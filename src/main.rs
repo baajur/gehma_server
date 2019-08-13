@@ -2,6 +2,8 @@
 extern crate diesel;
 #[macro_use]
 extern crate serde_derive;
+#[macro_use]
+extern crate lazy_static;
 
 use actix_cors::Cors;
 use actix_files::NamedFile;
@@ -27,7 +29,7 @@ pub const LIMIT_PUSH_NOTIFICATION_CONTACTS: usize = 128;
 
 pub type Pool = r2d2::Pool<ConnectionManager<PgConnection>>;
 
-fn main() {
+pub(crate) fn main() {
     dotenv::dotenv().ok();
     std::env::set_var("RUST_LOG", "actix_web=info,actix_server=info");
     env_logger::init();
