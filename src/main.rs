@@ -15,11 +15,13 @@ use std::path::PathBuf;
 
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 
-mod blacklist_handler;
-mod exists_handler;
+//mod blacklist_handler;
+//mod exists_handler;
 mod utils;
-mod push_notification_handler;
-mod user_handler;
+//mod push_notification_handler;
+//mod user_handler;
+pub(crate) mod controllers;
+pub(crate) mod queries;
 
 #[cfg(test)]
 mod tests;
@@ -75,25 +77,25 @@ pub(crate) fn main() {
             )
             .service(
                 web::scope("/api")
-                    .service(web::resource("/user").route(web::post().to_async(user_handler::add)))
+                    .service(web::resource("/user").route(web::post().to_async(controllers::user::add)))
                     .service(
                         web::resource("/user/{uid}/token")
-                            .route(web::put().to_async(push_notification_handler::update_token)),
+                            .route(web::put().to_async(controllers::push_notification::update_token)),
                     )
                     .service(
                         web::resource("/user/{uid}/blacklist")
-                            .route(web::get().to_async(blacklist_handler::get_all))
-                            .route(web::post().to_async(blacklist_handler::add))
-                            .route(web::put().to_async(blacklist_handler::delete)), //deletes
+                            .route(web::get().to_async(controllers::blacklist::get_all))
+                            .route(web::post().to_async(controllers::blacklist::add))
+                            .route(web::put().to_async(controllers::blacklist::delete)), //deletes
                     )
                     .service(
                         web::resource("/user/{uid}")
-                            .route(web::get().to_async(user_handler::get))
-                            .route(web::put().to_async(user_handler::update)),
+                            .route(web::get().to_async(controllers::user::get))
+                            .route(web::put().to_async(controllers::user::update)),
                     )
                     .service(
                         web::resource("/exists/{uid}/{country_code}")
-                            .route(web::post().to_async(exists_handler::exists)),
+                            .route(web::post().to_async(controllers::contact_exists::exists)),
                     ),
             )
     })

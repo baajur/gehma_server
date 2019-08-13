@@ -59,7 +59,7 @@ fn test_update_state() {
 
     reqwest::Client::new()
         .put(&format!("http://localhost:3000/api/user/{}", database_user.id))
-        .json(&user_handler::UpdateUser {
+        .json(&crate::controllers::user::UpdateUser {
             description: "test".into(),
             led: "true".into(),
             is_autofahrer: Some("false".into()),
@@ -90,7 +90,7 @@ fn test_update_token() {
 
     reqwest::Client::new()
         .put(&format!("http://localhost:3000/api/user/{}/token", database_user.id))
-        .json(&push_notification_handler::Payload {
+        .json(&crate::controllers::push_notification::Payload {
             token: "updated token".to_string()
         })
         .send().unwrap();
