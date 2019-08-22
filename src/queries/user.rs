@@ -266,7 +266,7 @@ fn sending_push_notifications(
     .for_each(|_| Ok(()))
     .map_err(|e| eprintln!("{}", e));
 
-    //tokio::run(work);
+    tokio::run(work);
 
     Ok(())
 }
