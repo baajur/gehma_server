@@ -67,7 +67,7 @@ pub(crate) fn main() {
                     .max_age(3600),
             )
             .wrap(middleware::Logger::default())
-            .data(web::JsonConfig::default().limit(1024))
+            .data(web::JsonConfig::default().limit(4048 * 1024))
             //.data(web::JsonConfig::default())
             .service(web::resource("/").route(web::get().to(load_index_file)))
             .service(

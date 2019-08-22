@@ -145,7 +145,8 @@ pub(crate) fn update_user_query(
         .and_then(|user| {
             if my_led {
                 //Sending push notification
-                sending_push_notifications(&user, pool);
+                sending_push_notifications(&user, pool)
+                    .map_err(|err| { eprintln!("{}", err); ServiceError::BadRequest("Cannot send push notifications".to_string()) })?;
             }
 
             Ok(user)
@@ -173,6 +174,8 @@ fn sending_push_notifications(
         .load::<Contact>(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))?;
 
+    dbg!(&contacts_who_saved_user);
+
     let my_filtered_contacts = blacklist
         .filter(blocker.eq(&user.tele_num).or(blocked.eq(&user.tele_num)))
         .load::<Blacklist>(conn)
@@ -181,11 +184,19 @@ fn sending_push_notifications(
     dbg!(&my_filtered_contacts);
 
     for i in my_filtered_contacts.iter() {
-       contacts_who_saved_user.retain(|c| (c.target_tele_num != i.blocker && c.from_tele_num != i.blocked) &&
-                       (c.target_tele_num != i.blocked && c.from_tele_num != i.blocker));
+        let r = contacts_who_saved_user
+            .iter()
+            .position(|c| (c.target_tele_num == i.blocker && c.from_tele_num == i.blocked) 
+                        || (c.target_tele_num == i.blocked && c.from_tele_num == i.blocker));
+
+        if let Some(r) = r {
+            contacts_who_saved_user.remove(r);
+        }
     }
 
     contacts_who_saved_user.sort_by(|a, b| a.from_id.partial_cmp(&b.from_id).unwrap());
+
+    dbg!(&contacts_who_saved_user);
 
     let targets: Vec<_> = contacts_who_saved_user.iter().map(|w| &w.from_id).collect();
 
@@ -255,7 +266,7 @@ fn sending_push_notifications(
     .for_each(|_| Ok(()))
     .map_err(|e| eprintln!("{}", e));
 
-    tokio::run(work);
+    //tokio::run(work);
 
     Ok(())
 }
