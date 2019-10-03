@@ -26,7 +26,7 @@ pub(crate) mod queries;
 #[cfg(test)]
 mod tests;
 
-pub const ALLOWED_CLIENT_VERSIONS: &'static [&'static str] = &["0.2"];
+pub const ALLOWED_CLIENT_VERSIONS: &'static [&'static str] = &["0.3"];
 pub const LIMIT_PUSH_NOTIFICATION_CONTACTS: usize = 128;
 
 pub type Pool = r2d2::Pool<ConnectionManager<PgConnection>>;
