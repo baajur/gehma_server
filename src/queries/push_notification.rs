@@ -9,11 +9,14 @@ use ::core::models::{Analytic, PhoneNumber, UsageStatisticEntry, User};
 
 use crate::controllers::push_notification::Payload;
 
+use log::{info, error};
+
 pub(crate) fn update_token_query(
     uid: Uuid,
     token: String,
     pool: &web::Data<Pool>,
 ) -> Result<(), ServiceError> {
+    info!("queries/push_notification/update_token_query");
     use ::core::schema::users::dsl::*;
     let conn: &PgConnection = &pool.get().unwrap();
 

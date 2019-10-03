@@ -10,12 +10,15 @@ use crate::controllers::contact_exists::{Payload, PayloadUser, ResponseUser, MAX
 
 use crate::Pool;
 
+use log::info;
+
 pub(crate) fn get_query(
     uid: Uuid,
     phone_numbers: &mut Vec<PayloadUser>,
     country_code: &String,
     pool: web::Data<Pool>,
 ) -> Result<Vec<ResponseUser>, ServiceError> {
+    info!("queries/push_notification/get_query");
     use ::core::models::Contact;
     use ::core::models::PhoneNumber;
     use ::core::schema::blacklist::dsl::{blacklist, blocked, blocker};

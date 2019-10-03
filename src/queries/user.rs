@@ -10,10 +10,14 @@ use uuid::Uuid;
 
 use crate::controllers::user::{PostUser, UpdateUser};
 
+use log::{info, error};
+
 pub(crate) fn get_entry_by_tel_query(
     tele: &PhoneNumber,
     pool: &web::Data<Pool>,
 ) -> Result<User, ::core::errors::ServiceError> {
+    info!("queries/user/get_entry_by_tel_query");
+
     use ::core::schema::users::dsl::*;
 
     let conn: &PgConnection = &pool.get().unwrap();
@@ -40,6 +44,7 @@ pub(crate) fn analytics_user(
     pool: &web::Data<Pool>,
     user: &User,
 ) -> Result<Analytic, ::core::errors::ServiceError> {
+    info!("queries/user/analytics_user");
     use ::core::schema::analytics::dsl::analytics;
 
     let ana = Analytic::my_from(user);
@@ -62,6 +67,7 @@ pub(crate) fn create_query(
     version: &String,
     pool: &web::Data<Pool>,
 ) -> Result<User, ServiceError> {
+    info!("queries/user/create_query");
     use ::core::schema::users::dsl::users;
 
     let new_inv: User = User::my_from(&tel.to_string(), country_code, version);
@@ -80,6 +86,7 @@ pub(crate) fn analytics_usage_statistics(
     pool: &web::Data<Pool>,
     user: &User,
 ) -> Result<UsageStatisticEntry, ::core::errors::ServiceError> {
+    info!("queries/user/analytics_usage_statistics");
     use ::core::schema::usage_statistics::dsl::usage_statistics;
 
     let ana = UsageStatisticEntry::my_from(user);
@@ -101,6 +108,7 @@ pub(crate) fn update_user_query(
     user: &UpdateUser,
     pool: &web::Data<Pool>,
 ) -> Result<User, ::core::errors::ServiceError> {
+    info!("queries/user/update_user_query");
     use ::core::schema::users::dsl::{
         changed_at, client_version, description, id, is_autofahrer, led, users,
     };
@@ -159,6 +167,7 @@ fn sending_push_notifications(
     user: &User,
     pool: &web::Data<Pool>,
 ) -> Result<(), ServiceError> {
+    info!("queries/user/sending_push_notifications");
     use ::core::models::Contact;
     use ::core::schema::blacklist::dsl::{blacklist, blocker, blocked};
     use ::core::schema::contacts::dsl::{contacts, from_id, target_tele_num};
@@ -216,8 +225,8 @@ fn sending_push_notifications(
 
     user_contacts.sort_by(|a, b| a.id.partial_cmp(&b.id).unwrap());
 
-    println!("{:#?}", user_contacts);
-    println!("{:#?}", contacts_who_saved_user);
+    //println!("{:#?}", user_contacts);
+    //println!("{:#?}", contacts_who_saved_user);
 
     let api_token = std::env::var("FCM_TOKEN").expect("No FCM_TOKEN configured");
 
@@ -230,12 +239,12 @@ fn sending_push_notifications(
             .take(crate::LIMIT_PUSH_NOTIFICATION_CONTACTS);
 
     if test.len() == 0 {
-        println!("Nix zu senden");
+        info!("Nix zu senden");
     }
 
     for (user, contact) in test {
         //assert_eq!(user.id, contact.from_id);
-        println!("{} ist motiviert zu {}", contact.name, user.tele_num);
+        info!("{} ist motiviert zu {}", contact.name, user.tele_num);
     }
 
     let work = futures::stream::iter_ok(
@@ -264,7 +273,7 @@ fn sending_push_notifications(
         futures::future::ok(res.json::<serde_json::Value>())
     })
     .for_each(|_| Ok(()))
-    .map_err(|e| eprintln!("{}", e));
+    .map_err(|e| error!("{}", e));
 
     tokio::run(work);
 
@@ -272,6 +281,7 @@ fn sending_push_notifications(
 }
 
 pub(crate) fn get_query(myid: Uuid, pool: &web::Data<Pool>) -> Result<Vec<User>, ServiceError> {
+    info!("queries/user/get_query");
     use ::core::schema::users::dsl::{id, users};
 
     let conn: &PgConnection = &pool.get().unwrap();
