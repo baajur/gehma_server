@@ -10,7 +10,7 @@ use crate::controllers::contact_exists::{Payload, PayloadUser, ResponseUser, MAX
 
 use crate::Pool;
 
-use log::info;
+use log::{info, error};
 
 pub(crate) fn get_query(
     uid: Uuid,
@@ -45,7 +45,7 @@ pub(crate) fn get_query(
                 name: w.name.clone(),
             }),
             Err(err) => {
-                eprintln!("{}", err);
+                error!("{}", err);
                 None
             }
         })
@@ -91,7 +91,7 @@ pub(crate) fn get_query(
                                         .collect();
 
                                     if let Some(mut res_user) = res.first_mut() {
-                                        res_user.user = Some(i.clone());
+                                        res_user.user = Some(i.downgrade());
                                     }
                                 }
 

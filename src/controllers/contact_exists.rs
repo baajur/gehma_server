@@ -3,11 +3,11 @@ use diesel::{prelude::*, PgConnection};
 use futures::Future;
 use uuid::Uuid;
 
-use ::core::errors::ServiceError;
-use ::core::models::{Blacklist, User};
 use crate::Pool;
+use core::errors::ServiceError;
+use core::models::{Blacklist, DowngradedUser};
 
-use log::{error, info, debug};
+use log::{debug, error, info};
 
 pub const MAX_ALLOWED_CONTACTS: usize = 10000;
 pub const MIN_TELE_NUM_LENGTH: usize = 3;
@@ -17,7 +17,7 @@ pub struct ResponseUser {
     pub calculated_tele: String,
     pub old: String,
     pub name: String,
-    pub user: Option<User>,
+    pub user: Option<DowngradedUser>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -66,8 +66,8 @@ fn get_entry(
     pool: web::Data<Pool>,
 ) -> Result<Vec<ResponseUser>, ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
-    let users = crate::queries::contact_exists::get_query(parsed, phone_numbers, country_code, pool)?;
+    let users =
+        crate::queries::contact_exists::get_query(parsed, phone_numbers, country_code, pool)?;
 
     Ok(users)
 }
-

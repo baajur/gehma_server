@@ -19,6 +19,19 @@ pub struct User {
     pub firebase_token: Option<String>
 }
 
+/* We don't want to expose all user's data to everyone. That's why this struct
+ * is a minimal version of `User` with only essential fields.
+ * */
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct DowngradedUser {
+    pub tele_num: String,
+    pub led: bool,
+    pub country_code: String,
+    pub description: String,
+    pub is_autofahrer: bool,
+    pub changed_at: chrono::NaiveDateTime,
+}
+
 impl User {
     pub fn my_from(e: &String, country_code: &String, version: &String) -> Self {
         User {
@@ -32,6 +45,17 @@ impl User {
             is_autofahrer: false,
             client_version: version.to_string(),
             firebase_token: None,
+        }
+    }
+
+    pub fn downgrade(&self) -> DowngradedUser {
+        DowngradedUser {
+            tele_num: self.tele_num.clone(),
+            led: self.led.clone(),
+            country_code: self.country_code.clone(),
+            description: self.description.clone(),
+            is_autofahrer: self.is_autofahrer.clone(),
+            changed_at: self.changed_at.clone(),
         }
     }
 }
