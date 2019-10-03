@@ -8,12 +8,16 @@ use serde_json::json;
 use tokio;
 use uuid::Uuid;
 
+use log::{info, debug, error};
+
 pub fn add(
     _info: web::Path<()>,
     body: web::Json<PostUser>,
     pool: web::Data<Pool>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
-    dbg!(&body);
+    info!("controllers/user/add");
+    debug!("{:?}", body);
+    //dbg!(&body);
     web::block(move || create_entry(body.into_inner(), pool)).then(|res| match res {
         Ok(user) => {
             let mut res = HttpResponse::Ok()
@@ -33,7 +37,9 @@ pub fn get(
     info: web::Path<(String)>,
     pool: web::Data<Pool>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
-    dbg!(&info);
+    info!("controllers/user/get");
+    debug!("path {:?}", info);
+
     web::block(move || get_entry(&info.into_inner(), pool)).then(|res| match res {
         Ok(users) => {
             let mut res = HttpResponse::Ok()
@@ -69,8 +75,10 @@ pub fn update(
     data: web::Json<UpdateUser>,
     pool: web::Data<Pool>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
-    dbg!(&info);
-    dbg!(&data);
+    info!("controllers/user/update");
+    debug!("path {:?}", info);
+    debug!("data {:?}", data);
+
     web::block(move || update_user(&info.into_inner(), &data.into_inner(), &pool)).then(|res| {
         match res {
             Ok(user) => Ok(HttpResponse::Ok()
@@ -88,9 +96,11 @@ fn create_entry(
     body: PostUser,
     pool: web::Data<Pool>,
 ) -> Result<User, ServiceError> {
-    dbg!(&body);
+    info!("controllers/user/create_entry");
+    debug!("body {:?}", body);
 
     if !crate::ALLOWED_CLIENT_VERSIONS.contains(&body.client_version.as_str()) {
+        error!("Version mismatch. Server does not suppoert client version");
         return Err(ServiceError::BadRequest(format!(
             "Version mismatch. The supported versions are {:?}",
             crate::ALLOWED_CLIENT_VERSIONS

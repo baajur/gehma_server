@@ -8,6 +8,8 @@ use ::core::models::{Blacklist, PhoneNumber, User};
 
 use crate::Pool;
 
+use log::{error, debug, info};
+
 #[derive(Debug, Deserialize)]
 pub struct GetAllData {
     numbers: Vec<String>,
@@ -18,6 +20,9 @@ pub fn get_all(
     //data: web::Json<GetAllData>,
     pool: web::Data<Pool>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
+    info!("controllers/blacklist/get_all");
+    debug!("path {:?}", info);
+
     dbg!(&info);
     let info = info.into_inner();
     web::block(move || get_entry(&info, pool)).then(|res| match res {
@@ -47,8 +52,10 @@ pub fn add(
     data: web::Json<PostData>,
     pool: web::Data<Pool>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
-    dbg!(&info);
-    dbg!(&data);
+    info!("controllers/blacklist/add");
+    debug!("path {:?}", info);
+    debug!("body {:?}", data);
+
     web::block(move || create_entry(&info.into_inner(), &data.into_inner(), pool)).then(|res| {
         match res {
             Ok(_) => {
@@ -69,7 +76,10 @@ pub fn delete(
     data: web::Json<PostData>,
     pool: web::Data<Pool>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
-    dbg!(&info);
+    info!("controllers/blacklist/delete");
+    debug!("path {:?}", info);
+    debug!("body {:?}", data);
+
     web::block(move || delete_entry(&info.into_inner(), &data.into_inner(), pool)).then(|res| {
         match res {
             Ok(_) => {

@@ -7,6 +7,8 @@ use crate::Pool;
 use ::core::errors::ServiceError;
 use ::core::models::{Analytic, PhoneNumber, UsageStatisticEntry, User};
 
+use log::{info, debug};
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Payload {
     pub token: String,
@@ -17,7 +19,10 @@ pub fn update_token(
     body: web::Json<Payload>,
     pool: web::Data<Pool>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
-    dbg!(&body);
+    info!("controllers/push_notification/update_token");
+    debug!("path {:?}", _info);
+    debug!("body {:?}", body);
+
     web::block(move || update_token_handler(_info.into_inner(), body.into_inner(), pool)).then(
         |res| match res {
             Ok(user) => {

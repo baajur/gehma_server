@@ -7,6 +7,8 @@ use ::core::errors::ServiceError;
 use ::core::models::{Blacklist, User};
 use crate::Pool;
 
+use log::{error, info, debug};
+
 pub const MAX_ALLOWED_CONTACTS: usize = 10000;
 pub const MIN_TELE_NUM_LENGTH: usize = 3;
 
@@ -34,8 +36,10 @@ pub fn exists(
     mut payload: web::Json<Payload>,
     pool: web::Data<Pool>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
-    dbg!(&info);
-    //dbg!(&payload);
+    info!("controllers/contact_exists/exists");
+    debug!("path {:?}", info);
+    debug!("body {:?}", payload);
+
     web::block(move || {
         let info = info.into_inner();
         get_entry(&info.0, &info.1, &mut payload.numbers, pool)
