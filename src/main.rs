@@ -41,11 +41,13 @@ pub(crate) fn main() {
     let debug = std::env::var("DEBUG").unwrap_or("1".to_string());
     let addr = std::env::var("BINDING_ADDR").unwrap_or("localhost".to_string());
 
+    /*
     let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
     builder
         .set_private_key_file("key.pem", SslFiletype::PEM)
         .unwrap();
     builder.set_certificate_chain_file("cert.pem").unwrap();
+    */
 
     let manager = ConnectionManager::<PgConnection>::new(database_url);
     let pool: Pool = r2d2::Pool::builder()
@@ -101,11 +103,12 @@ pub(crate) fn main() {
     })
     .keep_alive(None);
 
-    let listener = match debug.as_str() {
-        "0" => server.bind_ssl(format!("{}:{}", addr, port), builder),
-        "1" => server.bind(format!("{}:{}", addr, port)),
-        _ => panic!("debug state not defined"),
-    };
+    //let listener = match debug.as_str() {
+        //"0" => server.bind_ssl(format!("{}:{}", addr, port), builder),
+        //"1" => server.bind(format!("{}:{}", addr, port)),
+    let listener = server.bind(format!("{}:{}", addr, port));
+        //_ => panic!("debug state not defined"),
+    //};
 
     listener.unwrap().run().unwrap()
 }
