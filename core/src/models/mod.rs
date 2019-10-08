@@ -16,7 +16,8 @@ pub struct User {
     pub is_autofahrer: bool,
     pub changed_at: chrono::NaiveDateTime,
     pub client_version: String,
-    pub firebase_token: Option<String>
+    pub firebase_token: Option<String>,
+    pub profile_picture: String,
 }
 
 /* We don't want to expose all user's data to everyone. That's why this struct
@@ -30,6 +31,7 @@ pub struct DowngradedUser {
     pub description: String,
     pub is_autofahrer: bool,
     pub changed_at: chrono::NaiveDateTime,
+    pub profile_picture: String,
 }
 
 impl User {
@@ -45,6 +47,7 @@ impl User {
             is_autofahrer: false,
             client_version: version.to_string(),
             firebase_token: None,
+            profile_picture: "".to_string(),
         }
     }
 
@@ -56,6 +59,7 @@ impl User {
             description: self.description.clone(),
             is_autofahrer: self.is_autofahrer.clone(),
             changed_at: self.changed_at.clone(),
+            profile_picture: self.profile_picture.clone()
         }
     }
 }

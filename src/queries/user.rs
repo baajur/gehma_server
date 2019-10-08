@@ -10,7 +10,7 @@ use uuid::Uuid;
 
 use crate::controllers::user::{PostUser, UpdateUser};
 
-use log::{info, error};
+use log::{info, error, debug};
 
 pub(crate) fn get_entry_by_tel_query(
     tele: &PhoneNumber,
@@ -294,4 +294,25 @@ pub(crate) fn get_query(myid: Uuid, pool: &web::Data<Pool>) -> Result<Vec<User>,
             Ok(result)
             //Err(ServiceError::BadRequest("Invalid Invitation".into()))
         })
+}
+
+pub(crate) fn update_profile_picture(uid: Uuid, ending: String, pool: web::Data::<Pool>) -> Result<(), ServiceError> {
+    info!("queries/user/update_profile_picture");
+    use ::core::schema::users::dsl::{id, users, profile_picture, changed_at};
+
+    let conn: &PgConnection = &pool.get().unwrap();
+
+    let target = users.filter(id.eq(uid));
+
+    diesel::update(target)
+        .set((
+            changed_at.eq(chrono::Local::now().naive_local()),
+            profile_picture.eq(format!("static/profile_pictures/{}.{}", uid, ending))
+        ))
+        .execute(conn)
+        .map_err(|_db_error| ServiceError::BadRequest("Updating state failed".into()))?;
+
+        debug!("Updating profile {}", format!("static/profile_pictures/{}.{}", uid, ending));
+
+    Ok(())
 }

@@ -1,14 +1,19 @@
 use crate::Pool;
-use ::core::errors::ServiceError;
-use ::core::models::{Analytic, PhoneNumber, UsageStatisticEntry, User, Blacklist};
-use actix_web::{error::BlockingError, web, HttpResponse};
+use actix_multipart::{Field, Multipart, MultipartError};
+use actix_web::{error::BlockingError, error::PayloadError, web, web::Data, HttpResponse};
+use core::errors::ServiceError;
+use core::models::{Analytic, Blacklist, PhoneNumber, UsageStatisticEntry, User};
 use diesel::{prelude::*, PgConnection};
+use futures::future::{err, Either};
+use futures::stream::Stream;
 use futures::Future;
 use serde_json::json;
 use tokio;
 use uuid::Uuid;
 
-use log::{info, debug, error};
+use log::{debug, error, info};
+use std::cell::Cell;
+use std::io::Write;
 
 pub fn add(
     _info: web::Path<()>,
@@ -55,6 +60,29 @@ pub fn get(
     })
 }
 
+pub fn upload_profile_picture(
+    info: web::Path<String>,
+    multipart: Multipart,
+    pool: web::Data<Pool>,
+) -> impl Future<Item = HttpResponse, Error = ServiceError> {
+    info!("controllers/upload_profile_picture");
+
+    let uid = info.into_inner();
+    multipart
+        .map_err(|err| {
+            error!("Multipart error: {}", err);
+            ServiceError::InternalServerError
+        })
+        .map(move |field| save_file(uid.clone(), field, pool.clone()).into_stream())
+        .flatten()
+        .collect()
+        .map(|sizes| HttpResponse::Ok().json(sizes))
+        .map_err(|err| {
+            error!("Multipart error: {}", err);
+            err
+        })
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PostUser {
     pub tele_num: String,
@@ -92,10 +120,7 @@ pub fn update(
     })
 }
 
-fn create_entry(
-    body: PostUser,
-    pool: web::Data<Pool>,
-) -> Result<User, ServiceError> {
+fn create_entry(body: PostUser, pool: web::Data<Pool>) -> Result<User, ServiceError> {
     info!("controllers/user/create_entry");
     debug!("body {:?}", body);
 
@@ -114,9 +139,16 @@ fn create_entry(
 
     dbg!(&tele2.to_string());
 
-    let user = match crate::queries::user::create_query(&tele2, &country_code, &body.client_version, &pool) {
+    let user = match crate::queries::user::create_query(
+        &tele2,
+        &country_code,
+        &body.client_version,
+        &pool,
+    ) {
         Ok(u) => Ok(u),
-        Err(ServiceError::AlreadyExists(_)) => crate::queries::user::get_entry_by_tel_query(&tele2, &pool),
+        Err(ServiceError::AlreadyExists(_)) => {
+            crate::queries::user::get_entry_by_tel_query(&tele2, &pool)
+        }
         Err(err) => Err(err),
     }?;
 
@@ -168,4 +200,220 @@ fn update_user(
     crate::queries::user::analytics_user(&pool, &user)?;
 
     Ok(user)
+}
+
+//TODO add verification
+fn save_file(
+    uid: String,
+    field: Field,
+    pool: web::Data<Pool>,
+) -> impl Future<Item = i64, Error = ServiceError> {
+    use std::fs::OpenOptions;
+
+    info!("controllers/user/save_file");
+
+    let str_content_length = field.headers().get("Content-Length");
+
+    if let Some(str_content_length) = str_content_length {
+        let content_length = match str_content_length.to_str().unwrap().parse::<usize>() {
+            Ok(le) => le,
+            Err(e) => {
+                error!("Invalid content length");
+                return Either::A(err(ServiceError::InternalServerError));
+            }
+        };
+
+        if content_length / 1000 > crate::ALLOWED_PROFILE_PICTURE_SIZE {
+            return Either::A(err(ServiceError::BadRequest(
+                "Picture is too big".to_string(),
+            )));
+        }
+    } else {
+        error!("No content length");
+        return Either::A(err(ServiceError::InternalServerError));
+    }
+
+    let unsanitized_ending = match parse_content_disposition_to_fileending(
+        field
+            .headers()
+            .get("content-disposition")
+            .map(|w| w.to_str().unwrap()),
+    ) {
+        Ok(end) => end,
+        Err(e) => {
+            error!("Cannot parse file ending");
+            error!("{:?}", e);
+            return Either::A(err(ServiceError::InternalServerError));
+        }
+    };
+
+    debug!("unsanitized_ending {:?}", unsanitized_ending);
+
+    let ending = match &*unsanitized_ending {
+        ("jpg") => "jpg",
+        ("jpeg") => "jpg",
+        ("png") => "png",
+        _ => {
+            error!("Cannot get file ending");
+            return Either::A(err(ServiceError::InternalServerError));
+        }
+    }
+    .to_string();
+
+    debug!("ending {:?}", ending);
+
+    let parsed = match Uuid::parse_str(&uid) {
+        Ok(p) => p,
+        Err(e) => {
+            error!("uuid is invalid {}", uid);
+            return Either::A(err(ServiceError::InternalServerError));
+        }
+    };
+
+    let file = match OpenOptions::new()
+        .write(true)
+        .create(true)
+        .open(&format!("static/profile_pictures/{}.{}", uid, ending))
+    {
+        Ok(file) => file,
+        Err(e) => {
+            error!("save_file {}", e);
+            return Either::A(err(ServiceError::BadRequest("Uuid is invalid".to_string())));
+        }
+    };
+
+    let ending2 = ending.clone();
+    let pool2 = pool.clone();
+
+    Either::B(
+        field
+            .fold((file, 0i64), move |(mut file, mut acc), bytes| {
+                web::block(move || {
+                    file.write_all(bytes.as_ref()).map_err(|e| {
+                        error!("file.write_all failed {:?}", e);
+                        MultipartError::Payload(PayloadError::Io(e))
+                    })?;
+                    acc += bytes.len() as i64;
+                    Ok((file, acc))
+                })
+                .map_err(|e: BlockingError<MultipartError>| match e {
+                    BlockingError::Error(e) => e,
+                    BlockingError::Canceled => MultipartError::Incomplete,
+                })
+            })
+            .map(|(_, acc)| acc)
+            .map_err(|e| {
+                error!("save_file failed, {:?}", e);
+                ServiceError::InternalServerError
+            })
+            .and_then(move |w| {
+                remove_old_profile_picture(parsed, ending, pool).map_err(|e| {
+                    error!("update_profile_picture removing old profile failed {:?}", e);
+                    ServiceError::InternalServerError
+                });
+
+                Ok(w)
+            })
+            .and_then(move |w| {
+                crate::queries::user::update_profile_picture(parsed, ending2, pool2).map_err(
+                    |e| {
+                        error!("update_profile_picture failed {:?}", e);
+                        ServiceError::InternalServerError
+                    },
+                )?;
+
+                Ok(w)
+            }),
+    )
+}
+
+///The user can upload multiple types of images. When he uploads an image with
+///a different type, it may happen that the old won't be overwritten.
+fn remove_old_profile_picture(
+    myid: Uuid,
+    ending: String,
+    pool: web::Data<Pool>,
+) -> Result<(), ServiceError> {
+    info!("controllers/user/remove_old_profile_picture");
+
+    use core::schema::users::dsl::{id, users};
+
+    let conn: &PgConnection = &pool.get().unwrap();
+
+    users
+        .find(myid)
+        .first::<User>(conn)
+        .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
+        .and_then(|result| {
+            use std::fs::remove_file;
+
+            let pp = result.profile_picture.clone();
+            let splitted = pp.split(".").collect::<Vec<_>>();
+
+            if let Some(db_end) = splitted.get(1) {
+                // If database's profile picture ending is the same as the uploaded one
+                // we need not to delete it, because it gets overwritten
+                if **db_end == ending {
+                    return Ok(());
+                }
+            }
+
+            match remove_file(result.profile_picture.clone()) {
+                Ok(_) => (),
+                Err(e) => {
+                    error!("Cannot remove profile picture {}", result.profile_picture);
+                }
+            }
+
+            Ok(())
+        })
+}
+
+fn parse_content_disposition_to_fileending(raw: Option<&str>) -> Result<String, ServiceError> {
+    match raw {
+        Some(s) => {
+            let splitted = s.split(";").collect::<Vec<_>>();
+            //form-data; name=\"image\"; filename=\"IMG-20191019-WA0023.jpg\"
+
+            if let Some(f) = splitted.get(2) {
+                let ssplitted = f.split("=").collect::<Vec<_>>();
+
+                if let Some(filename) = ssplitted.get(1) {
+                    let parsed_filename = filename.trim().replace("\"", "");
+
+                    Ok(parsed_filename
+                        .split(".")
+                        .collect::<Vec<_>>()
+                        .get(1)
+                        .unwrap()
+                        .to_string())
+                } else {
+                    error!("No filename in form-data");
+                    return Err(ServiceError::InternalServerError);
+                }
+            } else {
+                error!("No filename in form-data");
+                return Err(ServiceError::InternalServerError);
+            }
+        }
+
+        None => {
+            error!("No content-disposition in form-data");
+            return Err(ServiceError::InternalServerError);
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn parse_content_disposition() {
+        let input = "form-data; name=\"image\"; filename=\"IMG-20191019-WA0023.jpg\"";
+
+        let result = parse_content_disposition_to_fileending(Some(input));
+
+        assert_eq!("jpg".to_string(), result.unwrap());
+    }
 }

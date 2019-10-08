@@ -12,6 +12,8 @@ use actix_web::{middleware, web, App, HttpServer, Responder};
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
 use std::path::PathBuf;
+use actix_web::HttpResponse;
+use std::cell::Cell;
 
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 
@@ -28,6 +30,7 @@ mod tests;
 
 pub const ALLOWED_CLIENT_VERSIONS: &'static [&'static str] = &["0.3"];
 pub const LIMIT_PUSH_NOTIFICATION_CONTACTS: usize = 128;
+pub const ALLOWED_PROFILE_PICTURE_SIZE: usize = 5000; //in Kilobytes
 
 pub type Pool = r2d2::Pool<ConnectionManager<PgConnection>>;
 
@@ -70,7 +73,7 @@ pub(crate) fn main() {
             )
             .wrap(middleware::Logger::default())
             .data(web::JsonConfig::default().limit(4048 * 1024))
-            //.data(web::JsonConfig::default())
+            .data(Cell::new(0usize)) //state for picture upload
             .service(web::resource("/").route(web::get().to(load_index_file)))
             .service(
                 web::scope("/static")
@@ -89,6 +92,10 @@ pub(crate) fn main() {
                             .route(web::get().to_async(controllers::blacklist::get_all))
                             .route(web::post().to_async(controllers::blacklist::add))
                             .route(web::put().to_async(controllers::blacklist::delete)), //deletes
+                    )
+                    .service(
+                        web::resource("/user/{uid}/profile")
+                            .route(web::post().to_async(controllers::user::upload_profile_picture))
                     )
                     .service(
                         web::resource("/user/{uid}")
