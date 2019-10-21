@@ -14,6 +14,8 @@ core = { path = "core" }
 actix-identity = "0.1.0"
 actix-multipart = "0.1.1"
 actix-cors = "0.1.0"
+actix-service = "0.4.1"
+bytes = "0.4"
 actix-files = "0.1.0"
 actix-web-actors = "1.0.0"
 actix-web = { version="1.0.3" }

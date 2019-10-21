@@ -5,7 +5,7 @@ extern crate serde_derive;
 use actix_cors::Cors;
 use actix_files::NamedFile;
 use actix_web::http::header;
-use actix_web::{middleware, web, App, HttpServer};
+use actix_web::{middleware as actix_middleware, web, App, HttpServer};
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
 use std::cell::Cell;
@@ -19,10 +19,12 @@ mod utils;
 pub(crate) mod controllers;
 pub(crate) mod queries;
 
+mod middleware;
+
 #[cfg(test)]
 mod tests;
 
-pub const ALLOWED_CLIENT_VERSIONS: &[&'static str] = &["0.3"];
+pub const ALLOWED_CLIENT_VERSIONS: &[&'static str] = &["0.4"];
 pub const LIMIT_PUSH_NOTIFICATION_CONTACTS: usize = 128;
 pub const ALLOWED_PROFILE_PICTURE_SIZE: usize = 5000; //in Kilobytes
 
@@ -54,7 +56,9 @@ pub(crate) fn main() {
                     .allowed_header(header::CONTENT_TYPE)
                     .max_age(3600),
             )
-            .wrap(middleware::Logger::default())
+            .wrap(actix_middleware::Logger::default())
+            //.wrap(middleware::RequestBodyLogging)
+            .wrap(middleware::ResponseBodyLogging)
             .data(web::JsonConfig::default().limit(4048 * 1024))
             .data(Cell::new(0usize)) //state for picture upload
             .service(web::resource("/").route(web::get().to(load_index_file)))

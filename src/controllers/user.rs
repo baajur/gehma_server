@@ -18,7 +18,7 @@ pub fn add(
     pool: web::Data<Pool>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
     info!("controllers/user/add");
-    debug!("{:?}", body);
+    //debug!("{:?}", body);
     //dbg!(&body);
     web::block(move || create_entry(body.into_inner(), pool)).then(|res| match res {
         Ok(user) => {
