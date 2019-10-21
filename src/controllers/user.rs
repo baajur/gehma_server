@@ -1,18 +1,15 @@
 use crate::Pool;
 use actix_multipart::{Field, Multipart, MultipartError};
-use actix_web::{error::BlockingError, error::PayloadError, web, web::Data, HttpResponse};
+use actix_web::{error::BlockingError, error::PayloadError, web, HttpResponse};
 use core::errors::ServiceError;
-use core::models::{Analytic, Blacklist, PhoneNumber, UsageStatisticEntry, User};
+use core::models::{PhoneNumber, User};
 use diesel::{prelude::*, PgConnection};
 use futures::future::{err, Either};
 use futures::stream::Stream;
 use futures::Future;
-use serde_json::json;
-use tokio;
 use uuid::Uuid;
 
 use log::{debug, error, info};
-use std::cell::Cell;
 use std::io::Write;
 
 pub fn add(
@@ -218,7 +215,7 @@ fn save_file(
         let content_length = match str_content_length.to_str().unwrap().parse::<usize>() {
             Ok(le) => le,
             Err(e) => {
-                error!("Invalid content length");
+                error!("Invalid content length {}", e);
                 return Either::A(err(ServiceError::InternalServerError));
             }
         };
@@ -250,11 +247,11 @@ fn save_file(
     debug!("unsanitized_ending {:?}", unsanitized_ending);
 
     let ending = match &*unsanitized_ending {
-        ("jpg") => "jpg",
-        ("jpeg") => "jpg",
-        ("png") => "png",
-        _ => {
-            error!("Cannot get file ending");
+        "jpg" => "jpg",
+        "jpeg" => "jpg",
+        "png" => "png",
+        end => {
+            error!("Cannot get file ending {}", end);
             return Either::A(err(ServiceError::InternalServerError));
         }
     }
@@ -264,7 +261,7 @@ fn save_file(
 
     let parsed = match Uuid::parse_str(&uid) {
         Ok(p) => p,
-        Err(e) => {
+        Err(_e) => {
             error!("uuid is invalid {}", uid);
             return Either::A(err(ServiceError::InternalServerError));
         }
@@ -307,10 +304,7 @@ fn save_file(
                 ServiceError::InternalServerError
             })
             .and_then(move |w| {
-                remove_old_profile_picture(parsed, ending, pool).map_err(|e| {
-                    error!("update_profile_picture removing old profile failed {:?}", e);
-                    ServiceError::InternalServerError
-                });
+                remove_old_profile_picture(parsed, ending, pool);
 
                 Ok(w)
             })
@@ -329,14 +323,10 @@ fn save_file(
 
 ///The user can upload multiple types of images. When he uploads an image with
 ///a different type, it may happen that the old won't be overwritten.
-fn remove_old_profile_picture(
-    myid: Uuid,
-    ending: String,
-    pool: web::Data<Pool>,
-) -> Result<(), ServiceError> {
+fn remove_old_profile_picture(myid: Uuid, ending: String, pool: web::Data<Pool>) {
     info!("controllers/user/remove_old_profile_picture");
 
-    use core::schema::users::dsl::{id, users};
+    use core::schema::users::dsl::users;
 
     let conn: &PgConnection = &pool.get().unwrap();
 
@@ -358,15 +348,14 @@ fn remove_old_profile_picture(
                 }
             }
 
-            match remove_file(result.profile_picture.clone()) {
-                Ok(_) => (),
-                Err(e) => {
-                    error!("Cannot remove profile picture {}", result.profile_picture);
-                }
+            if let Err(e) = remove_file(result.profile_picture.clone()) {
+                error!("Cannot remove profile picture {}", result.profile_picture);
+                error!("Thrown {}", e);
             }
 
             Ok(())
         })
+        .unwrap();
 }
 
 fn parse_content_disposition_to_fileending(raw: Option<&str>) -> Result<String, ServiceError> {

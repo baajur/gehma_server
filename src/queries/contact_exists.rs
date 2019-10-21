@@ -1,12 +1,11 @@
-use actix_web::{error::BlockingError, web, HttpResponse};
+use actix_web::web;
 use diesel::{prelude::*, PgConnection};
-use futures::Future;
 use uuid::Uuid;
 
 use ::core::errors::ServiceError;
 use ::core::models::{Blacklist, User};
 
-use crate::controllers::contact_exists::{Payload, PayloadUser, ResponseUser, MAX_ALLOWED_CONTACTS, MIN_TELE_NUM_LENGTH};
+use crate::controllers::contact_exists::{PayloadUser, ResponseUser, MAX_ALLOWED_CONTACTS, MIN_TELE_NUM_LENGTH};
 
 use crate::Pool;
 

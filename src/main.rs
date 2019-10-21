@@ -1,21 +1,16 @@
-#[macro_use]
 extern crate diesel;
 #[macro_use]
 extern crate serde_derive;
-#[macro_use]
 extern crate lazy_static;
 
 use actix_cors::Cors;
 use actix_files::NamedFile;
 use actix_web::http::header;
-use actix_web::{middleware, web, App, HttpServer, Responder};
+use actix_web::{middleware, web, App, HttpServer};
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
 use std::path::PathBuf;
-use actix_web::HttpResponse;
 use std::cell::Cell;
-
-use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 
 //mod blacklist_handler;
 //mod exists_handler;
@@ -41,23 +36,12 @@ pub(crate) fn main() {
 
     let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL expected");
     let port = std::env::var("PORT").unwrap_or("3000".to_string());
-    let debug = std::env::var("DEBUG").unwrap_or("1".to_string());
     let addr = std::env::var("BINDING_ADDR").unwrap_or("localhost".to_string());
-
-    /*
-    let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
-    builder
-        .set_private_key_file("key.pem", SslFiletype::PEM)
-        .unwrap();
-    builder.set_certificate_chain_file("cert.pem").unwrap();
-    */
 
     let manager = ConnectionManager::<PgConnection>::new(database_url);
     let pool: Pool = r2d2::Pool::builder()
         .build(manager)
         .expect("Failed to create a pool");
-
-    //let domain: String = std::env::var("DOMAIN").unwrap_or_else(|_| "localhost".into());
 
     let server = HttpServer::new(move || {
         App::new()
@@ -110,14 +94,9 @@ pub(crate) fn main() {
     })
     .keep_alive(None);
 
-    //let listener = match debug.as_str() {
-        //"0" => server.bind_ssl(format!("{}:{}", addr, port), builder),
-        //"1" => server.bind(format!("{}:{}", addr, port)),
     let listener = server.bind(format!("{}:{}", addr, port));
-        //_ => panic!("debug state not defined"),
-    //};
 
-    listener.unwrap().run().unwrap()
+    listener.expect("Cannot bind").run().unwrap()
 }
 
 fn load_index_file(_req: actix_web::HttpRequest) -> actix_web::Result<NamedFile> {

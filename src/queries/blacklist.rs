@@ -1,6 +1,5 @@
-use actix_web::{error::BlockingError, web, HttpResponse};
+use actix_web::web;
 use diesel::{prelude::*, PgConnection};
-use futures::Future;
 use uuid::Uuid;
 
 use ::core::errors::ServiceError;

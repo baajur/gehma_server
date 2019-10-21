@@ -8,7 +8,7 @@ use ::core::models::{Blacklist, PhoneNumber, User};
 
 use crate::Pool;
 
-use log::{error, debug, info};
+use log::{debug, info};
 
 #[derive(Debug, Deserialize)]
 pub struct GetAllData {

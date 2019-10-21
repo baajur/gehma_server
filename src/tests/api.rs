@@ -21,6 +21,7 @@ fn test_post_user() {
         main();
     });
 
+    #[allow(deprecated)]
     thread::sleep_ms(500);
 
     let my_user = new_user();
@@ -35,6 +36,7 @@ fn test_get_user() {
         main();
     });
 
+    #[allow(deprecated)]
     thread::sleep_ms(500);
 
     let database_user = new_user();
@@ -53,6 +55,7 @@ fn test_update_state() {
         main();
     });
 
+    #[allow(deprecated)]
     thread::sleep_ms(500);
 
     let database_user = new_user();
@@ -84,6 +87,7 @@ fn test_update_token() {
         main();
     });
 
+    #[allow(deprecated)]
     thread::sleep_ms(500);
 
     let database_user = new_user();

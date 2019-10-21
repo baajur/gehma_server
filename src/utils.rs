@@ -33,6 +33,7 @@ pub(crate) struct Version {
 }
 
 impl Version {
+    #[allow(dead_code)]
     pub fn new(raw: impl Into<String>) -> Result<Self, ()> {
         let s = raw.into();
 

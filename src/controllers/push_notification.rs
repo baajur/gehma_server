@@ -1,11 +1,9 @@
 use actix_web::{error::BlockingError, web, HttpResponse};
-use diesel::{prelude::*, PgConnection};
 use futures::Future;
 use uuid::Uuid;
 
 use crate::Pool;
 use ::core::errors::ServiceError;
-use ::core::models::{Analytic, PhoneNumber, UsageStatisticEntry, User};
 
 use log::{info, debug};
 
