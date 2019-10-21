@@ -1,13 +1,12 @@
 use actix_web::{error::BlockingError, web, HttpResponse};
-use diesel::{prelude::*, PgConnection};
 use futures::Future;
 use uuid::Uuid;
 
 use crate::Pool;
 use core::errors::ServiceError;
-use core::models::{Blacklist, DowngradedUser};
+use core::models::{DowngradedUser};
 
-use log::{debug, error, info};
+use log::{debug, info};
 
 pub const MAX_ALLOWED_CONTACTS: usize = 10000;
 pub const MIN_TELE_NUM_LENGTH: usize = 3;
@@ -60,8 +59,8 @@ pub fn exists(
 }
 
 fn get_entry(
-    uid: &String,
-    country_code: &String,
+    uid: &str,
+    country_code: &str,
     phone_numbers: &mut Vec<PayloadUser>,
     pool: web::Data<Pool>,
 ) -> Result<Vec<ResponseUser>, ServiceError> {

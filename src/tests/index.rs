@@ -24,7 +24,7 @@ fn test_load_file() {
 }
 
 #[test]
-fn test_load_datenschutz_HTML() {
+fn test_load_datenschutz_html() {
     let mut app =
         test::init_service(App::new().route("/static/{filename:.*}", web::get().to(load_file)));
     let req = test::TestRequest::get()

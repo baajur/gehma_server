@@ -1,16 +1,16 @@
 use crate::Pool;
-use ::core::errors::ServiceError;
-use ::core::models::{Analytic, PhoneNumber, UsageStatisticEntry, User, Blacklist};
-use actix_web::{error::BlockingError, web, HttpResponse};
+use actix_web::web;
+use core::errors::ServiceError;
+use core::models::{Analytic, Blacklist, PhoneNumber, UsageStatisticEntry, User};
 use diesel::{prelude::*, PgConnection};
 use futures::Future;
 use serde_json::json;
 use tokio;
 use uuid::Uuid;
 
-use crate::controllers::user::{PostUser, UpdateUser};
+use crate::controllers::user::UpdateUser;
 
-use log::{info, error};
+use log::{debug, error, info};
 
 pub(crate) fn get_entry_by_tel_query(
     tele: &PhoneNumber,
@@ -18,7 +18,7 @@ pub(crate) fn get_entry_by_tel_query(
 ) -> Result<User, ::core::errors::ServiceError> {
     info!("queries/user/get_entry_by_tel_query");
 
-    use ::core::schema::users::dsl::*;
+    use core::schema::users::dsl::*;
 
     let conn: &PgConnection = &pool.get().unwrap();
 
@@ -36,8 +36,8 @@ pub(crate) fn get_entry_by_tel_query(
         })?;
 
     res.first()
-        .map(|w| w.clone())
-        .ok_or(ServiceError::BadRequest("No user found".into()))
+        .cloned()
+        .ok_or_else(|| ServiceError::BadRequest("No user found".into()))
 }
 
 pub(crate) fn analytics_user(
@@ -45,7 +45,7 @@ pub(crate) fn analytics_user(
     user: &User,
 ) -> Result<Analytic, ::core::errors::ServiceError> {
     info!("queries/user/analytics_user");
-    use ::core::schema::analytics::dsl::analytics;
+    use core::schema::analytics::dsl::analytics;
 
     let ana = Analytic::my_from(user);
     let conn: &PgConnection = &pool.get().unwrap();
@@ -63,12 +63,12 @@ pub(crate) fn analytics_user(
 
 pub(crate) fn create_query(
     tel: &PhoneNumber,
-    country_code: &String,
-    version: &String,
+    country_code: &str,
+    version: &str,
     pool: &web::Data<Pool>,
 ) -> Result<User, ServiceError> {
     info!("queries/user/create_query");
-    use ::core::schema::users::dsl::users;
+    use core::schema::users::dsl::users;
 
     let new_inv: User = User::my_from(&tel.to_string(), country_code, version);
     let conn: &PgConnection = &pool.get().unwrap();
@@ -87,7 +87,7 @@ pub(crate) fn analytics_usage_statistics(
     user: &User,
 ) -> Result<UsageStatisticEntry, ::core::errors::ServiceError> {
     info!("queries/user/analytics_usage_statistics");
-    use ::core::schema::usage_statistics::dsl::usage_statistics;
+    use core::schema::usage_statistics::dsl::usage_statistics;
 
     let ana = UsageStatisticEntry::my_from(user);
     let conn: &PgConnection = &pool.get().unwrap();
@@ -109,7 +109,7 @@ pub(crate) fn update_user_query(
     pool: &web::Data<Pool>,
 ) -> Result<User, ::core::errors::ServiceError> {
     info!("queries/user/update_user_query");
-    use ::core::schema::users::dsl::{
+    use core::schema::users::dsl::{
         changed_at, client_version, description, id, is_autofahrer, led, users,
     };
 
@@ -140,41 +140,38 @@ pub(crate) fn update_user_query(
         .execute(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Updating state failed".into()))?;
 
-    let db_user = users
+    users
         .filter(id.eq(myid))
         .load::<User>(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
         .and_then(|res_users| {
             Ok(res_users
                 .first()
-                .map(|w| w.clone())
-                .ok_or(ServiceError::BadRequest("No user found".into()))?)
+                .cloned()
+                .ok_or_else(|| ServiceError::BadRequest("No user found".into()))?)
         })
         .and_then(|user| {
             if my_led {
                 //Sending push notification
-                sending_push_notifications(&user, pool)
-                    .map_err(|err| { eprintln!("{}", err); ServiceError::BadRequest("Cannot send push notifications".to_string()) })?;
+                sending_push_notifications(&user, pool).map_err(|err| {
+                    eprintln!("{}", err);
+                    ServiceError::BadRequest("Cannot send push notifications".to_string())
+                })?;
             }
 
             Ok(user)
-        });
-
-    db_user
+        })
 }
 
-fn sending_push_notifications(
-    user: &User,
-    pool: &web::Data<Pool>,
-) -> Result<(), ServiceError> {
+fn sending_push_notifications(user: &User, pool: &web::Data<Pool>) -> Result<(), ServiceError> {
     info!("queries/user/sending_push_notifications");
-    use ::core::models::Contact;
-    use ::core::schema::blacklist::dsl::{blacklist, blocker, blocked};
-    use ::core::schema::contacts::dsl::{contacts, from_id, target_tele_num};
-    use ::core::schema::users::dsl::{id, tele_num, users};
+    use core::models::Contact;
+    use core::schema::blacklist::dsl::{blacklist, blocked, blocker};
+    use core::schema::contacts::dsl::{contacts, target_tele_num};
+    use core::schema::users::dsl::{id, users};
     use futures::stream::Stream;
     use reqwest::header::{AUTHORIZATION, CONTENT_TYPE};
-    use reqwest::r#async::{Client, Response};
+    use reqwest::r#async::Client;
 
     let conn: &PgConnection = &pool.get().unwrap();
 
@@ -193,10 +190,10 @@ fn sending_push_notifications(
     dbg!(&my_filtered_contacts);
 
     for i in my_filtered_contacts.iter() {
-        let r = contacts_who_saved_user
-            .iter()
-            .position(|c| (c.target_tele_num == i.blocker && c.from_tele_num == i.blocked) 
-                        || (c.target_tele_num == i.blocked && c.from_tele_num == i.blocker));
+        let r = contacts_who_saved_user.iter().position(|c| {
+            (c.target_tele_num == i.blocker && c.from_tele_num == i.blocked)
+                || (c.target_tele_num == i.blocked && c.from_tele_num == i.blocker)
+        });
 
         if let Some(r) = r {
             contacts_who_saved_user.remove(r);
@@ -233,10 +230,10 @@ fn sending_push_notifications(
     let client = Client::new();
 
     let test = user_contacts
-            .clone()
-            .into_iter()
-            .zip(contacts_who_saved_user.clone())
-            .take(crate::LIMIT_PUSH_NOTIFICATION_CONTACTS);
+        .clone()
+        .into_iter()
+        .zip(contacts_who_saved_user.clone())
+        .take(crate::LIMIT_PUSH_NOTIFICATION_CONTACTS);
 
     if test.len() == 0 {
         info!("Nix zu senden");
@@ -282,7 +279,7 @@ fn sending_push_notifications(
 
 pub(crate) fn get_query(myid: Uuid, pool: &web::Data<Pool>) -> Result<Vec<User>, ServiceError> {
     info!("queries/user/get_query");
-    use ::core::schema::users::dsl::{id, users};
+    use core::schema::users::dsl::{id, users};
 
     let conn: &PgConnection = &pool.get().unwrap();
 
@@ -294,4 +291,32 @@ pub(crate) fn get_query(myid: Uuid, pool: &web::Data<Pool>) -> Result<Vec<User>,
             Ok(result)
             //Err(ServiceError::BadRequest("Invalid Invitation".into()))
         })
+}
+
+pub(crate) fn update_profile_picture(
+    uid: Uuid,
+    ending: String,
+    pool: web::Data<Pool>,
+) -> Result<(), ServiceError> {
+    info!("queries/user/update_profile_picture");
+    use core::schema::users::dsl::{changed_at, id, profile_picture, users};
+
+    let conn: &PgConnection = &pool.get().unwrap();
+
+    let target = users.filter(id.eq(uid));
+
+    diesel::update(target)
+        .set((
+            changed_at.eq(chrono::Local::now().naive_local()),
+            profile_picture.eq(format!("static/profile_pictures/{}.{}", uid, ending)),
+        ))
+        .execute(conn)
+        .map_err(|_db_error| ServiceError::BadRequest("Updating state failed".into()))?;
+
+    debug!(
+        "Updating profile {}",
+        format!("static/profile_pictures/{}.{}", uid, ending)
+    );
+
+    Ok(())
 }

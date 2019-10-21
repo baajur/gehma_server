@@ -1,6 +1,6 @@
 [package]
 name = "sprechstunde"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["Kevin Per <kevin.per@protonmail.com>"]
 edition = "2018"
 
@@ -12,10 +12,13 @@ members = [
 [dependencies]
 core = { path = "core" }
 actix-identity = "0.1.0"
+actix-multipart = "0.1.1"
 actix-cors = "0.1.0"
+actix-service = "0.4.1"
+bytes = "0.4"
 actix-files = "0.1.0"
 actix-web-actors = "1.0.0"
-actix-web = { version="1.0.3", features=["ssl"] }
+actix-web = { version="1.0.3" }
 actix = "0.8"
 chrono = { version = "0.4.6", features = ["serde"] }
 diesel = { version = "1.4.*", features = ["postgres","uuidv07", "r2d2", "chrono"] }
@@ -24,7 +27,6 @@ env_logger = "0.6"
 log = "0.4"
 futures = "0.1"
 r2d2 = "0.8"
-lazy_static = "1.3.0"
 serde = "1.0"
 serde_derive = "1.0"
 serde_json = "1.0"
