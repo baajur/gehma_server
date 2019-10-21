@@ -1,7 +1,6 @@
 extern crate diesel;
 #[macro_use]
 extern crate serde_derive;
-extern crate lazy_static;
 
 use actix_cors::Cors;
 use actix_files::NamedFile;
