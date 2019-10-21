@@ -38,7 +38,7 @@ impl Version {
         let s = raw.into();
 
         let splitted = s
-            .split(".")
+            .split('.')
             .map(|w| w.parse().expect("Version can only contain numbers"))
             .collect::<Vec<_>>();
 
@@ -62,9 +62,9 @@ impl Version {
         };
 
         Ok(Version {
-            major: major,
-            minor: minor,
-            patch: patch,
+            major,
+            minor,
+            patch,
         })
     }
 }

@@ -8,8 +8,8 @@ use actix_web::http::header;
 use actix_web::{middleware, web, App, HttpServer};
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
-use std::path::PathBuf;
 use std::cell::Cell;
+use std::path::PathBuf;
 
 //mod blacklist_handler;
 //mod exists_handler;
@@ -22,7 +22,7 @@ pub(crate) mod queries;
 #[cfg(test)]
 mod tests;
 
-pub const ALLOWED_CLIENT_VERSIONS: &'static [&'static str] = &["0.3"];
+pub const ALLOWED_CLIENT_VERSIONS: &[&'static str] = &["0.3"];
 pub const LIMIT_PUSH_NOTIFICATION_CONTACTS: usize = 128;
 pub const ALLOWED_PROFILE_PICTURE_SIZE: usize = 5000; //in Kilobytes
 
@@ -34,8 +34,8 @@ pub(crate) fn main() {
     env_logger::init();
 
     let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL expected");
-    let port = std::env::var("PORT").unwrap_or("3000".to_string());
-    let addr = std::env::var("BINDING_ADDR").unwrap_or("localhost".to_string());
+    let port = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());
+    let addr = std::env::var("BINDING_ADDR").unwrap_or_else(|_| "localhost".to_string());
 
     let manager = ConnectionManager::<PgConnection>::new(database_url);
     let pool: Pool = r2d2::Pool::builder()
@@ -60,15 +60,22 @@ pub(crate) fn main() {
             .service(web::resource("/").route(web::get().to(load_index_file)))
             .service(
                 web::scope("/static")
-                    .service(actix_files::Files::new("/browse", "static/browse").show_files_listing().use_last_modified(true))
-                    .service(web::resource("/{filename:.*}").route(web::get().to(load_file)))
+                    .service(
+                        actix_files::Files::new("/browse", "static/browse")
+                            .show_files_listing()
+                            .use_last_modified(true),
+                    )
+                    .service(web::resource("/{filename:.*}").route(web::get().to(load_file))),
             )
             .service(
                 web::scope("/api")
-                    .service(web::resource("/user").route(web::post().to_async(controllers::user::add)))
                     .service(
-                        web::resource("/user/{uid}/token")
-                            .route(web::put().to_async(controllers::push_notification::update_token)),
+                        web::resource("/user").route(web::post().to_async(controllers::user::add)),
+                    )
+                    .service(
+                        web::resource("/user/{uid}/token").route(
+                            web::put().to_async(controllers::push_notification::update_token),
+                        ),
                     )
                     .service(
                         web::resource("/user/{uid}/blacklist")
@@ -78,7 +85,7 @@ pub(crate) fn main() {
                     )
                     .service(
                         web::resource("/user/{uid}/profile")
-                            .route(web::post().to_async(controllers::user::upload_profile_picture))
+                            .route(web::post().to_async(controllers::user::upload_profile_picture)),
                     )
                     .service(
                         web::resource("/user/{uid}")

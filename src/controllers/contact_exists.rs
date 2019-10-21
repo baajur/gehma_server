@@ -59,8 +59,8 @@ pub fn exists(
 }
 
 fn get_entry(
-    uid: &String,
-    country_code: &String,
+    uid: &str,
+    country_code: &str,
     phone_numbers: &mut Vec<PayloadUser>,
     pool: web::Data<Pool>,
 ) -> Result<Vec<ResponseUser>, ServiceError> {

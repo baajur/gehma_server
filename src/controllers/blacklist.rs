@@ -3,8 +3,8 @@ use diesel::{prelude::*, PgConnection};
 use futures::Future;
 use uuid::Uuid;
 
-use ::core::errors::ServiceError;
-use ::core::models::{Blacklist, PhoneNumber, User};
+use core::errors::ServiceError;
+use core::models::{Blacklist, PhoneNumber, User};
 
 use crate::Pool;
 
@@ -95,10 +95,7 @@ pub fn delete(
     })
 }
 
-fn get_entry(
-    blocker: &String,
-    pool: web::Data<Pool>,
-) -> Result<Vec<Blacklist>, ServiceError> {
+fn get_entry(blocker: &str, pool: web::Data<Pool>) -> Result<Vec<Blacklist>, ServiceError> {
     let blocker = Uuid::parse_str(blocker)?;
 
     let bl = crate::queries::blacklist::get_query(blocker, pool)?;
@@ -109,11 +106,11 @@ fn get_entry(
 }
 
 fn create_entry(
-    blocker: &String,
+    blocker: &str,
     data: &PostData,
     pool: web::Data<Pool>,
 ) -> Result<Blacklist, ServiceError> {
-    use ::core::schema::users::dsl::{id, users};
+    use core::schema::users::dsl::{id, users};
 
     let blocker2 = Uuid::parse_str(blocker)?;
     let blocked = PhoneNumber::my_from(&data.blocked, &data.country_code)?;
@@ -130,10 +127,8 @@ fn create_entry(
 
     let user = myusers
         .first()
-        .map(|w| w.clone())
-        .ok_or(ServiceError::BadRequest(
-            "No user found with given uid".into(),
-        ))?;
+        .cloned()
+        .ok_or_else(|| ServiceError::BadRequest("No user found with given uid".into()))?;
 
     let tel = PhoneNumber::my_from(&user.tele_num, &data.country_code)?;
     let b = crate::queries::blacklist::create_query(&tel, &blocked, pool)?;
@@ -143,11 +138,11 @@ fn create_entry(
 }
 
 fn delete_entry(
-    blocker: &String,
+    blocker: &str,
     data: &PostData,
     pool: web::Data<Pool>,
 ) -> Result<(), ServiceError> {
-    use ::core::schema::users::dsl::{id, users};
+    use core::schema::users::dsl::{id, users};
 
     let blocker2 = Uuid::parse_str(blocker)?;
     let blocked = PhoneNumber::my_from(&data.blocked, &data.country_code)?;
@@ -161,8 +156,8 @@ fn delete_entry(
 
     let user = myusers
         .first()
-        .map(|w| w.clone())
-        .ok_or(ServiceError::BadRequest(
+        .cloned()
+        .ok_or_else(|| ServiceError::BadRequest(
             "No user found with given uid".into(),
         ))?;
 

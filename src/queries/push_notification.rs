@@ -3,10 +3,9 @@ use diesel::{prelude::*, PgConnection};
 use uuid::Uuid;
 
 use crate::Pool;
-use ::core::errors::ServiceError;
+use core::errors::ServiceError;
 
-
-use log::{info, error};
+use log::{error, info};
 
 pub(crate) fn update_token_query(
     uid: Uuid,
@@ -14,7 +13,7 @@ pub(crate) fn update_token_query(
     pool: &web::Data<Pool>,
 ) -> Result<(), ServiceError> {
     info!("queries/push_notification/update_token_query");
-    use ::core::schema::users::dsl::*;
+    use core::schema::users::dsl::*;
     let conn: &PgConnection = &pool.get().unwrap();
 
     let target = users.filter(id.eq(uid));

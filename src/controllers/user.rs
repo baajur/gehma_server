@@ -169,7 +169,7 @@ fn create_entry(body: PostUser, pool: web::Data<Pool>) -> Result<User, ServiceEr
     Ok(user)
 }
 
-fn get_entry(uid: &String, pool: web::Data<Pool>) -> Result<User, ::core::errors::ServiceError> {
+fn get_entry(uid: &str, pool: web::Data<Pool>) -> Result<User, ::core::errors::ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
     let users = crate::queries::user::get_query(parsed, &pool)?;
     dbg!(&users);
@@ -185,7 +185,7 @@ fn get_entry(uid: &String, pool: web::Data<Pool>) -> Result<User, ::core::errors
 }
 
 fn update_user(
-    uid: &String,
+    uid: &str,
     user: &UpdateUser,
     pool: &web::Data<Pool>,
 ) -> Result<User, ::core::errors::ServiceError> {
@@ -338,7 +338,7 @@ fn remove_old_profile_picture(myid: Uuid, ending: String, pool: web::Data<Pool>)
             use std::fs::remove_file;
 
             let pp = result.profile_picture.clone();
-            let splitted = pp.split(".").collect::<Vec<_>>();
+            let splitted = pp.split('.').collect::<Vec<_>>();
 
             if let Some(db_end) = splitted.get(1) {
                 // If database's profile picture ending is the same as the uploaded one
@@ -361,34 +361,37 @@ fn remove_old_profile_picture(myid: Uuid, ending: String, pool: web::Data<Pool>)
 fn parse_content_disposition_to_fileending(raw: Option<&str>) -> Result<String, ServiceError> {
     match raw {
         Some(s) => {
-            let splitted = s.split(";").collect::<Vec<_>>();
+            let splitted = s.split(';').collect::<Vec<_>>();
             //form-data; name=\"image\"; filename=\"IMG-20191019-WA0023.jpg\"
 
             if let Some(f) = splitted.get(2) {
-                let ssplitted = f.split("=").collect::<Vec<_>>();
+                let ssplitted = f.split('=').collect::<Vec<_>>();
 
                 if let Some(filename) = ssplitted.get(1) {
                     let parsed_filename = filename.trim().replace("\"", "");
 
                     Ok(parsed_filename
-                        .split(".")
+                        .split('.')
                         .collect::<Vec<_>>()
                         .get(1)
                         .unwrap()
                         .to_string())
                 } else {
                     error!("No filename in form-data");
-                    return Err(ServiceError::InternalServerError);
+                    //FIXME change to BadRequest
+                    Err(ServiceError::InternalServerError)
                 }
             } else {
                 error!("No filename in form-data");
+                //FIXME change to BadRequest
                 return Err(ServiceError::InternalServerError);
             }
         }
 
         None => {
             error!("No content-disposition in form-data");
-            return Err(ServiceError::InternalServerError);
+            //FIXME change to BadRequest
+            Err(ServiceError::InternalServerError)
         }
     }
 }

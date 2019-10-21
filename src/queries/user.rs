@@ -36,8 +36,8 @@ pub(crate) fn get_entry_by_tel_query(
         })?;
 
     res.first()
-        .map(|w| w.clone())
-        .ok_or(ServiceError::BadRequest("No user found".into()))
+        .cloned()
+        .ok_or_else(|| ServiceError::BadRequest("No user found".into()))
 }
 
 pub(crate) fn analytics_user(
@@ -63,8 +63,8 @@ pub(crate) fn analytics_user(
 
 pub(crate) fn create_query(
     tel: &PhoneNumber,
-    country_code: &String,
-    version: &String,
+    country_code: &str,
+    version: &str,
     pool: &web::Data<Pool>,
 ) -> Result<User, ServiceError> {
     info!("queries/user/create_query");
@@ -140,15 +140,15 @@ pub(crate) fn update_user_query(
         .execute(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Updating state failed".into()))?;
 
-    let db_user = users
+    users
         .filter(id.eq(myid))
         .load::<User>(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
         .and_then(|res_users| {
             Ok(res_users
                 .first()
-                .map(|w| w.clone())
-                .ok_or(ServiceError::BadRequest("No user found".into()))?)
+                .cloned()
+                .ok_or_else(|| ServiceError::BadRequest("No user found".into()))?)
         })
         .and_then(|user| {
             if my_led {
@@ -160,9 +160,7 @@ pub(crate) fn update_user_query(
             }
 
             Ok(user)
-        });
-
-    db_user
+        })
 }
 
 fn sending_push_notifications(user: &User, pool: &web::Data<Pool>) -> Result<(), ServiceError> {

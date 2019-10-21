@@ -24,8 +24,8 @@ pub(crate) fn get_query(
         .load::<User>(conn)
         .map_err(|_db_err| ServiceError::BadRequest("Invalid User".into()))?
         .first()
-        .map(|w| w.clone())
-        .ok_or(ServiceError::BadRequest("No user found".into()))?;
+        .cloned()
+        .ok_or_else(|| ServiceError::BadRequest("No user found".into()))?;
 
     blacklist
         .filter(blocker.eq(user.tele_num))

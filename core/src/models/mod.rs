@@ -1,8 +1,6 @@
 use super::schema::*;
 use crate::errors::InternalError;
 use crate::utils::phonenumber_to_international;
-use diesel::{r2d2::ConnectionManager, PgConnection};
-
 
 #[derive(Debug, Serialize, Deserialize, Queryable, Insertable, Clone, Identifiable, AsChangeset, Eq, PartialEq)]
 #[table_name = "users"]
@@ -35,7 +33,7 @@ pub struct DowngradedUser {
 }
 
 impl User {
-    pub fn my_from(e: &String, country_code: &String, version: &String) -> Self {
+    pub fn my_from(e: &str, country_code: &str, version: &str) -> Self {
         User {
             id: uuid::Uuid::new_v4(),
             tele_num: e.to_string(),
@@ -54,11 +52,11 @@ impl User {
     pub fn downgrade(&self) -> DowngradedUser {
         DowngradedUser {
             tele_num: self.tele_num.clone(),
-            led: self.led.clone(),
+            led: self.led,
             country_code: self.country_code.clone(),
             description: self.description.clone(),
-            is_autofahrer: self.is_autofahrer.clone(),
-            changed_at: self.changed_at.clone(),
+            is_autofahrer: self.is_autofahrer,
+            changed_at: self.changed_at,
             profile_picture: self.profile_picture.clone()
         }
     }
@@ -160,35 +158,6 @@ impl UsageStatisticEntry {
     }
 }
 
-/*
-#[derive(Debug, Serialize, Deserialize, Queryable, Clone, Identifiable)]
-#[table_name = "push_notifications_listeners"]
-pub struct PushNotificationListener {
-    pub id: i32,
-    pub tele_num_from: String,
-    pub tele_num_target: String,
-    pub created_at: chrono::NaiveDateTime,
-}
-
-#[derive(Debug, Serialize, Deserialize, Insertable)]
-#[table_name = "push_notifications_listeners"]
-pub struct InsertPushNotificationListener {
-    pub tele_num_from: String,
-    pub tele_num_target: String,
-    pub created_at: chrono::NaiveDateTime,
-}
-
-impl PushNotificationListener {
-    pub fn my_from(from: String, target: String) -> InsertPushNotificationListener {
-        InsertPushNotificationListener {
-            tele_num_from: from,
-            tele_num_target: target,
-            created_at: chrono::Local::now().naive_local(),
-        }
-    }
-}
-*/
-
 #[derive(Debug, Serialize, Deserialize, Queryable, Clone, Identifiable, Associations)]
 #[belongs_to(User, foreign_key="from_tele_num")]
 #[table_name = "contacts"]
@@ -215,10 +184,10 @@ pub struct ContactInsert {
 impl Contact {
     pub fn my_from(name: String, user: &User, target_tele_num: String) -> ContactInsert {
         ContactInsert {
-            from_id: user.id.clone(),
-            target_tele_num: target_tele_num,
+            from_id: user.id,
+            target_tele_num,
             created_at: chrono::Local::now().naive_local(),
-            name: name,
+            name,
             from_tele_num: user.tele_num.clone(),
         }
     }

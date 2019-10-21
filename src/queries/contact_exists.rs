@@ -14,7 +14,7 @@ use log::{info, error};
 pub(crate) fn get_query(
     uid: Uuid,
     phone_numbers: &mut Vec<PayloadUser>,
-    country_code: &String,
+    country_code: &str,
     pool: web::Data<Pool>,
 ) -> Result<Vec<ResponseUser>, ServiceError> {
     info!("queries/push_notification/get_query");
@@ -25,7 +25,7 @@ pub(crate) fn get_query(
 
     let conn: &PgConnection = &pool.get().unwrap();
 
-    if phone_numbers.len() == 0 {
+    if phone_numbers.is_empty() {
         return Ok(Vec::new());
     }
 
@@ -34,7 +34,7 @@ pub(crate) fn get_query(
     }
 
     let mut numbers: Vec<ResponseUser> = phone_numbers
-        .into_iter()
+        .iter_mut()
         .filter(|w| w.tele_num.len() > MIN_TELE_NUM_LENGTH)
         .filter_map(|w| match PhoneNumber::my_from(&w.tele_num, country_code) {
             Ok(number) => Some(ResponseUser {
