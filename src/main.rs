@@ -26,7 +26,7 @@ mod tests;
 
 pub const ALLOWED_CLIENT_VERSIONS: &[&'static str] = &["0.4"];
 pub const LIMIT_PUSH_NOTIFICATION_CONTACTS: usize = 128;
-pub const ALLOWED_PROFILE_PICTURE_SIZE: usize = 5000; //in Kilobytes
+pub const ALLOWED_PROFILE_PICTURE_SIZE: usize = 10_000; //in Kilobytes
 
 pub type Pool = r2d2::Pool<ConnectionManager<PgConnection>>;
 
@@ -58,8 +58,6 @@ pub(crate) fn main() {
                     .max_age(3600),
             )
             .wrap(actix_middleware::Logger::default())
-            //.wrap(middleware::RequestBodyLogging)
-            .wrap(middleware::ResponseBodyLogging)
             .data(web::JsonConfig::default().limit(4048 * 1024))
             .data(Cell::new(0usize)) //state for picture upload
             .service(web::resource("/").route(web::get().to(load_index_file)))
@@ -74,6 +72,8 @@ pub(crate) fn main() {
             )
             .service(
                 web::scope("/api")
+                    //.wrap(middleware::RequestBodyLogging)
+                    //.wrap(middleware::ResponseBodyLogging)
                     .service(
                         web::resource("/user").route(web::post().to_async(controllers::user::add)),
                     )

@@ -37,8 +37,7 @@ pub struct LoggingMiddleware<S> {
 
 impl<S, B> Service for LoggingMiddleware<S>
 where
-    S: Service<Request = ServiceRequest, Response = ServiceResponse<B>, Error = Error>
-        + 'static,
+    S: Service<Request = ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
     S::Future: 'static,
     B: 'static,
 {
@@ -68,4 +67,3 @@ where
         )
     }
 }
-
