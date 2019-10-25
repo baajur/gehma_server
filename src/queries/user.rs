@@ -258,7 +258,8 @@ fn sending_push_notifications(user: &User, pool: &web::Data<Pool>) -> Result<(),
             .json(&json!({
                 "notification": {
                     "title": format!("{} ist motiviert", contact.name),
-                    "body": ""
+                    "body": "",
+                    "icon": "ic_stat_name_nougat"
                 },
                 "registration_ids": [user.firebase_token]
             }))
