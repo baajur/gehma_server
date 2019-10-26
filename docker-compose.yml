@@ -1,0 +1,17 @@
+version: '3'
+services:
+    api: 
+        build: .
+        image: kper/gehma:latest
+        ports: 
+        - "3000:3000"
+        links:
+            - db
+        volumes:
+            - ./static:/gehma/static
+    db:
+        image: postgres:latest
+        ports:
+            - "10000:5432"
+        volumes:
+            - ./database_volume:/var/lib/postgresql/data

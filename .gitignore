@@ -9,3 +9,5 @@ node_modules
 client.js
 core/target
 static/profile_pictures/*
+docker-compose.dev.yml
+old_env
