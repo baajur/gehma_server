@@ -1,16 +1,26 @@
 version: '3'
 services:
     api: 
-        image: kper/gehma:latest
+        image: kper/gehma:v0.4.4
         ports: 
         - "3000:3000"
         links:
             - db
         volumes:
             - ./static:/gehma/static
+        logging:
+            driver: "json-file"
+            options:
+                max-file: "5"
+                max-size: "50m"
     db:
         image: postgres:latest
         ports:
             - "10000:5432"
         volumes:
             - ./database_volume:/var/lib/postgresql/data
+        logging:
+            driver: "json-file"
+            options:
+                max-file: "5"
+                max-size: "50m"
