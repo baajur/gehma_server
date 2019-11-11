@@ -37,7 +37,7 @@ pub fn exists(
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
     info!("controllers/contact_exists/exists");
     debug!("path {:?}", info);
-    debug!("body {:?}", payload);
+    //debug!("body {:?}", payload);
 
     web::block(move || {
         let info = info.into_inner();
