@@ -60,7 +60,6 @@ pub(crate) fn main() {
             .wrap(actix_middleware::Logger::default())
             .data(web::JsonConfig::default().limit(4048 * 1024))
             .wrap(actix_middleware::Compress::default())
-            .data(Cell::new(0usize)) //state for picture upload
             .service(web::resource("/").route(web::get().to(load_index_file)))
             .service(
                 web::scope("/static")
