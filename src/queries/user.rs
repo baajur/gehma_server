@@ -314,7 +314,7 @@ pub(crate) fn update_profile_picture(
         .execute(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Updating state failed".into()))?;
 
-    debug!(
+    info!(
         "Updating profile {}",
         format!("static/profile_pictures/{}.{}", uid, ending)
     );

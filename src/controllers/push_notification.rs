@@ -18,8 +18,8 @@ pub fn update_token(
     pool: web::Data<Pool>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
     info!("controllers/push_notification/update_token");
-    debug!("path {:?}", _info);
-    debug!("body {:?}", body);
+    info!("path {:?}", _info);
+    info!("body {:?}", body);
 
     web::block(move || update_token_handler(_info.into_inner(), body.into_inner(), pool)).then(
         |res| match res {

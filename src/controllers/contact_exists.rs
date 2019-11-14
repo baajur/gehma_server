@@ -36,7 +36,7 @@ pub fn exists(
     pool: web::Data<Pool>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
     info!("controllers/contact_exists/exists");
-    debug!("path {:?}", info);
+    info!("path {:?}", info);
     //debug!("body {:?}", payload);
 
     web::block(move || {

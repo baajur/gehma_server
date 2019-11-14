@@ -40,7 +40,7 @@ pub fn get(
     pool: web::Data<Pool>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
     info!("controllers/user/get");
-    debug!("path {:?}", info);
+    info!("path {:?}", info);
 
     web::block(move || get_entry(&info.into_inner(), pool)).then(|res| match res {
         Ok(users) => {

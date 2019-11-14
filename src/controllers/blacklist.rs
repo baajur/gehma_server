@@ -21,9 +21,9 @@ pub fn get_all(
     pool: web::Data<Pool>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
     info!("controllers/blacklist/get_all");
-    debug!("path {:?}", info);
+    info!("path {:?}", info);
 
-    dbg!(&info);
+    //dbg!(&info);
     let info = info.into_inner();
     web::block(move || get_entry(&info, pool)).then(|res| match res {
         Ok(users) => {
@@ -53,8 +53,8 @@ pub fn add(
     pool: web::Data<Pool>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
     info!("controllers/blacklist/add");
-    debug!("path {:?}", info);
-    debug!("body {:?}", data);
+    info!("path {:?}", info);
+    info!("body {:?}", data);
 
     web::block(move || create_entry(&info.into_inner(), &data.into_inner(), pool)).then(|res| {
         match res {
@@ -77,8 +77,8 @@ pub fn delete(
     pool: web::Data<Pool>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
     info!("controllers/blacklist/delete");
-    debug!("path {:?}", info);
-    debug!("body {:?}", data);
+    info!("path {:?}", info);
+    info!("body {:?}", data);
 
     web::block(move || delete_entry(&info.into_inner(), &data.into_inner(), pool)).then(|res| {
         match res {
@@ -115,8 +115,8 @@ fn create_entry(
     let blocker2 = Uuid::parse_str(blocker)?;
     let blocked = PhoneNumber::my_from(&data.blocked, &data.country_code)?;
 
-    dbg!(&blocked);
-    dbg!(&blocker);
+    //dbg!(&blocked);
+    //dbg!(&blocker);
 
     let conn: &PgConnection = &pool.get().unwrap();
 
@@ -133,7 +133,7 @@ fn create_entry(
     let tel = PhoneNumber::my_from(&user.tele_num, &data.country_code)?;
     let b = crate::queries::blacklist::create_query(&tel, &blocked, pool)?;
 
-    dbg!(&b);
+    //dbg!(&b);
     Ok(b)
 }
 
