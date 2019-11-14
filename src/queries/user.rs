@@ -257,9 +257,12 @@ fn sending_push_notifications(user: &User, pool: &web::Data<Pool>) -> Result<(),
             .header(AUTHORIZATION, format!("key={}", api_token))
             .json(&json!({
                 "notification": {
-                    "title": format!("{} ist motiviert", contact.name),
+                    "title": format!("Klopf! klopf! ({})", contact.name),
                     "body": "",
                     "icon": "ic_stat_name_nougat"
+                },
+                "android":{
+                    "ttl":"43200s"
                 },
                 "registration_ids": [user.firebase_token]
             }))
