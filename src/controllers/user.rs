@@ -1,3 +1,4 @@
+use crate::auth::FirebaseDatabaseConfiguration;
 use crate::Pool;
 use actix_multipart::{Field, Multipart, MultipartError};
 use actix_web::{error::BlockingError, error::PayloadError, web, HttpResponse};
@@ -7,60 +8,75 @@ use diesel::{prelude::*, PgConnection};
 use futures::future::{err, Either};
 use futures::stream::Stream;
 use futures::Future;
+use std::sync::Arc;
 use uuid::Uuid;
 
+use actix_web::HttpRequest;
 use log::{debug, error, info};
 use std::io::Write;
+use crate::utils::QueryParams;
+//use crate::auth::authenticate_user;
 
-pub fn add(
+pub fn signin(
+    req: HttpRequest,
     _info: web::Path<()>,
     body: web::Json<PostUser>,
     pool: web::Data<Pool>,
+    query: web::Query<QueryParams>,
+    firebase_config: web::Data<FirebaseDatabaseConfiguration>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
     info!("controllers/user/add");
-    //debug!("{:?}", body);
-    //dbg!(&body);
-    web::block(move || create_entry(body.into_inner(), pool)).then(|res| match res {
-        Ok(user) => {
-            let mut res = HttpResponse::Ok()
-                .content_type("application/json")
-                .json(user);
-            crate::utils::set_response_headers(&mut res);
-            Ok(res)
-        }
-        Err(err) => match err {
-            BlockingError::Error(service_error) => Err(service_error),
-            BlockingError::Canceled => Err(ServiceError::InternalServerError),
+
+    web::block(move || create_entry(body.into_inner(), pool, &query.firebase_uid, firebase_config)).then(
+        |res| match res {
+            Ok(user) => {
+                let mut res = HttpResponse::Ok()
+                    .content_type("application/json")
+                    .json(user);
+                crate::utils::set_response_headers(&mut res);
+                Ok(res)
+            }
+            Err(err) => match err {
+                BlockingError::Error(service_error) => Err(service_error),
+                BlockingError::Canceled => Err(ServiceError::InternalServerError),
+            },
         },
-    })
+    )
 }
 
 pub fn get(
+    req: HttpRequest,
     info: web::Path<(String)>,
     pool: web::Data<Pool>,
+    query: web::Query<QueryParams>,
+    firebase_config: web::Data<FirebaseDatabaseConfiguration>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
     info!("controllers/user/get");
-    info!("path {:?}", info);
 
-    web::block(move || get_entry(&info.into_inner(), pool)).then(|res| match res {
-        Ok(users) => {
-            let mut res = HttpResponse::Ok()
-                .content_type("application/json")
-                .json(users);
-            crate::utils::set_response_headers(&mut res);
-            Ok(res)
-        }
-        Err(err) => match err {
-            BlockingError::Error(service_error) => Err(service_error),
-            BlockingError::Canceled => Err(ServiceError::InternalServerError),
+    web::block(move || get_entry(&info.into_inner(), pool, &query.firebase_uid, firebase_config)).then(
+        |res| match res {
+            Ok(users) => {
+                let mut res = HttpResponse::Ok()
+                    .content_type("application/json")
+                    .json(users);
+                crate::utils::set_response_headers(&mut res);
+                Ok(res)
+            }
+            Err(err) => match err {
+                BlockingError::Error(service_error) => Err(service_error),
+                BlockingError::Canceled => Err(ServiceError::InternalServerError),
+            },
         },
-    })
+    )
 }
 
 pub fn upload_profile_picture(
+    req: HttpRequest,
     info: web::Path<String>,
     multipart: Multipart,
     pool: web::Data<Pool>,
+    query: web::Query<QueryParams>,
+    firebase_config: web::Data<FirebaseDatabaseConfiguration>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
     info!("controllers/upload_profile_picture");
 
@@ -70,7 +86,16 @@ pub fn upload_profile_picture(
             error!("Multipart error: {}", err);
             ServiceError::InternalServerError
         })
-        .map(move |field| save_file(uid.clone(), field, pool.clone()).into_stream())
+        .map(move |field| {
+            save_file(
+                uid.clone(),
+                field,
+                pool.clone(),
+                &query.firebase_uid,
+                firebase_config.clone(),
+            )
+            .into_stream()
+        })
         .flatten()
         .collect()
         .map(|sizes| HttpResponse::Ok().json(sizes))
@@ -99,12 +124,12 @@ pub fn update(
     info: web::Path<(String)>,
     data: web::Json<UpdateUser>,
     pool: web::Data<Pool>,
+    query: web::Query<QueryParams>,
+    firebase_config: web::Data<FirebaseDatabaseConfiguration>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
     info!("controllers/user/update");
-    debug!("path {:?}", info);
-    debug!("data {:?}", data);
 
-    web::block(move || update_user(&info.into_inner(), &data.into_inner(), &pool)).then(|res| {
+    web::block(move || update_user_with_auth(&info.into_inner(), &data.into_inner(), &pool, &query.firebase_uid, firebase_config)).then(|res| {
         match res {
             Ok(user) => Ok(HttpResponse::Ok()
                 .content_type("application/json")
@@ -117,9 +142,14 @@ pub fn update(
     })
 }
 
-fn create_entry(body: PostUser, pool: web::Data<Pool>) -> Result<User, ServiceError> {
+fn create_entry(
+    body: PostUser,
+    pool: web::Data<Pool>,
+    firebase_uid: &String,
+    firebase_config: web::Data<FirebaseDatabaseConfiguration>,
+) -> Result<User, ServiceError> {
     info!("controllers/user/create_entry");
-    debug!("body {:?}", body);
+    //debug!("body {:?}", body);
 
     if !crate::ALLOWED_CLIENT_VERSIONS.contains(&body.client_version.as_str()) {
         error!("Version mismatch. Server does not suppoert client version");
@@ -129,28 +159,25 @@ fn create_entry(body: PostUser, pool: web::Data<Pool>) -> Result<User, ServiceEr
         )));
     }
 
-    let tele = &body.tele_num;
     let country_code = &body.country_code;
+    let tele = PhoneNumber::my_from(&body.tele_num, country_code)?;
 
-    let tele2 = PhoneNumber::my_from(&tele, country_code)?;
+    authenticate_user!(&tele, &firebase_uid, firebase_config.into_inner());
 
-    dbg!(&tele2.to_string());
-
-    let user = match crate::queries::user::create_query(
-        &tele2,
-        &country_code,
-        &body.client_version,
-        &pool,
-    ) {
-        Ok(u) => Ok(u),
-        Err(ServiceError::AlreadyExists(_)) => {
-            crate::queries::user::get_entry_by_tel_query(&tele2, &pool)
-        }
-        Err(err) => Err(err),
-    }?;
+    let user =
+        match crate::queries::user::create_query(&tele, &country_code, &body.client_version, &pool)
+        {
+            Ok(u) => Ok(u),
+            Err(ServiceError::AlreadyExists(_)) => {
+                //If the user already exists, that's ok
+                //then return it
+                crate::queries::user::get_entry_by_tel_query(&tele, &pool)
+            }
+            Err(err) => Err(err),
+        }?;
 
     if user.client_version != body.client_version {
-        update_user(
+        update_user_without_auth(
             &user.id.to_string(),
             &UpdateUser {
                 description: user.description.clone(),
@@ -162,29 +189,39 @@ fn create_entry(body: PostUser, pool: web::Data<Pool>) -> Result<User, ServiceEr
         )?;
     }
 
-    dbg!(&user);
-
     crate::queries::user::analytics_usage_statistics(&pool, &user)?;
 
     Ok(user)
 }
 
-fn get_entry(uid: &str, pool: web::Data<Pool>) -> Result<User, ::core::errors::ServiceError> {
+fn get_entry(
+    uid: &str,
+    pool: web::Data<Pool>,
+    firebase_uid: &String,
+    firebase_config: web::Data<FirebaseDatabaseConfiguration>,
+) -> Result<User, ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
-    let users = crate::queries::user::get_query(parsed, &pool)?;
-    dbg!(&users);
 
-    let user = match users.len() {
-        0 => Err(ServiceError::BadRequest("No user found".to_string())),
-        _ => Ok(users.get(0).unwrap().clone()),
-    }?;
-
-    //analytics_usage_statistics(&pool, &user)?; not logging every refresh
-
-    Ok(user)
+    authenticate_user_by_uid!(parsed, &firebase_uid, firebase_config.into_inner(), &pool)
 }
 
-fn update_user(
+fn update_user_with_auth(
+    uid: &str,
+    user: &UpdateUser,
+    pool: &web::Data<Pool>,
+    firebase_uid: &String,
+    firebase_config: web::Data<FirebaseDatabaseConfiguration>,
+) -> Result<User, ::core::errors::ServiceError> {
+    let parsed = Uuid::parse_str(uid)?;
+
+    let muser : Result<User, ServiceError> = authenticate_user_by_uid!(parsed, &firebase_uid, firebase_config.into_inner(), &pool);
+
+    muser?;
+
+    update_user_without_auth(uid, user, pool)
+}
+
+fn update_user_without_auth(
     uid: &str,
     user: &UpdateUser,
     pool: &web::Data<Pool>,
@@ -192,18 +229,17 @@ fn update_user(
     let parsed = Uuid::parse_str(uid)?;
     let user = crate::queries::user::update_user_query(parsed, user, &pool)?;
 
-    dbg!(&user);
-
     crate::queries::user::analytics_user(&pool, &user)?;
 
     Ok(user)
 }
 
-//TODO add verification
 fn save_file(
     uid: String,
     field: Field,
     pool: web::Data<Pool>,
+    firebase_uid: &String,
+    firebase_config: web::Data<FirebaseDatabaseConfiguration>,
 ) -> impl Future<Item = i64, Error = ServiceError> {
     use std::fs::OpenOptions;
 
@@ -244,7 +280,7 @@ fn save_file(
         }
     };
 
-    debug!("unsanitized_ending {:?}", unsanitized_ending);
+    //debug!("unsanitized_ending {:?}", unsanitized_ending);
 
     let ending = match &*unsanitized_ending {
         "jpg" => "jpg",
@@ -257,7 +293,7 @@ fn save_file(
     }
     .to_string();
 
-    debug!("ending {:?}", ending);
+    //debug!("ending {:?}", ending);
 
     let parsed = match Uuid::parse_str(&uid) {
         Ok(p) => p,
@@ -266,6 +302,21 @@ fn save_file(
             return Either::A(err(ServiceError::InternalServerError));
         }
     };
+
+    //Authentication
+    //Cannot use the `authenticate_user_by_uid!` macro, because
+    //return types don't match
+    let user = crate::queries::user::get_query(parsed, &pool).unwrap();
+    let tele = PhoneNumber::my_from(&user.tele_num, &user.country_code).unwrap();
+
+    let is_ok =
+        crate::auth::priv_authenticate_user(&tele, firebase_uid, firebase_config.into_inner())
+            .unwrap();
+
+    if !is_ok {
+        return Either::A(err(ServiceError::Unauthorized));
+    }
+    //Authentication END
 
     let file = match OpenOptions::new()
         .write(true)

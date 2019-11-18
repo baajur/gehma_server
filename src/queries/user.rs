@@ -281,7 +281,7 @@ fn sending_push_notifications(user: &User, pool: &web::Data<Pool>) -> Result<(),
     Ok(())
 }
 
-pub(crate) fn get_query(myid: Uuid, pool: &web::Data<Pool>) -> Result<Vec<User>, ServiceError> {
+pub(crate) fn get_query(myid: Uuid, pool: &web::Data<Pool>) -> Result<User, ServiceError> {
     info!("queries/user/get_query");
     use core::schema::users::dsl::{id, users};
 
@@ -291,9 +291,10 @@ pub(crate) fn get_query(myid: Uuid, pool: &web::Data<Pool>) -> Result<Vec<User>,
         .filter(id.eq(myid))
         .load::<User>(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
-        .and_then(|result| {
-            Ok(result)
-            //Err(ServiceError::BadRequest("Invalid Invitation".into()))
+        .and_then(|w| {
+            w.first()
+                .cloned()
+                .ok_or_else(|| ServiceError::BadRequest("No user found".into()))
         })
 }
 

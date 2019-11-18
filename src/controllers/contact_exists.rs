@@ -6,6 +6,10 @@ use crate::Pool;
 use core::errors::ServiceError;
 use core::models::{DowngradedUser};
 
+use core::models::User;
+use crate::utils::QueryParams;
+use crate::auth::FirebaseDatabaseConfiguration;
+
 use log::{debug, info};
 
 pub const MAX_ALLOWED_CONTACTS: usize = 10000;
@@ -34,14 +38,14 @@ pub fn exists(
     info: web::Path<(String, String)>,
     mut payload: web::Json<Payload>,
     pool: web::Data<Pool>,
+    query: web::Query<QueryParams>,
+    firebase_config: web::Data<FirebaseDatabaseConfiguration>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
     info!("controllers/contact_exists/exists");
-    info!("path {:?}", info);
-    //debug!("body {:?}", payload);
 
     web::block(move || {
         let info = info.into_inner();
-        get_entry(&info.0, &info.1, &mut payload.numbers, pool)
+        get_entry(&info.0, &info.1, &mut payload.numbers, pool, &query.firebase_uid, firebase_config)
     })
     .then(|res| match res {
         Ok(users) => {
@@ -63,8 +67,15 @@ fn get_entry(
     country_code: &str,
     phone_numbers: &mut Vec<PayloadUser>,
     pool: web::Data<Pool>,
+    firebase_uid: &String,
+    firebase_config: web::Data<FirebaseDatabaseConfiguration>,
 ) -> Result<Vec<ResponseUser>, ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
+
+    let user : Result<User, ServiceError> = authenticate_user_by_uid!(parsed, firebase_uid, firebase_config.into_inner(), &pool);
+
+    user?;
+
     let users =
         crate::queries::contact_exists::get_query(parsed, phone_numbers, country_code, pool)?;
 

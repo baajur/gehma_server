@@ -4,18 +4,17 @@ extern crate serde_derive;
 
 use actix_cors::Cors;
 use actix_files::NamedFile;
+use actix_service::Service;
 use actix_web::http::header;
-use actix_web::{middleware as actix_middleware, web, App, HttpServer};
+use actix_web::{middleware as actix_middleware, web, App, HttpResponse, HttpServer};
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
 use std::cell::Cell;
 use std::path::PathBuf;
 
-//mod blacklist_handler;
-//mod exists_handler;
 mod utils;
-//mod push_notification_handler;
-//mod user_handler;
+#[macro_use]
+mod auth;
 pub(crate) mod controllers;
 pub(crate) mod queries;
 
@@ -39,15 +38,23 @@ pub(crate) fn main() {
 
     let port = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());
     let addr = std::env::var("BINDING_ADDR").unwrap_or_else(|_| "localhost".to_string());
+    let firebase_auth_token = std::env::var("FIREBASE_AUTH_TOKEN").expect("no FIREBASE_AUTH_TOKEN");
+    let firebase_project_id = std::env::var("FIREBASE_PROJECT_ID").expect("no FIREBASE_PROJECT_ID");
 
     let manager = ConnectionManager::<PgConnection>::new(database_url);
     let pool: Pool = r2d2::Pool::builder()
         .build(manager)
         .expect("Failed to create a pool");
 
+    let firebase_auth_configuration = auth::FirebaseDatabaseConfiguration {
+        firebase_project_id: firebase_project_id,
+        firebase_auth_token: firebase_auth_token
+    };
+
     let server = HttpServer::new(move || {
         App::new()
             .data(pool.clone())
+            .data(firebase_auth_configuration.clone())
             .wrap(
                 Cors::new()
                     .allowed_origin("http://localhost:3000")
@@ -74,8 +81,10 @@ pub(crate) fn main() {
                 web::scope("/api")
                     //.wrap(middleware::RequestBodyLogging)
                     //.wrap(middleware::ResponseBodyLogging)
+                    //.wrap(middleware::Auth)
                     .service(
-                        web::resource("/user").route(web::post().to_async(controllers::user::add)),
+                        web::resource("/signin") //must have query string firebase_uid
+                            .route(web::post().to_async(controllers::user::signin)),
                     )
                     .service(
                         web::resource("/user/{uid}/token").route(
@@ -100,7 +109,8 @@ pub(crate) fn main() {
                     .service(
                         web::resource("/exists/{uid}/{country_code}")
                             .route(web::post().to_async(controllers::contact_exists::exists)),
-                    ),
+                    )
+                    .default_service(web::route().to(|| HttpResponse::NotFound())),
             )
     })
     .keep_alive(None);
