@@ -48,7 +48,7 @@ pub(crate) fn main() {
 
     let firebase_auth_configuration = auth::FirebaseDatabaseConfiguration {
         firebase_project_id: firebase_project_id,
-        firebase_auth_token: firebase_auth_token
+        firebase_auth_token: firebase_auth_token,
     };
 
     let server = HttpServer::new(move || {
@@ -67,21 +67,12 @@ pub(crate) fn main() {
             .wrap(actix_middleware::Logger::default())
             .data(web::JsonConfig::default().limit(4048 * 1024))
             .wrap(actix_middleware::Compress::default())
-            .service(web::resource("/").route(web::get().to(load_index_file)))
             .service(
-                web::scope("/static")
-                    .service(
-                        actix_files::Files::new("/browse", "static/browse")
-                            .show_files_listing()
-                            .use_last_modified(true),
-                    )
-                    .service(web::resource("/{filename:.*}").route(web::get().to(load_file))),
+                web::scope("/static/profile_pictures")
+                .service(web::resource("/{filename:.*}").route(web::get().to(load_file))),
             )
             .service(
                 web::scope("/api")
-                    //.wrap(middleware::RequestBodyLogging)
-                    //.wrap(middleware::ResponseBodyLogging)
-                    //.wrap(middleware::Auth)
                     .service(
                         web::resource("/signin") //must have query string firebase_uid
                             .route(web::post().to_async(controllers::user::signin)),
@@ -118,11 +109,6 @@ pub(crate) fn main() {
     let listener = server.bind(format!("{}:{}", addr, port));
 
     listener.expect("Cannot bind").run().unwrap()
-}
-
-fn load_index_file(_req: actix_web::HttpRequest) -> actix_web::Result<NamedFile> {
-    let path: PathBuf = PathBuf::from("static/index.html");
-    Ok(NamedFile::open(path)?)
 }
 
 fn load_file(req: actix_web::HttpRequest) -> actix_web::Result<NamedFile> {
