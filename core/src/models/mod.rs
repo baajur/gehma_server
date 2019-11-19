@@ -11,7 +11,6 @@ pub struct User {
     pub created_at: chrono::NaiveDateTime,
     pub country_code: String,
     pub description: String,
-    pub is_autofahrer: bool,
     pub changed_at: chrono::NaiveDateTime,
     pub client_version: String,
     pub firebase_token: Option<String>,
@@ -27,7 +26,6 @@ pub struct DowngradedUser {
     pub led: bool,
     pub country_code: String,
     pub description: String,
-    pub is_autofahrer: bool,
     pub changed_at: chrono::NaiveDateTime,
     pub profile_picture: String,
 }
@@ -42,7 +40,6 @@ impl User {
             changed_at: chrono::Local::now().naive_local(),
             country_code: country_code.to_string(),
             description: "".to_string(),
-            is_autofahrer: false,
             client_version: version.to_string(),
             firebase_token: None,
             profile_picture: "".to_string(),
@@ -55,7 +52,6 @@ impl User {
             led: self.led,
             country_code: self.country_code.clone(),
             description: self.description.clone(),
-            is_autofahrer: self.is_autofahrer,
             changed_at: self.changed_at,
             profile_picture: self.profile_picture.clone()
         }
@@ -107,7 +103,6 @@ pub struct Analytic {
     pub id: i32,
     pub tele_num: String,
     pub led: bool,
-    pub is_autofahrer: bool,
     pub description: String,
     pub created_at: chrono::NaiveDateTime,
 }
@@ -117,7 +112,6 @@ pub struct Analytic {
 pub struct InsertAnalytic {
     pub tele_num: String,
     pub led: bool,
-    pub is_autofahrer: bool,
     pub description: String,
     pub created_at: chrono::NaiveDateTime,
 }
@@ -127,7 +121,6 @@ impl Analytic {
         InsertAnalytic {
             tele_num: user.tele_num.clone(),
             led: user.led,
-            is_autofahrer: user.is_autofahrer,
             description: user.description.clone(),
             created_at: chrono::Local::now().naive_local(),
         }

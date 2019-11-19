@@ -1,0 +1,1 @@
+ALTER TABLE users ADD column is_autofahrer BOOLEAN NOT NULL DEFAULT FALSE;

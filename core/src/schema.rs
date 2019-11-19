@@ -3,7 +3,6 @@ table! {
         id -> Int4,
         tele_num -> Varchar,
         led -> Bool,
-        is_autofahrer -> Bool,
         description -> Text,
         created_at -> Timestamp,
     }
@@ -45,7 +44,6 @@ table! {
         created_at -> Timestamp,
         country_code -> Varchar,
         description -> Text,
-        is_autofahrer -> Bool,
         changed_at -> Timestamp,
         client_version -> Varchar,
         firebase_token -> Nullable<Varchar>,

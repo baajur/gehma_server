@@ -116,7 +116,6 @@ pub struct PostUser {
 pub struct UpdateUser {
     pub description: String,
     pub led: String,
-    pub is_autofahrer: Option<String>,
     pub client_version: String,
 }
 
@@ -182,7 +181,6 @@ fn create_entry(
             &UpdateUser {
                 description: user.description.clone(),
                 led: format!("{}", user.led),
-                is_autofahrer: Some(format!("{}", user.is_autofahrer)),
                 client_version: body.client_version.clone(),
             },
             &pool,

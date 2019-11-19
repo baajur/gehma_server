@@ -110,7 +110,7 @@ pub(crate) fn update_user_query(
 ) -> Result<User, ::core::errors::ServiceError> {
     info!("queries/user/update_user_query");
     use core::schema::users::dsl::{
-        changed_at, client_version, description, id, is_autofahrer, led, users,
+        changed_at, client_version, description, id, led, users,
     };
 
     let conn: &PgConnection = &pool.get().unwrap();
@@ -123,17 +123,10 @@ pub(crate) fn update_user_query(
         _ => false,
     };
 
-    let my_is_autofahrer = match user.is_autofahrer.as_ref().map(|w| &**w) {
-        Some("true") => true,
-        Some("false") => false,
-        _ => false,
-    };
-
     diesel::update(target)
         .set((
             description.eq(user.description.to_string()),
             led.eq(my_led),
-            is_autofahrer.eq(my_is_autofahrer),
             changed_at.eq(chrono::Local::now().naive_local()),
             client_version.eq(user.client_version.clone()),
         ))
