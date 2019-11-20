@@ -1,19 +1,14 @@
 use crate::auth::FirebaseDatabaseConfiguration;
-use actix_web::HttpRequest;
-use actix_web::{error::BlockingError, web, HttpResponse};
+use actix_web::{web};
 use diesel::{prelude::*, PgConnection};
-use futures::Future;
 use uuid::Uuid;
 
 use core::errors::ServiceError;
 use core::models::{Blacklist, PhoneNumber, User};
-use crate::utils::QueryParams;
 
 use crate::Pool;
 
-use log::{debug, info};
-
-use crate::routes::blacklist::{GetAllData, PostData};
+use crate::routes::blacklist::{PostData};
 
 pub(crate) fn get_entry(
     blocker: &str,

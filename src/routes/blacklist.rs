@@ -1,17 +1,13 @@
 use crate::auth::FirebaseDatabaseConfiguration;
-use actix_web::HttpRequest;
 use actix_web::{error::BlockingError, web, HttpResponse};
-use diesel::{prelude::*, PgConnection};
 use futures::Future;
-use uuid::Uuid;
 
 use core::errors::ServiceError;
-use core::models::{Blacklist, PhoneNumber, User};
 use crate::utils::QueryParams;
 
 use crate::Pool;
 
-use log::{debug, info};
+use log::{info};
 
 use crate::controllers::blacklist::{create_entry, get_entry, delete_entry};
 
@@ -27,7 +23,6 @@ pub struct PostData {
 }
 
 pub fn get_all(
-    req: HttpRequest,
     info: web::Path<(String)>,
     pool: web::Data<Pool>,
     query: web::Query<QueryParams>,
@@ -55,7 +50,6 @@ pub fn get_all(
 }
 
 pub fn add(
-    req: HttpRequest,
     info: web::Path<(String)>,
     data: web::Json<PostData>,
     query: web::Query<QueryParams>,
@@ -87,7 +81,6 @@ pub fn add(
 }
 
 pub fn delete(
-    req: HttpRequest,
     info: web::Path<(String)>,
     data: web::Json<PostData>,
     pool: web::Data<Pool>,

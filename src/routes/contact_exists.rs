@@ -1,6 +1,5 @@
 use actix_web::{error::BlockingError, web, HttpResponse};
 use futures::Future;
-use uuid::Uuid;
 
 use crate::Pool;
 use core::errors::ServiceError;
@@ -8,10 +7,10 @@ use core::models::DowngradedUser;
 
 use crate::auth::FirebaseDatabaseConfiguration;
 use crate::utils::QueryParams;
-use core::models::User;
 
 use crate::controllers::contact_exists::get_entry;
-use log::{debug, info};
+
+use log::info;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResponseUser {

@@ -1,22 +1,15 @@
 use crate::auth::FirebaseDatabaseConfiguration;
 use crate::Pool;
-use actix_multipart::{Field, Multipart, MultipartError};
-use actix_web::{error::BlockingError, error::PayloadError, web, HttpResponse};
+use actix_web::{error::BlockingError, web, HttpResponse};
+use actix_multipart::{Multipart};
 use core::errors::ServiceError;
-use core::models::{PhoneNumber, User};
-use diesel::{prelude::*, PgConnection};
-use futures::future::{err, Either};
 use futures::stream::Stream;
-use futures::Future;
-use std::sync::Arc;
-use uuid::Uuid;
 
-use actix_web::HttpRequest;
-use log::{debug, error, info};
-use std::io::Write;
+use log::{error, info};
 use crate::utils::QueryParams;
+use futures::Future;
 
-use crate::controllers::user::{create_entry, get_entry, update_user_with_auth, update_user_without_auth, save_file};
+use crate::controllers::user::{create_entry, get_entry, update_user_with_auth, save_file};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PostUser {
@@ -33,7 +26,6 @@ pub struct UpdateUser {
 }
 
 pub fn signin(
-    req: HttpRequest,
     _info: web::Path<()>,
     body: web::Json<PostUser>,
     pool: web::Data<Pool>,
@@ -60,7 +52,6 @@ pub fn signin(
 }
 
 pub fn get(
-    req: HttpRequest,
     info: web::Path<(String)>,
     pool: web::Data<Pool>,
     query: web::Query<QueryParams>,
@@ -86,7 +77,6 @@ pub fn get(
 }
 
 pub fn upload_profile_picture(
-    req: HttpRequest,
     info: web::Path<String>,
     multipart: Multipart,
     pool: web::Data<Pool>,

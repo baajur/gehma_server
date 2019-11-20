@@ -1,18 +1,13 @@
-use actix_web::{error::BlockingError, web, HttpResponse};
-use futures::Future;
+use actix_web::{web};
 use uuid::Uuid;
 
 use crate::Pool;
 use core::errors::ServiceError;
-use core::models::{DowngradedUser};
 
 use core::models::User;
-use crate::utils::QueryParams;
 use crate::auth::FirebaseDatabaseConfiguration;
 
-use log::{debug, info};
-
-use crate::routes::contact_exists::{ResponseUser, Payload, PayloadUser};
+use crate::routes::contact_exists::{ResponseUser, PayloadUser};
 
 pub(crate) fn get_entry(
     uid: &str,

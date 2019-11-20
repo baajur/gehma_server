@@ -10,7 +10,7 @@ use uuid::Uuid;
 
 use crate::routes::user::UpdateUser;
 
-use log::{debug, error, info};
+use log::{error, info};
 
 pub(crate) fn get_entry_by_tel_query(
     tele: &PhoneNumber,

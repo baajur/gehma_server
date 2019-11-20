@@ -4,12 +4,10 @@ extern crate serde_derive;
 
 use actix_cors::Cors;
 use actix_files::NamedFile;
-use actix_service::Service;
 use actix_web::http::header;
 use actix_web::{middleware as actix_middleware, web, App, HttpResponse, HttpServer};
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
-use std::cell::Cell;
 use std::path::PathBuf;
 
 mod utils;

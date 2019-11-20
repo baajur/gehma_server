@@ -1,6 +1,5 @@
 use core::errors::ServiceError;
 use core::models::PhoneNumber;
-use reqwest::header::{AUTHORIZATION, CONTENT_TYPE};
 use reqwest::Client;
 use std::sync::Arc;
 use log::{info, error};
@@ -40,7 +39,7 @@ macro_rules! authenticate_user_by_uid {
         let user = crate::queries::user::get_query($uid, $pool)?;
         let tele = core::models::PhoneNumber::my_from(&user.tele_num, &user.country_code)?;
 
-        let ok = authenticate_user!(&tele, $firebase_uid, $firebase_config)?;
+        let _ = authenticate_user!(&tele, $firebase_uid, $firebase_config)?;
 
         Ok(user)
     }}

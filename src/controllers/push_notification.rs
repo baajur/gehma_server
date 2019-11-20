@@ -1,14 +1,10 @@
-use actix_web::{error::BlockingError, web, HttpResponse};
-use futures::Future;
+use actix_web::{web};
 use uuid::Uuid;
 
 use crate::Pool;
 use core::models::User;
 use core::errors::ServiceError;
-use crate::utils::QueryParams;
 use crate::auth::FirebaseDatabaseConfiguration;
-
-use log::{debug, info};
 
 use crate::routes::push_notification::Payload;
 

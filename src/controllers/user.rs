@@ -1,20 +1,17 @@
 use crate::auth::FirebaseDatabaseConfiguration;
 use crate::Pool;
-use actix_multipart::{Field, Multipart, MultipartError};
-use actix_web::{error::BlockingError, error::PayloadError, web, HttpResponse};
+use actix_multipart::{Field, MultipartError};
+use actix_web::{error::BlockingError, error::PayloadError, web};
 use core::errors::ServiceError;
 use core::models::{PhoneNumber, User};
 use diesel::{prelude::*, PgConnection};
 use futures::future::{err, Either};
 use futures::stream::Stream;
 use futures::Future;
-use std::sync::Arc;
 use uuid::Uuid;
 
-use actix_web::HttpRequest;
-use log::{debug, error, info};
+use log::{error, info};
 use std::io::Write;
-use crate::utils::QueryParams;
 //use crate::auth::authenticate_user;
 
 use crate::routes::user::{PostUser, UpdateUser};
@@ -39,7 +36,7 @@ pub(crate) fn create_entry(
     let country_code = &body.country_code;
     let tele = PhoneNumber::my_from(&body.tele_num, country_code)?;
 
-    authenticate_user!(&tele, &firebase_uid, firebase_config.into_inner());
+    authenticate_user!(&tele, &firebase_uid, firebase_config.into_inner())?;
 
     let user =
         match crate::queries::user::create_query(&tele, &country_code, &body.client_version, &pool)
