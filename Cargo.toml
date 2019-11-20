@@ -1,6 +1,6 @@
 [package]
 name = "sprechstunde"
-version = "0.4.4"
+version = "0.5.0"
 authors = ["Kevin Per <kevin.per@protonmail.com>"]
 edition = "2018"
 
