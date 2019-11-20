@@ -5,11 +5,14 @@ use uuid::Uuid;
 use ::core::errors::ServiceError;
 use ::core::models::{Blacklist, User};
 
-use crate::controllers::contact_exists::{PayloadUser, ResponseUser, MAX_ALLOWED_CONTACTS, MIN_TELE_NUM_LENGTH};
+use crate::routes::contact_exists::{PayloadUser, ResponseUser};
 
 use crate::Pool;
 
 use log::{info, error};
+
+pub const MAX_ALLOWED_CONTACTS: usize = 10000;
+pub const MIN_TELE_NUM_LENGTH: usize = 3;
 
 pub(crate) fn get_query(
     uid: Uuid,

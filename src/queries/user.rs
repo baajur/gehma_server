@@ -8,7 +8,7 @@ use serde_json::json;
 use tokio;
 use uuid::Uuid;
 
-use crate::controllers::user::UpdateUser;
+use crate::routes::user::UpdateUser;
 
 use log::{debug, error, info};
 

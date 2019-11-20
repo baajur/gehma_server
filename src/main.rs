@@ -17,6 +17,7 @@ mod utils;
 mod auth;
 pub(crate) mod controllers;
 pub(crate) mod queries;
+pub(crate) mod routes;
 
 mod middleware;
 
@@ -75,31 +76,31 @@ pub(crate) fn main() {
                 web::scope("/api")
                     .service(
                         web::resource("/signin") //must have query string firebase_uid
-                            .route(web::post().to_async(controllers::user::signin)),
+                            .route(web::post().to_async(routes::user::signin)),
                     )
                     .service(
                         web::resource("/user/{uid}/token").route(
-                            web::put().to_async(controllers::push_notification::update_token),
+                            web::put().to_async(routes::push_notification::update_token),
                         ),
                     )
                     .service(
                         web::resource("/user/{uid}/blacklist")
-                            .route(web::get().to_async(controllers::blacklist::get_all))
-                            .route(web::post().to_async(controllers::blacklist::add))
-                            .route(web::put().to_async(controllers::blacklist::delete)), //deletes
+                            .route(web::get().to_async(routes::blacklist::get_all))
+                            .route(web::post().to_async(routes::blacklist::add))
+                            .route(web::put().to_async(routes::blacklist::delete)), //deletes
                     )
                     .service(
                         web::resource("/user/{uid}/profile")
-                            .route(web::post().to_async(controllers::user::upload_profile_picture)),
+                            .route(web::post().to_async(routes::user::upload_profile_picture)),
                     )
                     .service(
                         web::resource("/user/{uid}")
-                            .route(web::get().to_async(controllers::user::get))
-                            .route(web::put().to_async(controllers::user::update)),
+                            .route(web::get().to_async(routes::user::get))
+                            .route(web::put().to_async(routes::user::update)),
                     )
                     .service(
                         web::resource("/exists/{uid}/{country_code}")
-                            .route(web::post().to_async(controllers::contact_exists::exists)),
+                            .route(web::post().to_async(routes::contact_exists::exists)),
                     )
                     .default_service(web::route().to(|| HttpResponse::NotFound())),
             )
