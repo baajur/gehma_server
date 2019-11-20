@@ -19,8 +19,8 @@ pub(crate) mod routes;
 
 mod middleware;
 
-#[cfg(test)]
-mod tests;
+//#[cfg(test)]
+//mod tests;
 
 pub const ALLOWED_CLIENT_VERSIONS: &[&'static str] = &["0.4"];
 pub const LIMIT_PUSH_NOTIFICATION_CONTACTS: usize = 128;
@@ -67,7 +67,7 @@ pub(crate) fn main() {
             .data(web::JsonConfig::default().limit(4048 * 1024))
             .wrap(actix_middleware::Compress::default())
             .service(
-                web::scope("/static/profile_pictures")
+                web::scope("/static")
                 .service(web::resource("/{filename:.*}").route(web::get().to(load_file))),
             )
             .service(
