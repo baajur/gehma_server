@@ -1,4 +1,4 @@
-use crate::auth::FirebaseDatabaseConfiguration;
+use crate::auth::Auth;
 use actix_web::{web};
 use diesel::{prelude::*, PgConnection};
 use uuid::Uuid;
@@ -14,14 +14,14 @@ pub(crate) fn get_entry(
     blocker: &str,
     pool: web::Data<Pool>,
     firebase_uid: &String,
-    firebase_configuration: web::Data<FirebaseDatabaseConfiguration>,
+    auth: web::Data<Auth>,
 ) -> Result<Vec<Blacklist>, ServiceError> {
     let blocker = Uuid::parse_str(blocker)?;
 
     let user : Result<User, ServiceError> = authenticate_user_by_uid!(
         blocker,
         &firebase_uid,
-        firebase_configuration.into_inner(),
+        auth.into_inner(),
         &pool
     );
 
@@ -37,7 +37,7 @@ pub(crate) fn create_entry(
     data: &PostData,
     pool: web::Data<Pool>,
     firebase_uid: &String,
-    firebase_config: web::Data<FirebaseDatabaseConfiguration>,
+    auth: web::Data<Auth>,
 ) -> Result<Blacklist, ServiceError> {
     use core::schema::users::dsl::{id, users};
 
@@ -46,7 +46,7 @@ pub(crate) fn create_entry(
     let user : Result<User, ServiceError> = authenticate_user_by_uid!(
         blocker2,
         &firebase_uid,
-        firebase_config.into_inner(),
+        auth.into_inner(),
         &pool
     );
 
@@ -81,7 +81,7 @@ pub(crate) fn delete_entry(
     data: &PostData,
     pool: web::Data<Pool>,
     firebase_uid: &String,
-    firebase_configuration: web::Data<FirebaseDatabaseConfiguration>,
+    auth: web::Data<Auth>,
 ) -> Result<(), ServiceError> {
     use core::schema::users::dsl::{id, users};
 
@@ -90,7 +90,7 @@ pub(crate) fn delete_entry(
     let user : Result<User, ServiceError>  = authenticate_user_by_uid!(
         blocker2,
         &firebase_uid,
-        firebase_configuration.into_inner(),
+        auth.into_inner(),
         &pool
     );
 

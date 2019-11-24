@@ -1,4 +1,3 @@
-use crate::auth::FirebaseDatabaseConfiguration;
 use crate::Pool;
 use actix_multipart::{Field, MultipartError};
 use actix_web::{error::BlockingError, error::PayloadError, web};
@@ -9,6 +8,7 @@ use futures::future::{err, Either};
 use futures::stream::Stream;
 use futures::Future;
 use uuid::Uuid;
+use crate::auth::Auth;
 
 use log::{error, info};
 use std::io::Write;
@@ -20,7 +20,7 @@ pub(crate) fn create_entry(
     body: PostUser,
     pool: web::Data<Pool>,
     firebase_uid: &String,
-    firebase_config: web::Data<FirebaseDatabaseConfiguration>,
+    auth: web::Data<Auth>,
 ) -> Result<User, ServiceError> {
     info!("controllers/user/create_entry");
     //debug!("body {:?}", body);
@@ -36,7 +36,7 @@ pub(crate) fn create_entry(
     let country_code = &body.country_code;
     let tele = PhoneNumber::my_from(&body.tele_num, country_code)?;
 
-    authenticate_user!(&tele, &firebase_uid, firebase_config.into_inner())?;
+    authenticate_user!(&tele, &firebase_uid, auth.into_inner())?;
 
     let user =
         match crate::queries::user::create_query(&tele, &country_code, &body.client_version, &pool)
@@ -71,11 +71,11 @@ pub(crate) fn get_entry(
     uid: &str,
     pool: web::Data<Pool>,
     firebase_uid: &String,
-    firebase_config: web::Data<FirebaseDatabaseConfiguration>,
+    auth: web::Data<Auth>,
 ) -> Result<User, ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
 
-    authenticate_user_by_uid!(parsed, &firebase_uid, firebase_config.into_inner(), &pool)
+    authenticate_user_by_uid!(parsed, &firebase_uid, auth.into_inner(), &pool)
 }
 
 pub(crate) fn update_user_with_auth(
@@ -83,11 +83,12 @@ pub(crate) fn update_user_with_auth(
     user: &UpdateUser,
     pool: &web::Data<Pool>,
     firebase_uid: &String,
-    firebase_config: web::Data<FirebaseDatabaseConfiguration>,
+    auth: web::Data<Auth>,
 ) -> Result<User, ::core::errors::ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
 
-    let muser : Result<User, ServiceError> = authenticate_user_by_uid!(parsed, &firebase_uid, firebase_config.into_inner(), &pool);
+    let muser: Result<User, ServiceError> =
+        authenticate_user_by_uid!(parsed, &firebase_uid, auth.into_inner(), &pool);
 
     muser?;
 
@@ -112,7 +113,7 @@ pub(crate) fn save_file(
     field: Field,
     pool: web::Data<Pool>,
     firebase_uid: &String,
-    firebase_config: web::Data<FirebaseDatabaseConfiguration>,
+    auth: web::Data<Auth>,
 ) -> impl Future<Item = i64, Error = ServiceError> {
     use std::fs::OpenOptions;
 
@@ -182,13 +183,18 @@ pub(crate) fn save_file(
     let user = crate::queries::user::get_query(parsed, &pool).unwrap();
     let tele = PhoneNumber::my_from(&user.tele_num, &user.country_code).unwrap();
 
-    let is_ok =
-        crate::auth::priv_authenticate_user(&tele, firebase_uid, firebase_config.into_inner())
-            .unwrap();
+    let is_ok = auth.authenticator.authentification(&tele, firebase_uid);
+
+    if let Err(_) = is_ok {
+        return Either::A(err(ServiceError::Unauthorized));
+    }
+
+    let is_ok = is_ok.unwrap();
 
     if !is_ok {
         return Either::A(err(ServiceError::Unauthorized));
     }
+
     //Authentication END
 
     let file = match OpenOptions::new()

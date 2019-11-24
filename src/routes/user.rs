@@ -1,15 +1,15 @@
-use crate::auth::FirebaseDatabaseConfiguration;
 use crate::Pool;
+use actix_multipart::Multipart;
 use actix_web::{error::BlockingError, web, HttpResponse};
-use actix_multipart::{Multipart};
 use core::errors::ServiceError;
 use futures::stream::Stream;
 
-use log::{error, info};
 use crate::utils::QueryParams;
 use futures::Future;
+use log::{error, info};
 
-use crate::controllers::user::{create_entry, get_entry, update_user_with_auth, save_file};
+use crate::auth::Auth;
+use crate::controllers::user::{create_entry, get_entry, save_file, update_user_with_auth};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PostUser {
@@ -30,37 +30,43 @@ pub fn signin(
     body: web::Json<PostUser>,
     pool: web::Data<Pool>,
     query: web::Query<QueryParams>,
-    firebase_config: web::Data<FirebaseDatabaseConfiguration>,
+    auth: web::Data<Auth>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
     info!("controllers/user/add");
 
-    web::block(move || create_entry(body.into_inner(), pool, &query.firebase_uid, firebase_config)).then(
-        |res| match res {
-            Ok(user) => {
-                let mut res = HttpResponse::Ok()
-                    .content_type("application/json")
-                    .json(user);
-                crate::utils::set_response_headers(&mut res);
-                Ok(res)
-            }
-            Err(err) => match err {
-                BlockingError::Error(service_error) => Err(service_error),
-                BlockingError::Canceled => Err(ServiceError::InternalServerError),
-            },
+    web::block(move || {
+        create_entry(
+            body.into_inner(),
+            pool,
+            &query.firebase_uid,
+            auth
+        )
+    })
+    .then(|res| match res {
+        Ok(user) => {
+            let mut res = HttpResponse::Ok()
+                .content_type("application/json")
+                .json(user);
+            crate::utils::set_response_headers(&mut res);
+            Ok(res)
+        }
+        Err(err) => match err {
+            BlockingError::Error(service_error) => Err(service_error),
+            BlockingError::Canceled => Err(ServiceError::InternalServerError),
         },
-    )
+    })
 }
 
 pub fn get(
     info: web::Path<(String)>,
     pool: web::Data<Pool>,
     query: web::Query<QueryParams>,
-    firebase_config: web::Data<FirebaseDatabaseConfiguration>,
+    auth: web::Data<Auth>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
     info!("controllers/user/get");
 
-    web::block(move || get_entry(&info.into_inner(), pool, &query.firebase_uid, firebase_config)).then(
-        |res| match res {
+    web::block(move || get_entry(&info.into_inner(), pool, &query.firebase_uid, auth)).then(|res| {
+        match res {
             Ok(users) => {
                 let mut res = HttpResponse::Ok()
                     .content_type("application/json")
@@ -72,8 +78,8 @@ pub fn get(
                 BlockingError::Error(service_error) => Err(service_error),
                 BlockingError::Canceled => Err(ServiceError::InternalServerError),
             },
-        },
-    )
+        }
+    })
 }
 
 pub fn upload_profile_picture(
@@ -81,7 +87,7 @@ pub fn upload_profile_picture(
     multipart: Multipart,
     pool: web::Data<Pool>,
     query: web::Query<QueryParams>,
-    firebase_config: web::Data<FirebaseDatabaseConfiguration>,
+    auth: web::Data<Auth>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
     info!("controllers/upload_profile_picture");
 
@@ -97,7 +103,7 @@ pub fn upload_profile_picture(
                 field,
                 pool.clone(),
                 &query.firebase_uid,
-                firebase_config.clone(),
+                auth.clone(),
             )
             .into_stream()
         })
@@ -110,26 +116,31 @@ pub fn upload_profile_picture(
         })
 }
 
-
-
 pub fn update(
     info: web::Path<(String)>,
     data: web::Json<UpdateUser>,
     pool: web::Data<Pool>,
     query: web::Query<QueryParams>,
-    firebase_config: web::Data<FirebaseDatabaseConfiguration>,
+    auth: web::Data<Auth>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
     info!("controllers/user/update");
 
-    web::block(move || update_user_with_auth(&info.into_inner(), &data.into_inner(), &pool, &query.firebase_uid, firebase_config)).then(|res| {
-        match res {
-            Ok(user) => Ok(HttpResponse::Ok()
-                .content_type("application/json")
-                .json(&user)),
-            Err(err) => match err {
-                BlockingError::Error(service_error) => Err(service_error),
-                BlockingError::Canceled => Err(ServiceError::InternalServerError),
-            },
-        }
+    web::block(move || {
+        update_user_with_auth(
+            &info.into_inner(),
+            &data.into_inner(),
+            &pool,
+            &query.firebase_uid,
+            auth,
+        )
+    })
+    .then(|res| match res {
+        Ok(user) => Ok(HttpResponse::Ok()
+            .content_type("application/json")
+            .json(&user)),
+        Err(err) => match err {
+            BlockingError::Error(service_error) => Err(service_error),
+            BlockingError::Canceled => Err(ServiceError::InternalServerError),
+        },
     })
 }

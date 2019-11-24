@@ -5,7 +5,7 @@ use futures::Future;
 use crate::Pool;
 use core::errors::ServiceError;
 use crate::utils::QueryParams;
-use crate::auth::FirebaseDatabaseConfiguration;
+use crate::auth::Auth;
 
 use crate::controllers::push_notification::update_token_handler;
 
@@ -19,11 +19,11 @@ pub fn update_token(
     body: web::Json<Payload>,
     pool: web::Data<Pool>,
     query: web::Query<QueryParams>,
-    firebase_config: web::Data<FirebaseDatabaseConfiguration>,
+    auth: web::Data<Auth>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
     info!("controllers/push_notification/update_token");
 
-    web::block(move || update_token_handler(_info.into_inner(), body.into_inner(), pool, &query.firebase_uid, firebase_config)).then(
+    web::block(move || update_token_handler(_info.into_inner(), body.into_inner(), pool, &query.firebase_uid, auth)).then(
         |res| match res {
             Ok(user) => {
                 let mut res = HttpResponse::Ok()

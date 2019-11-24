@@ -2,6 +2,7 @@ extern crate diesel;
 #[macro_use]
 extern crate serde_derive;
 
+use crate::auth::firebase::FirebaseAuthenticator;
 use actix_cors::Cors;
 use actix_files::NamedFile;
 use actix_web::http::header;
@@ -28,6 +29,20 @@ pub const ALLOWED_PROFILE_PICTURE_SIZE: usize = 10_000; //in Kilobytes
 
 pub type Pool = r2d2::Pool<ConnectionManager<PgConnection>>;
 
+fn get_auth() -> crate::auth::AuthenticatorWrapper {
+    let firebase_auth_token = std::env::var("FIREBASE_AUTH_TOKEN").expect("no FIREBASE_AUTH_TOKEN");
+    let firebase_project_id = std::env::var("FIREBASE_PROJECT_ID").expect("no FIREBASE_PROJECT_ID");
+
+    let firebase_auth_configuration = auth::firebase::FirebaseDatabaseConfiguration {
+        firebase_project_id: firebase_project_id,
+        firebase_auth_token: firebase_auth_token,
+    };
+
+    crate::auth::AuthenticatorWrapper::new(Box::new(FirebaseAuthenticator {
+        config: firebase_auth_configuration.clone(),
+    }))
+}
+
 pub(crate) fn main() {
     dotenv::dotenv().ok();
     std::env::set_var("RUST_LOG", "info,actix_web=info,actix_server=info");
@@ -37,23 +52,16 @@ pub(crate) fn main() {
 
     let port = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());
     let addr = std::env::var("BINDING_ADDR").unwrap_or_else(|_| "localhost".to_string());
-    let firebase_auth_token = std::env::var("FIREBASE_AUTH_TOKEN").expect("no FIREBASE_AUTH_TOKEN");
-    let firebase_project_id = std::env::var("FIREBASE_PROJECT_ID").expect("no FIREBASE_PROJECT_ID");
 
     let manager = ConnectionManager::<PgConnection>::new(database_url);
     let pool: Pool = r2d2::Pool::builder()
         .build(manager)
         .expect("Failed to create a pool");
 
-    let firebase_auth_configuration = auth::FirebaseDatabaseConfiguration {
-        firebase_project_id: firebase_project_id,
-        firebase_auth_token: firebase_auth_token,
-    };
-
     let server = HttpServer::new(move || {
         App::new()
             .data(pool.clone())
-            .data(firebase_auth_configuration.clone())
+            .data(get_auth())
             .wrap(
                 Cors::new()
                     .allowed_origin("http://localhost:3000")

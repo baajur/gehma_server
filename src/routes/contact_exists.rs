@@ -5,7 +5,7 @@ use crate::Pool;
 use core::errors::ServiceError;
 use core::models::DowngradedUser;
 
-use crate::auth::FirebaseDatabaseConfiguration;
+use crate::auth::Auth;
 use crate::utils::QueryParams;
 
 use crate::controllers::contact_exists::get_entry;
@@ -36,7 +36,7 @@ pub fn exists(
     mut payload: web::Json<Payload>,
     pool: web::Data<Pool>,
     query: web::Query<QueryParams>,
-    firebase_config: web::Data<FirebaseDatabaseConfiguration>,
+    auth: web::Data<Auth>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
     info!("controllers/contact_exists/exists");
 
@@ -48,7 +48,7 @@ pub fn exists(
             &mut payload.numbers,
             pool,
             &query.firebase_uid,
-            firebase_config,
+            auth,
         )
     })
     .then(|res| match res {

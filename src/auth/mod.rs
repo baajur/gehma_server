@@ -1,32 +1,54 @@
 use core::errors::ServiceError;
 use core::models::PhoneNumber;
+use log::{error, info};
 use reqwest::Client;
-use std::sync::Arc;
-use log::{info, error};
 
-#[derive(Debug, Clone)]
-pub struct FirebaseDatabaseConfiguration {
-    pub firebase_project_id: String,
-    pub firebase_auth_token: String,
+pub mod firebase;
+
+pub type Auth = AuthenticatorWrapper;
+
+/// The actix's routes cannot handle `web::Data<impl Authenticator + 'static>`.
+/// That's why I use a wrapper struct to make it easier to guess the type
+pub struct AuthenticatorWrapper {
+    //pub authenticator: crate::auth::firebase::FirebaseAuthenticator
+    pub authenticator: Box<dyn Authenticator>
 }
 
-/// Response of firebase for auth requests
-#[derive(Debug, Deserialize)]
-struct FirebaseAuthResponse {
-    tele_num: String,
+impl AuthenticatorWrapper {
+    pub fn new(a: Box<dyn Authenticator>) -> Self {
+        AuthenticatorWrapper {
+            authenticator: a
+        }
+    }
+}
+
+pub trait AuthenticatorConfiguration : Send + Sync {
+    fn get_project_id(&self) -> &String;
+    fn get_auth_token(&self) -> &String;
+}
+
+pub trait Authenticator : Send + Sync {
+    fn authentification(
+        &self,
+        tele_num: &PhoneNumber,
+        user_token: &String,
+    ) -> Result<bool, ServiceError>;
+    fn get_configuration(&self) -> Box<&dyn AuthenticatorConfiguration>;
 }
 
 #[macro_export]
 macro_rules! authenticate_user {
-    ($tele_num:expr, $firebase_uid:expr, $firebase_config:expr) => {{
-        let is_ok =
-            crate::auth::priv_authenticate_user($tele_num, $firebase_uid, $firebase_config)?;
+    ($tele_num:expr, $uid:expr, $auth:expr) => {{
+        let is_ok = $auth.authenticator.authentification($tele_num, $uid)?;
 
         if !is_ok {
-            log::warn!("Authentication failed for {} given firebase_uid {}", $tele_num.to_string(), $firebase_uid);
+            log::warn!(
+                "Authentication failed for {} given firebase_uid {}",
+                $tele_num.to_string(),
+                $uid
+            );
             Err(ServiceError::Unauthorized)
-        }
-        else {
+        } else {
             log::info!("Authentication ok");
             Ok(())
         }
@@ -35,43 +57,12 @@ macro_rules! authenticate_user {
 
 #[macro_export]
 macro_rules! authenticate_user_by_uid {
-    ($uid:expr, $firebase_uid:expr, $firebase_config:expr, $pool:expr) => {{
-        let user = crate::queries::user::get_query($uid, $pool)?;
+    ($id:expr, $key:expr, $auth:expr, $pool:expr) => {{
+        let user = crate::queries::user::get_query($id, $pool)?;
         let tele = core::models::PhoneNumber::my_from(&user.tele_num, &user.country_code)?;
 
-        let _ = authenticate_user!(&tele, $firebase_uid, $firebase_config)?;
+        let _ = authenticate_user!(&tele, $key, $auth)?;
 
         Ok(user)
-    }}
-}
-
-pub fn priv_authenticate_user(
-    tele_num: &PhoneNumber,
-    user_given_firebase_uid: &String,
-    firebase_config: Arc<FirebaseDatabaseConfiguration>,
-) -> Result<bool, ServiceError> {
-    info!("priv_authenticate_user");
-
-    let config = firebase_config.clone();
-
-    //FIXME
-    let client = Client::new();
-    let result: FirebaseAuthResponse = client
-        .get(&format!(
-            "https://{}.firebaseio.com/users/{}/.json?auth={}",
-            config.firebase_project_id, user_given_firebase_uid, config.firebase_auth_token
-        ))
-        .send()
-        .map_err(|w| {
-            error!("{:?}", w);
-            ServiceError::BadRequest("Cannot parse firebase's response".to_string())
-        })?
-        .json()
-        .map_err(|_| ServiceError::Unauthorized)?;
-
-    if result.tele_num == tele_num.to_string() {
-        return Ok(true);
-    }
-
-    Ok(false)
+    }};
 }
