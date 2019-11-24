@@ -4,6 +4,7 @@ use log::{error, info};
 use reqwest::Client;
 
 pub mod firebase;
+pub mod testing;
 
 pub type Auth = AuthenticatorWrapper;
 

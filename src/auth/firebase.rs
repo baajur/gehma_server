@@ -1,4 +1,5 @@
 use crate::auth::*;
+use core::models::PhoneNumber;
 
 #[derive(Debug, Clone)]
 pub struct FirebaseDatabaseConfiguration {
