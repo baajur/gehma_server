@@ -1,18 +1,26 @@
-FROM rust:1.38
+FROM rust:1.38 as builder
 RUN apt-get update
 RUN apt-get install -y openssl postgresql postgresql-contrib
 
-RUN cargo install diesel_cli --no-default-features --features postgres
+WORKDIR /gehma/diesel_dir
+RUN cargo install diesel_cli --no-default-features --features postgres --root /gehma/diesel_dir
 
-RUN USER=root cargo new --bin gehma
 WORKDIR /gehma
+RUN USER=root cargo new --bin gehma
 COPY ./core ./core
 COPY ./Cargo.lock ./Cargo.lock
 COPY ./Cargo.toml ./Cargo.toml
 COPY ./src ./src
 RUN cargo build --release
 
-COPY ./migrations ./migrations
+FROM debian:latest
+WORKDIR /gehma
+RUN apt-get update
+RUN apt-get install -y openssl postgresql-client
 
-CMD ["diesel migration run"]
-CMD ["/gehma/target/release/sprechstunde"]
+COPY ./migrations ./migrations
+COPY --from=builder /gehma/diesel_dir/bin/diesel . 
+COPY --from=builder /gehma/target/release/sprechstunde /gehma/sprechstunde
+
+CMD ["./diesel migration run"]
+CMD ["/gehma/sprechstunde"]
