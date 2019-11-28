@@ -8,6 +8,7 @@ use crate::auth::Auth;
 
 use crate::routes::push_notification::Payload;
 
+//FIXME move to user's controller
 pub(crate) fn update_token_handler(
     uid: String,
     payload: Payload,
@@ -17,7 +18,7 @@ pub(crate) fn update_token_handler(
 ) -> Result<(), ServiceError> {
     let parsed = Uuid::parse_str(&uid)?;
 
-    let user : Result<User, ServiceError> = authenticate_user_by_uid!(parsed, firebase_uid, auth.into_inner(), &pool);
+    let user : Result<User, ServiceError> = get_user_by_id!(parsed, firebase_uid, auth.into_inner(), &pool);
 
     user?;
 

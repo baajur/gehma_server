@@ -1,25 +1,26 @@
-use actix_web::{web};
+use actix_web::web;
 use uuid::Uuid;
 
 use crate::Pool;
 use core::errors::ServiceError;
 
-use core::models::User;
 use crate::auth::Auth;
+use core::models::User;
 
-use crate::routes::contact_exists::{ResponseUser, PayloadUser};
+use crate::routes::contact_exists::{PayloadUser, ResponseUser};
 
 pub(crate) fn get_entry(
     uid: &str,
     country_code: &str,
     phone_numbers: &mut Vec<PayloadUser>,
     pool: web::Data<Pool>,
-    firebase_uid: &String,
+    access_token: &String,
     auth: web::Data<Auth>,
 ) -> Result<Vec<ResponseUser>, ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
 
-    let user : Result<User, ServiceError> = authenticate_user_by_uid!(parsed, firebase_uid, auth.into_inner(), &pool);
+    let user: Result<User, ServiceError> =
+        get_user_by_id!(parsed, access_token, auth.into_inner(), &pool);
 
     user?;
 

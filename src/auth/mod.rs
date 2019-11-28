@@ -3,8 +3,9 @@ use core::models::PhoneNumber;
 use log::{error, info};
 use reqwest::Client;
 
-pub mod firebase;
+//pub mod firebase;
 pub mod testing;
+pub mod twilio;
 
 pub type Auth = AuthenticatorWrapper;
 
@@ -23,46 +24,41 @@ impl AuthenticatorWrapper {
     }
 }
 
+/*
 pub trait AuthenticatorConfiguration : Send + Sync {
     fn get_project_id(&self) -> &String;
     fn get_auth_token(&self) -> &String;
 }
+*/
 
 pub trait Authenticator : Send + Sync {
-    fn authentification(
+    fn check_code(
         &self,
         tele_num: &PhoneNumber,
         user_token: &String,
     ) -> Result<bool, ServiceError>;
-    fn get_configuration(&self) -> Box<&dyn AuthenticatorConfiguration>;
+
+    fn request_code(&self, tele_num: &PhoneNumber) -> Result<(), ServiceError>;
+    //fn get_configuration(&self) -> Box<&dyn AuthenticatorConfiguration>;
 }
 
 #[macro_export]
-macro_rules! authenticate_user {
-    ($tele_num:expr, $uid:expr, $auth:expr) => {{
-        let is_ok = $auth.authenticator.authentification($tele_num, $uid)?;
-
-        if !is_ok {
-            log::warn!(
-                "Authentication failed for {} given firebase_uid {}",
-                $tele_num.to_string(),
-                $uid
-            );
-            Err(ServiceError::Unauthorized)
-        } else {
-            log::info!("Authentication ok");
-            Ok(())
-        }
+macro_rules! get_user_by_tele_num {
+    ($tele_num:expr, $access_token:expr, $auth:expr, $pool:expr) => {{
+        crate::queries::user::get_user_by_tele_num($tele_num, $access_token, $pool)
+            .map_err(|w| {
+                log::error!("{:?}", w);
+                ServiceError::Unauthorized
+            })
     }};
 }
 
 #[macro_export]
-macro_rules! authenticate_user_by_uid {
-    ($id:expr, $key:expr, $auth:expr, $pool:expr) => {{
-        let user = crate::queries::user::get_query($id, $pool)?;
-        let tele = core::models::PhoneNumber::my_from(&user.tele_num, &user.country_code)?;
-
-        let _ = authenticate_user!(&tele, $key, $auth)?;
+macro_rules! get_user_by_id {
+    ($id:expr, $access_token:expr, $auth:expr, $pool:expr) => {{
+        let user = crate::queries::user::get_query($id, $access_token, $pool)?;
+        //let tele = core::models::PhoneNumber::my_from(&user.tele_num, &user.country_code)?;
+        //let _ = authenticate_user!(&tele, $key, $auth)?;
 
         Ok(user)
     }};

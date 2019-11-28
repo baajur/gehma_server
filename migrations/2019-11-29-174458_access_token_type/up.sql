@@ -1,0 +1,2 @@
+ALTER TABLE users ALTER COLUMN access_token TYPE CHAR(32);
+ALTER TABLE users ALTER COLUMN access_token SET DEFAULT 'init';

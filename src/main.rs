@@ -2,7 +2,7 @@ extern crate diesel;
 #[macro_use]
 extern crate serde_derive;
 
-use crate::auth::firebase::FirebaseAuthenticator;
+use crate::auth::AuthenticatorWrapper;
 use actix_cors::Cors;
 use actix_files::NamedFile;
 use actix_web::http::header;
@@ -20,27 +20,43 @@ pub(crate) mod routes;
 
 mod middleware;
 
-//#[cfg(test)]
-//mod tests;
+#[cfg(test)]
+mod tests;
 
-pub const ALLOWED_CLIENT_VERSIONS: &[&'static str] = &["0.5"];
+pub const ALLOWED_CLIENT_VERSIONS: &[&'static str] = &["0.5.1"];
 pub const LIMIT_PUSH_NOTIFICATION_CONTACTS: usize = 128;
 pub const ALLOWED_PROFILE_PICTURE_SIZE: usize = 10_000; //in Kilobytes
 
 pub type Pool = r2d2::Pool<ConnectionManager<PgConnection>>;
 
 fn get_auth() -> crate::auth::AuthenticatorWrapper {
-    let firebase_auth_token = std::env::var("FIREBASE_AUTH_TOKEN").expect("no FIREBASE_AUTH_TOKEN");
-    let firebase_project_id = std::env::var("FIREBASE_PROJECT_ID").expect("no FIREBASE_PROJECT_ID");
+    use crate::auth::twilio::TwilioAuthenticator;
+    use crate::auth::twilio::TwilioConfiguration;
 
-    let firebase_auth_configuration = auth::firebase::FirebaseDatabaseConfiguration {
-        firebase_project_id: firebase_project_id,
-        firebase_auth_token: firebase_auth_token,
+    let project_id = std::env::var("TWILIO_PROJECT_ID").expect("no PROJECT_ID");
+    let auth_token = std::env::var("TWILIO_AUTH_TOKEN").expect("no AUTH_TOKEN");
+    let sid = std::env::var("TWILIO_ACCOUNT_ID").expect("no ACCOUNT_ID");
+
+    let config = TwilioConfiguration {
+        project_id: project_id,
+        account_id: sid,
+        auth_token: auth_token,
     };
 
-    crate::auth::AuthenticatorWrapper::new(Box::new(FirebaseAuthenticator {
-        config: firebase_auth_configuration.clone(),
+    crate::auth::AuthenticatorWrapper::new(Box::new(TwilioAuthenticator {
+        config
     }))
+}
+
+fn set_testing_auth() -> AuthenticatorWrapper {
+    use crate::auth::testing::*;
+
+    let config = TestingAuthConfiguration {
+        id: "test".to_string(),
+        auth_token: "test".to_string(),
+    };
+
+    AuthenticatorWrapper::new(Box::new(TestingAuthentificator { config: config }))
 }
 
 pub(crate) fn main() {
@@ -107,6 +123,14 @@ pub(crate) fn main() {
                     .service(
                         web::resource("/exists/{uid}/{country_code}")
                             .route(web::post().to_async(routes::contact_exists::exists)),
+                    )
+                    .service(
+                        web::resource("/auth/request_code")
+                            .route(web::post().to_async(routes::auth::request_code)),
+                    )
+                    .service(
+                        web::resource("/auth/check")
+                            .route(web::post().to_async(routes::auth::check)),
                     )
                     .default_service(web::route().to(|| HttpResponse::NotFound())),
             )

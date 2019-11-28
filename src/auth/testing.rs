@@ -8,12 +8,12 @@ pub struct TestingAuthConfiguration {
     pub auth_token: String,
 }
 
-impl AuthenticatorConfiguration for TestingAuthConfiguration {
-    fn get_project_id(&self) -> &String {
+impl TestingAuthConfiguration {
+    pub fn get_project_id(&self) -> &String {
         &self.id
     }
 
-    fn get_auth_token(&self) -> &String {
+    pub fn get_auth_token(&self) -> &String {
         &self.auth_token
     }
 }
@@ -24,11 +24,11 @@ pub struct TestingAuthentificator {
 }
 
 impl Authenticator for TestingAuthentificator {
-    fn get_configuration(&self) -> Box<&dyn AuthenticatorConfiguration> {
-        Box::new(&self.config)
+    fn request_code(&self, _tele_num: &PhoneNumber) -> Result<(), ServiceError> {
+        Ok(())
     }
 
-    fn authentification(
+    fn check_code(
         &self,
         _tele_num: &PhoneNumber,
         _user_token: &String,

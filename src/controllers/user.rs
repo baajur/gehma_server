@@ -1,3 +1,4 @@
+use crate::auth::Auth;
 use crate::Pool;
 use actix_multipart::{Field, MultipartError};
 use actix_web::{error::BlockingError, error::PayloadError, web};
@@ -8,7 +9,6 @@ use futures::future::{err, Either};
 use futures::stream::Stream;
 use futures::Future;
 use uuid::Uuid;
-use crate::auth::Auth;
 
 use log::{error, info};
 use std::io::Write;
@@ -16,14 +16,13 @@ use std::io::Write;
 
 use crate::routes::user::{PostUser, UpdateUser};
 
-pub(crate) fn create_entry(
+pub(crate) fn user_signin(
     body: PostUser,
     pool: web::Data<Pool>,
     firebase_uid: &String,
     auth: web::Data<Auth>,
 ) -> Result<User, ServiceError> {
-    info!("controllers/user/create_entry");
-    //debug!("body {:?}", body);
+    info!("controllers/user/user_signin");
 
     if !crate::ALLOWED_CLIENT_VERSIONS.contains(&body.client_version.as_str()) {
         error!("Version mismatch. Server does not suppoert client version");
@@ -36,8 +35,9 @@ pub(crate) fn create_entry(
     let country_code = &body.country_code;
     let tele = PhoneNumber::my_from(&body.tele_num, country_code)?;
 
-    authenticate_user!(&tele, &firebase_uid, auth.into_inner())?;
+    let user = get_user_by_tele_num!(&tele, &firebase_uid, auth.into_inner(), &pool)?;
 
+    /*
     let user =
         match crate::queries::user::create_query(&tele, &country_code, &body.client_version, &pool)
         {
@@ -49,6 +49,9 @@ pub(crate) fn create_entry(
             }
             Err(err) => Err(err),
         }?;
+    */
+
+    //let user = crate::queries::user::get_entry_by_tel_query(&tele, &pool)?;
 
     if user.client_version != body.client_version {
         update_user_without_auth(
@@ -75,7 +78,7 @@ pub(crate) fn get_entry(
 ) -> Result<User, ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
 
-    authenticate_user_by_uid!(parsed, &firebase_uid, auth.into_inner(), &pool)
+    get_user_by_id!(parsed, &firebase_uid, auth.into_inner(), &pool)
 }
 
 pub(crate) fn update_user_with_auth(
@@ -87,8 +90,7 @@ pub(crate) fn update_user_with_auth(
 ) -> Result<User, ::core::errors::ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
 
-    let muser: Result<User, ServiceError> =
-        authenticate_user_by_uid!(parsed, &firebase_uid, auth.into_inner(), &pool);
+    let muser : Result<User, ServiceError> = get_user_by_id!(parsed, &firebase_uid, auth.into_inner(), &pool);
 
     muser?;
 
@@ -180,18 +182,10 @@ pub(crate) fn save_file(
     //Authentication
     //Cannot use the `authenticate_user_by_uid!` macro, because
     //return types don't match
-    let user = crate::queries::user::get_query(parsed, &pool).unwrap();
-    let tele = PhoneNumber::my_from(&user.tele_num, &user.country_code).unwrap();
+    let user = crate::queries::user::get_query(parsed, &firebase_uid, &pool);
 
-    let is_ok = auth.authenticator.authentification(&tele, firebase_uid);
-
-    if let Err(_) = is_ok {
-        return Either::A(err(ServiceError::Unauthorized));
-    }
-
-    let is_ok = is_ok.unwrap();
-
-    if !is_ok {
+    if let Err(my_err) = user {
+        error!("{:?}", my_err);
         return Either::A(err(ServiceError::Unauthorized));
     }
 

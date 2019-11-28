@@ -47,7 +47,7 @@ pub fn exists(
             &info.1,
             &mut payload.numbers,
             pool,
-            &query.firebase_uid,
+            &query.access_token,
             auth,
         )
     })

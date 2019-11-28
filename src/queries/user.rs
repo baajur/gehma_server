@@ -24,7 +24,7 @@ pub(crate) fn get_entry_by_tel_query(
 
     let tele = tele.to_string();
 
-    dbg!(&tele);
+//    dbg!(&tele);
 
     let res = users
         .filter(tele_num.eq(tele))
@@ -65,19 +65,20 @@ pub(crate) fn create_query(
     tel: &PhoneNumber,
     country_code: &str,
     version: &str,
+    access_token: &str,
     pool: &web::Data<Pool>,
 ) -> Result<User, ServiceError> {
     info!("queries/user/create_query");
     use core::schema::users::dsl::users;
 
-    let new_inv: User = User::my_from(&tel.to_string(), country_code, version);
+    let new_inv: User = User::my_from(&tel.to_string(), country_code, version, access_token);
     let conn: &PgConnection = &pool.get().unwrap();
 
     let ins = diesel::insert_into(users)
         .values(&new_inv)
         .get_result(conn)?;
 
-    dbg!(&ins);
+    //dbg!(&ins);
 
     Ok(ins)
 }
@@ -218,6 +219,7 @@ fn sending_push_notifications(user: &User, pool: &web::Data<Pool>) -> Result<(),
     //println!("{:#?}", user_contacts);
     //println!("{:#?}", contacts_who_saved_user);
 
+    //FIXME extract to .data()
     let api_token = std::env::var("FCM_TOKEN").expect("No FCM_TOKEN configured");
 
     let client = Client::new();
@@ -244,6 +246,7 @@ fn sending_push_notifications(user: &User, pool: &web::Data<Pool>) -> Result<(),
             .take(crate::LIMIT_PUSH_NOTIFICATION_CONTACTS),
     )
     .map(move |(user, contact)| {
+        //FIXME
         client
             .post("https://fcm.googleapis.com/fcm/send")
             .header(CONTENT_TYPE, "application/json")
@@ -274,14 +277,33 @@ fn sending_push_notifications(user: &User, pool: &web::Data<Pool>) -> Result<(),
     Ok(())
 }
 
-pub(crate) fn get_query(myid: Uuid, pool: &web::Data<Pool>) -> Result<User, ServiceError> {
+/// Get the user by uid
+pub(crate) fn get_query(myid: Uuid, my_access_token: &str, pool: &web::Data<Pool>) -> Result<User, ServiceError> {
     info!("queries/user/get_query");
-    use core::schema::users::dsl::{id, users};
+    use core::schema::users::dsl::{id, users, access_token};
 
     let conn: &PgConnection = &pool.get().unwrap();
 
     users
-        .filter(id.eq(myid))
+        .filter(id.eq(myid).and(access_token.eq(my_access_token)))
+        .load::<User>(conn)
+        .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
+        .and_then(|w| {
+            w.first()
+                .cloned()
+                .ok_or_else(|| ServiceError::BadRequest("No user found".into()))
+        })
+}
+
+/// Get the user by uid
+pub(crate) fn get_user_by_tele_num(phone_number: &PhoneNumber, my_access_token: &str, pool: &web::Data<Pool>) -> Result<User, ServiceError> {
+    info!("queries/user/get_query");
+    use core::schema::users::dsl::{tele_num, users, access_token};
+
+    let conn: &PgConnection = &pool.get().unwrap();
+
+    users
+        .filter(tele_num.eq(phone_number.to_string()).and(access_token.eq(my_access_token)))
         .load::<User>(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
         .and_then(|w| {
