@@ -46,8 +46,8 @@ table! {
         description -> Text,
         changed_at -> Timestamp,
         client_version -> Varchar,
-        firebase_token -> Nullable<Varchar>,
         profile_picture -> Varchar,
+        firebase_token -> Nullable<Varchar>,
     }
 }
 

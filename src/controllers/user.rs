@@ -23,7 +23,6 @@ pub(crate) fn create_entry(
     auth: web::Data<Auth>,
 ) -> Result<User, ServiceError> {
     info!("controllers/user/create_entry");
-    //debug!("body {:?}", body);
 
     if !crate::ALLOWED_CLIENT_VERSIONS.contains(&body.client_version.as_str()) {
         error!("Version mismatch. Server does not suppoert client version");

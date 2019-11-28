@@ -8,6 +8,7 @@ use crate::auth::Auth;
 
 use crate::routes::push_notification::Payload;
 
+//FIXME move to user's controller
 pub(crate) fn update_token_handler(
     uid: String,
     payload: Payload,

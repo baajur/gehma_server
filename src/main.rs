@@ -3,6 +3,7 @@ extern crate diesel;
 extern crate serde_derive;
 
 use crate::auth::firebase::FirebaseAuthenticator;
+    use crate::auth::AuthenticatorWrapper;
 use actix_cors::Cors;
 use actix_files::NamedFile;
 use actix_web::http::header;
@@ -20,10 +21,10 @@ pub(crate) mod routes;
 
 mod middleware;
 
-//#[cfg(test)]
-//mod tests;
+#[cfg(test)]
+mod tests;
 
-pub const ALLOWED_CLIENT_VERSIONS: &[&'static str] = &["0.5"];
+pub const ALLOWED_CLIENT_VERSIONS: &[&'static str] = &["0.5.1"];
 pub const LIMIT_PUSH_NOTIFICATION_CONTACTS: usize = 128;
 pub const ALLOWED_PROFILE_PICTURE_SIZE: usize = 10_000; //in Kilobytes
 
@@ -41,6 +42,17 @@ fn get_auth() -> crate::auth::AuthenticatorWrapper {
     crate::auth::AuthenticatorWrapper::new(Box::new(FirebaseAuthenticator {
         config: firebase_auth_configuration.clone(),
     }))
+}
+
+fn set_testing_auth() -> AuthenticatorWrapper {
+    use crate::auth::testing::*;
+
+    let config = TestingAuthConfiguration {
+        id: "test".to_string(),
+        auth_token: "test".to_string(),
+    };
+
+    AuthenticatorWrapper::new(Box::new(TestingAuthentificator { config: config }))
 }
 
 pub(crate) fn main() {
@@ -61,7 +73,7 @@ pub(crate) fn main() {
     let server = HttpServer::new(move || {
         App::new()
             .data(pool.clone())
-            .data(get_auth())
+            .data(set_testing_auth())
             .wrap(
                 Cors::new()
                     .allowed_origin("http://localhost:3000")

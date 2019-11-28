@@ -13,8 +13,8 @@ pub struct User {
     pub description: String,
     pub changed_at: chrono::NaiveDateTime,
     pub client_version: String,
-    pub firebase_token: Option<String>,
     pub profile_picture: String,
+    pub firebase_token: Option<String>,
 }
 
 /* We don't want to expose all user's data to everyone. That's why this struct
@@ -31,6 +31,7 @@ pub struct DowngradedUser {
 }
 
 impl User {
+    //FIXME e
     pub fn my_from(e: &str, country_code: &str, version: &str) -> Self {
         User {
             id: uuid::Uuid::new_v4(),

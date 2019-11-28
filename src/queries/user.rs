@@ -24,7 +24,7 @@ pub(crate) fn get_entry_by_tel_query(
 
     let tele = tele.to_string();
 
-    dbg!(&tele);
+//    dbg!(&tele);
 
     let res = users
         .filter(tele_num.eq(tele))
@@ -218,6 +218,7 @@ fn sending_push_notifications(user: &User, pool: &web::Data<Pool>) -> Result<(),
     //println!("{:#?}", user_contacts);
     //println!("{:#?}", contacts_who_saved_user);
 
+    //FIXME extract to .data()
     let api_token = std::env::var("FCM_TOKEN").expect("No FCM_TOKEN configured");
 
     let client = Client::new();
@@ -244,6 +245,7 @@ fn sending_push_notifications(user: &User, pool: &web::Data<Pool>) -> Result<(),
             .take(crate::LIMIT_PUSH_NOTIFICATION_CONTACTS),
     )
     .map(move |(user, contact)| {
+        //FIXME
         client
             .post("https://fcm.googleapis.com/fcm/send")
             .header(CONTENT_TYPE, "application/json")
