@@ -1,18 +1,11 @@
 use crate::auth::Auth;
 use crate::Pool;
-use actix_multipart::{Field, MultipartError};
-use actix_web::{error::BlockingError, error::PayloadError, web};
 use core::errors::ServiceError;
 use core::models::{PhoneNumber, User};
-use diesel::{prelude::*, PgConnection};
-use futures::future::{err, Either};
-use futures::stream::Stream;
-use futures::Future;
 use uuid::Uuid;
+use actix_web::web;
 
-use crate::auth::Authenticator;
-use log::{error, info};
-use std::io::Write;
+use log::{info};
 
 use crate::routes::auth::{RequestCheckCode, RequestCode};
 
@@ -26,7 +19,7 @@ pub struct ResponseCheckCode {
 
 pub(crate) fn request(
     body: RequestCode,
-    pool: web::Data<Pool>,
+    _pool: web::Data<Pool>,
     auth: web::Data<Auth>,
 ) -> Result<(), ServiceError> {
     info!("controllers/auth/request_code");
@@ -49,7 +42,7 @@ pub(crate) fn check_code(
 
     let res = auth.authenticator.check_code(&parsed, &body.code)?;
 
-    if (res) {
+    if res {
         let token = Uuid::new_v4().to_simple().to_string();
 
         crate::queries::user::create_query(

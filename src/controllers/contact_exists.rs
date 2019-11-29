@@ -15,12 +15,12 @@ pub(crate) fn get_entry(
     phone_numbers: &mut Vec<PayloadUser>,
     pool: web::Data<Pool>,
     access_token: &String,
-    auth: web::Data<Auth>,
+    _auth: web::Data<Auth>,
 ) -> Result<Vec<ResponseUser>, ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
 
     let user: Result<User, ServiceError> =
-        get_user_by_id!(parsed, access_token, auth.into_inner(), &pool);
+        get_user_by_id!(parsed, access_token, _auth.into_inner(), &pool);
 
     user?;
 

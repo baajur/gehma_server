@@ -8,15 +8,6 @@ pub struct TestingAuthConfiguration {
     pub auth_token: String,
 }
 
-impl TestingAuthConfiguration {
-    pub fn get_project_id(&self) -> &String {
-        &self.id
-    }
-
-    pub fn get_auth_token(&self) -> &String {
-        &self.auth_token
-    }
-}
 
 #[derive(Debug, Clone)]
 pub struct TestingAuthentificator {

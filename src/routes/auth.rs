@@ -1,11 +1,9 @@
 use crate::Pool;
-use actix_multipart::Multipart;
 use actix_web::{error::BlockingError, web, HttpResponse};
 use core::errors::ServiceError;
-use futures::stream::Stream;
 use crate::auth::Auth;
 
-use log::{error, info};
+use log::{info};
 use futures::Future;
 
 use crate::controllers::auth::{request, check_code};

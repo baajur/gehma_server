@@ -129,7 +129,7 @@ impl Authenticator for TwilioAuthenticator {
 
         //FIXME
         let client = Client::new();
-        let result: TwilioVerificationResponse = client
+        let _result: TwilioVerificationResponse = client
             .post(&format!(
                 "https://verify.twilio.com/v2/Services/{}/Verifications",
                 self.config.get_project_id()

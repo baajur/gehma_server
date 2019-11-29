@@ -14,14 +14,14 @@ pub(crate) fn get_entry(
     blocker: &str,
     pool: web::Data<Pool>,
     firebase_uid: &String,
-    auth: web::Data<Auth>,
+    _auth: web::Data<Auth>,
 ) -> Result<Vec<Blacklist>, ServiceError> {
     let blocker = Uuid::parse_str(blocker)?;
 
     let user : Result<User, ServiceError> = get_user_by_id!(
         blocker,
         &firebase_uid,
-        auth.into_inner(),
+        _auth.into_inner(),
         &pool
     );
 
@@ -37,7 +37,7 @@ pub(crate) fn create_entry(
     data: &PostData,
     pool: web::Data<Pool>,
     firebase_uid: &String,
-    auth: web::Data<Auth>,
+    _auth: web::Data<Auth>,
 ) -> Result<Blacklist, ServiceError> {
     use core::schema::users::dsl::{id, users};
 
@@ -46,7 +46,7 @@ pub(crate) fn create_entry(
     let user : Result<User, ServiceError> = get_user_by_id!(
         blocker2,
         &firebase_uid,
-        auth.into_inner(),
+        _auth.into_inner(),
         &pool
     );
 
@@ -81,7 +81,7 @@ pub(crate) fn delete_entry(
     data: &PostData,
     pool: web::Data<Pool>,
     firebase_uid: &String,
-    auth: web::Data<Auth>,
+    _auth: web::Data<Auth>,
 ) -> Result<(), ServiceError> {
     use core::schema::users::dsl::{id, users};
 
@@ -90,7 +90,7 @@ pub(crate) fn delete_entry(
     let user : Result<User, ServiceError>  = get_user_by_id!(
         blocker2,
         &firebase_uid,
-        auth.into_inner(),
+        _auth.into_inner(),
         &pool
     );
 

@@ -19,8 +19,8 @@ use crate::routes::user::{PostUser, UpdateUser};
 pub(crate) fn user_signin(
     body: PostUser,
     pool: web::Data<Pool>,
-    firebase_uid: &String,
-    auth: web::Data<Auth>,
+    access_token: &String,
+    _auth: web::Data<Auth>,
 ) -> Result<User, ServiceError> {
     info!("controllers/user/user_signin");
 
@@ -35,7 +35,7 @@ pub(crate) fn user_signin(
     let country_code = &body.country_code;
     let tele = PhoneNumber::my_from(&body.tele_num, country_code)?;
 
-    let user = get_user_by_tele_num!(&tele, &firebase_uid, auth.into_inner(), &pool)?;
+    let user = get_user_by_tele_num!(&tele, &access_token, _auth.into_inner(), &pool)?;
 
     if user.client_version != body.client_version {
         update_user_without_auth(
@@ -58,11 +58,11 @@ pub(crate) fn get_entry(
     uid: &str,
     pool: web::Data<Pool>,
     access_token: &String,
-    auth: web::Data<Auth>,
+    _auth: web::Data<Auth>,
 ) -> Result<User, ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
 
-    get_user_by_id!(parsed, &access_token, auth.into_inner(), &pool)
+    get_user_by_id!(parsed, &access_token, _auth.into_inner(), &pool)
 }
 
 pub(crate) fn update_user_with_auth(
@@ -70,11 +70,12 @@ pub(crate) fn update_user_with_auth(
     user: &UpdateUser,
     pool: &web::Data<Pool>,
     access_token: &String,
-    auth: web::Data<Auth>,
+    _auth: web::Data<Auth>,
 ) -> Result<User, ::core::errors::ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
 
-    let muser : Result<User, ServiceError> = get_user_by_id!(parsed, &access_token, auth.into_inner(), &pool);
+    let muser: Result<User, ServiceError> =
+        get_user_by_id!(parsed, &access_token, _auth.into_inner(), &pool);
 
     muser?;
 
@@ -98,8 +99,8 @@ pub(crate) fn save_file(
     uid: String,
     field: Field,
     pool: web::Data<Pool>,
-    firebase_uid: &String,
-    auth: web::Data<Auth>,
+    access_token: &String,
+    _auth: web::Data<Auth>,
 ) -> impl Future<Item = i64, Error = ServiceError> {
     use std::fs::OpenOptions;
 
@@ -166,7 +167,7 @@ pub(crate) fn save_file(
     //Authentication
     //Cannot use the `authenticate_user_by_uid!` macro, because
     //return types don't match
-    let user = crate::queries::user::get_query(parsed, &firebase_uid, &pool);
+    let user = crate::queries::user::get_query(parsed, &access_token, &pool);
 
     if let Err(my_err) = user {
         error!("{:?}", my_err);
