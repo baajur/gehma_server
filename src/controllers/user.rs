@@ -37,25 +37,9 @@ pub(crate) fn user_signin(
 
     let user = get_user_by_tele_num!(&tele, &firebase_uid, auth.into_inner(), &pool)?;
 
-    /*
-    let user =
-        match crate::queries::user::create_query(&tele, &country_code, &body.client_version, &pool)
-        {
-            Ok(u) => Ok(u),
-            Err(ServiceError::AlreadyExists(_)) => {
-                //If the user already exists, that's ok
-                //then return it
-                crate::queries::user::get_entry_by_tel_query(&tele, &pool)
-            }
-            Err(err) => Err(err),
-        }?;
-    */
-
-    //let user = crate::queries::user::get_entry_by_tel_query(&tele, &pool)?;
-
     if user.client_version != body.client_version {
         update_user_without_auth(
-            &user.id.to_string(),
+            &user.id,
             &UpdateUser {
                 description: user.description.clone(),
                 led: format!("{}", user.led),
@@ -73,37 +57,37 @@ pub(crate) fn user_signin(
 pub(crate) fn get_entry(
     uid: &str,
     pool: web::Data<Pool>,
-    firebase_uid: &String,
+    access_token: &String,
     auth: web::Data<Auth>,
 ) -> Result<User, ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
 
-    get_user_by_id!(parsed, &firebase_uid, auth.into_inner(), &pool)
+    get_user_by_id!(parsed, &access_token, auth.into_inner(), &pool)
 }
 
 pub(crate) fn update_user_with_auth(
     uid: &str,
     user: &UpdateUser,
     pool: &web::Data<Pool>,
-    firebase_uid: &String,
+    access_token: &String,
     auth: web::Data<Auth>,
 ) -> Result<User, ::core::errors::ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
 
-    let muser : Result<User, ServiceError> = get_user_by_id!(parsed, &firebase_uid, auth.into_inner(), &pool);
+    let muser : Result<User, ServiceError> = get_user_by_id!(parsed, &access_token, auth.into_inner(), &pool);
 
     muser?;
 
-    update_user_without_auth(uid, user, pool)
+    update_user_without_auth(&parsed, user, pool)
 }
 
 pub(crate) fn update_user_without_auth(
-    uid: &str,
+    uid: &Uuid,
     user: &UpdateUser,
     pool: &web::Data<Pool>,
 ) -> Result<User, ::core::errors::ServiceError> {
-    let parsed = Uuid::parse_str(uid)?;
-    let user = crate::queries::user::update_user_query(parsed, user, &pool)?;
+    //let parsed = Uuid::parse_str(uid)?;
+    let user = crate::queries::user::update_user_query(*uid, user, &pool)?;
 
     crate::queries::user::analytics_user(&pool, &user)?;
 

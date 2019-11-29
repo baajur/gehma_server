@@ -20,12 +20,12 @@ pub struct ResponseUser {
     pub user: Option<DowngradedUser>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Payload {
     pub numbers: Vec<PayloadUser>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct PayloadUser {
     pub name: String,
     pub tele_num: String,

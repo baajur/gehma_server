@@ -7,12 +7,7 @@ use crate::Pool;
 use log::{info};
 use crate::controllers::blacklist::{create_entry, get_entry, delete_entry};
 
-#[derive(Debug, Deserialize)]
-pub struct GetAllData {
-    pub numbers: Vec<String>,
-}
-
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct PostData {
     pub blocked: String,
     pub country_code: String,

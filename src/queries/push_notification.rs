@@ -19,10 +19,11 @@ pub(crate) fn update_token_query(
     let target = users.filter(id.eq(uid));
 
     diesel::update(target)
-        .set((
-            firebase_token.eq(Some(token)),
-            changed_at.eq(chrono::Local::now().naive_local()),
-        ))
+        .set(
+            firebase_token.eq(Some(token))
+            //disabled 29.11.2019
+            //changed_at.eq(chrono::Local::now().naive_local()),
+        )
         .execute(conn)
         .map_err(|_db_error| {
             error!("db_error {}", _db_error);

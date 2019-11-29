@@ -24,7 +24,7 @@ pub(crate) fn get_entry_by_tel_query(
 
     let tele = tele.to_string();
 
-//    dbg!(&tele);
+    //    dbg!(&tele);
 
     let res = users
         .filter(tele_num.eq(tele))
@@ -110,9 +110,7 @@ pub(crate) fn update_user_query(
     pool: &web::Data<Pool>,
 ) -> Result<User, ::core::errors::ServiceError> {
     info!("queries/user/update_user_query");
-    use core::schema::users::dsl::{
-        changed_at, client_version, description, id, led, users,
-    };
+    use core::schema::users::dsl::{changed_at, client_version, description, id, led, users};
 
     let conn: &PgConnection = &pool.get().unwrap();
 
@@ -278,9 +276,13 @@ fn sending_push_notifications(user: &User, pool: &web::Data<Pool>) -> Result<(),
 }
 
 /// Get the user by uid
-pub(crate) fn get_query(myid: Uuid, my_access_token: &str, pool: &web::Data<Pool>) -> Result<User, ServiceError> {
+pub(crate) fn get_query(
+    myid: Uuid,
+    my_access_token: &str,
+    pool: &web::Data<Pool>,
+) -> Result<User, ServiceError> {
     info!("queries/user/get_query");
-    use core::schema::users::dsl::{id, users, access_token};
+    use core::schema::users::dsl::{access_token, id, users};
 
     let conn: &PgConnection = &pool.get().unwrap();
 
@@ -296,14 +298,22 @@ pub(crate) fn get_query(myid: Uuid, my_access_token: &str, pool: &web::Data<Pool
 }
 
 /// Get the user by uid
-pub(crate) fn get_user_by_tele_num(phone_number: &PhoneNumber, my_access_token: &str, pool: &web::Data<Pool>) -> Result<User, ServiceError> {
+pub(crate) fn get_user_by_tele_num(
+    phone_number: &PhoneNumber,
+    my_access_token: &str,
+    pool: &web::Data<Pool>,
+) -> Result<User, ServiceError> {
     info!("queries/user/get_query");
-    use core::schema::users::dsl::{tele_num, users, access_token};
+    use core::schema::users::dsl::{access_token, tele_num, users};
 
     let conn: &PgConnection = &pool.get().unwrap();
 
     users
-        .filter(tele_num.eq(phone_number.to_string()).and(access_token.eq(my_access_token)))
+        .filter(
+            tele_num
+                .eq(phone_number.to_string())
+                .and(access_token.eq(my_access_token)),
+        )
         .load::<User>(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
         .and_then(|w| {

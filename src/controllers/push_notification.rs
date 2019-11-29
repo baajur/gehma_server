@@ -13,12 +13,12 @@ pub(crate) fn update_token_handler(
     uid: String,
     payload: Payload,
     pool: web::Data<Pool>,
-    firebase_uid: &String,
+    access_token: &String,
     auth: web::Data<Auth>,
 ) -> Result<(), ServiceError> {
     let parsed = Uuid::parse_str(&uid)?;
 
-    let user : Result<User, ServiceError> = get_user_by_id!(parsed, firebase_uid, auth.into_inner(), &pool);
+    let user : Result<User, ServiceError> = get_user_by_id!(parsed, access_token, auth.into_inner(), &pool);
 
     user?;
 
