@@ -27,7 +27,7 @@ pub fn get_all(
     info!("controllers/blacklist/get_all");
 
     let info = info.into_inner();
-    web::block(move || get_entry(&info, pool, &query.firebase_uid, auth)).then(
+    web::block(move || get_entry(&info, pool, &query.access_token, auth)).then(
         |res| match res {
             Ok(users) => {
                 let mut res = HttpResponse::Ok()
@@ -59,7 +59,7 @@ pub fn add(
             &info.into_inner(),
             &data.into_inner(),
             pool,
-            &query.firebase_uid,
+            &query.access_token,
             auth,
         )
     })
@@ -90,7 +90,7 @@ pub fn delete(
             &info.into_inner(),
             &data.into_inner(),
             pool,
-            &query.firebase_uid,
+            &query.access_token,
             auth,
         )
     })

@@ -48,6 +48,7 @@ table! {
         client_version -> Varchar,
         profile_picture -> Varchar,
         firebase_token -> Nullable<Varchar>,
+        access_token -> Bpchar,
     }
 }
 

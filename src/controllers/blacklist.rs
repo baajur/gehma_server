@@ -18,7 +18,7 @@ pub(crate) fn get_entry(
 ) -> Result<Vec<Blacklist>, ServiceError> {
     let blocker = Uuid::parse_str(blocker)?;
 
-    let user : Result<User, ServiceError> = authenticate_user_by_uid!(
+    let user : Result<User, ServiceError> = get_user_by_id!(
         blocker,
         &firebase_uid,
         auth.into_inner(),
@@ -43,7 +43,7 @@ pub(crate) fn create_entry(
 
     let blocker2 = Uuid::parse_str(blocker)?;
 
-    let user : Result<User, ServiceError> = authenticate_user_by_uid!(
+    let user : Result<User, ServiceError> = get_user_by_id!(
         blocker2,
         &firebase_uid,
         auth.into_inner(),
@@ -87,7 +87,7 @@ pub(crate) fn delete_entry(
 
     let blocker2 = Uuid::parse_str(blocker)?;
 
-    let user : Result<User, ServiceError>  = authenticate_user_by_uid!(
+    let user : Result<User, ServiceError>  = get_user_by_id!(
         blocker2,
         &firebase_uid,
         auth.into_inner(),

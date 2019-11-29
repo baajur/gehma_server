@@ -9,7 +9,7 @@ use futures::Future;
 use log::{error, info};
 
 use crate::auth::Auth;
-use crate::controllers::user::{create_entry, get_entry, save_file, update_user_with_auth};
+use crate::controllers::user::{user_signin, get_entry, save_file, update_user_with_auth};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PostUser {
@@ -35,10 +35,10 @@ pub fn signin(
     info!("controllers/user/add");
 
     web::block(move || {
-        create_entry(
+        user_signin(
             body.into_inner(),
             pool,
-            &query.firebase_uid,
+            &query.access_token,
             auth
         )
     })
@@ -65,7 +65,7 @@ pub fn get(
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
     info!("controllers/user/get");
 
-    web::block(move || get_entry(&info.into_inner(), pool, &query.firebase_uid, auth)).then(|res| {
+    web::block(move || get_entry(&info.into_inner(), pool, &query.access_token, auth)).then(|res| {
         match res {
             Ok(users) => {
                 let mut res = HttpResponse::Ok()
@@ -102,7 +102,7 @@ pub fn upload_profile_picture(
                 uid.clone(),
                 field,
                 pool.clone(),
-                &query.firebase_uid,
+                &query.access_token,
                 auth.clone(),
             )
             .into_stream()
@@ -130,7 +130,7 @@ pub fn update(
             &info.into_inner(),
             &data.into_inner(),
             &pool,
-            &query.firebase_uid,
+            &query.access_token,
             auth,
         )
     })

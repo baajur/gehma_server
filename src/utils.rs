@@ -1,6 +1,6 @@
 #[derive(Debug, Deserialize)]
 pub struct QueryParams {
-    pub firebase_uid: String,
+    pub access_token: String,
 }
 
 pub fn set_response_headers(response: &mut actix_web::HttpResponse) {
