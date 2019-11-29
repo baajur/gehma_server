@@ -10,6 +10,7 @@ use actix_web::{middleware as actix_middleware, web, App, HttpResponse, HttpServ
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
 use std::path::PathBuf;
+use diesel_migrations::run_pending_migrations;
 
 mod utils;
 #[macro_use]
@@ -74,6 +75,9 @@ pub(crate) fn main() {
         .build(manager)
         .expect("Failed to create a pool");
 
+    let connection: &PgConnection = &pool.get().unwrap();
+    run_pending_migrations(connection).expect("cannot run pending migrations");
+
     let server = HttpServer::new(move || {
         App::new()
             .data(pool.clone())
@@ -97,7 +101,7 @@ pub(crate) fn main() {
             .service(
                 web::scope("/api")
                     .service(
-                        web::resource("/signin") //must have query string firebase_uid
+                        web::resource("/signin") //must have query string access_token
                             .route(web::post().to_async(routes::user::signin)),
                     )
                     .service(
