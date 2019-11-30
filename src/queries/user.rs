@@ -12,7 +12,6 @@ use crate::routes::user::UpdateUser;
 
 use log::{error, info};
 
-/*
 pub(crate) fn get_entry_by_tel_query(
     tele: &PhoneNumber,
     pool: &web::Data<Pool>,
@@ -40,7 +39,6 @@ pub(crate) fn get_entry_by_tel_query(
         .cloned()
         .ok_or_else(|| ServiceError::BadRequest("No user found".into()))
 }
-*/
 
 pub(crate) fn analytics_user(
     pool: &web::Data<Pool>,

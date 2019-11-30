@@ -1,11 +1,11 @@
 use crate::auth::Auth;
 use crate::Pool;
+use actix_web::web;
 use core::errors::ServiceError;
 use core::models::{PhoneNumber, User};
 use uuid::Uuid;
-use actix_web::web;
 
-use log::{info};
+use log::{info, error};
 
 use crate::routes::auth::{RequestCheckCode, RequestCode};
 
@@ -45,14 +45,24 @@ pub(crate) fn check_code(
     if res {
         let token = Uuid::new_v4().to_simple().to_string();
 
-        crate::queries::user::create_query(
+        match crate::queries::user::create_query(
             &parsed,
             &body.country_code,
             &body.client_version,
             &token,
             &pool,
-        )
+        ) {
+            Ok(user) => Ok(user),
+            Err(ServiceError::AlreadyExists(_)) => {
+                crate::queries::user::get_entry_by_tel_query(&parsed, &pool)
+            }
+            Err(e) => {
+                error!("{}", e);
+                Err(ServiceError::InternalServerError)
+            }
+        }
     } else {
+        info!("Code was wrong");
         Err(ServiceError::BadRequest(
             "Check node returned false".to_string(),
         ))
