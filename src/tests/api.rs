@@ -469,3 +469,28 @@ fn test_contacts2() {
     cleanup(&user.tele_num, &init_pool().get().unwrap());
     cleanup(&user2.tele_num, &init_pool().get().unwrap());
 }
+
+#[test]
+fn test_empty_contacts() {
+    let mut app = test::init_service(App::new().data(init_pool()).data(set_testing_auth()).route(
+        "/api/exists/{uid}/{country_code}",
+        web::post().to_async(crate::routes::contact_exists::exists),
+    ));
+
+    let user = create_user("+4366412345678");
+
+    let req = test::TestRequest::post()
+        .uri(&format!(
+            "/api/exists/{}/{}?access_token={}",
+            user.id, "AT", user.access_token
+        ))
+        .set_json(&crate::routes::contact_exists::Payload {
+            numbers: Vec::new(),
+        })
+        .to_request();
+
+    let users: Vec<ResponseUser> = test::read_response_json(&mut app, req);
+
+    assert_eq!(users.len(), 0);
+    cleanup(&user.tele_num, &init_pool().get().unwrap());
+}
