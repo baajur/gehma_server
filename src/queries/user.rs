@@ -116,11 +116,14 @@ pub(crate) fn update_user_query(
 
     let target = users.filter(id.eq(myid));
 
+    /*
     let my_led = match &*user.led {
         "true" => true,
         "false" => false,
         _ => false,
     };
+    */
+    let my_led = user.led;
 
     diesel::update(target)
         .set((

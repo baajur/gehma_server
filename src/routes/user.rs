@@ -21,7 +21,7 @@ pub struct PostUser {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UpdateUser {
     pub description: String,
-    pub led: String,
+    pub led: bool,
     pub client_version: String,
 }
 

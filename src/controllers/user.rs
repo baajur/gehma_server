@@ -42,7 +42,7 @@ pub(crate) fn user_signin(
             &user.id,
             &UpdateUser {
                 description: user.description.clone(),
-                led: format!("{}", user.led),
+                led: user.led,
                 client_version: body.client_version.clone(),
             },
             &pool,
