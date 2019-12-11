@@ -10,10 +10,10 @@ COPY ./Cargo.toml ./Cargo.toml
 COPY ./src ./src
 RUN cargo build --release
 
-FROM debian:latest
+FROM ubuntu:latest
 WORKDIR /gehma
 RUN apt-get update
-RUN apt-get install -y openssl postgresql-client
+RUN apt-get install -y openssl postgresql-client ca-certificates
 
 COPY ./migrations ./migrations
 #COPY --from=builder /gehma/diesel_dir/bin/diesel .
