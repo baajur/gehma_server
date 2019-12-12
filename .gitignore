@@ -11,3 +11,4 @@ core/target
 static/profile_pictures/*
 docker-compose.dev.yml
 old_env
+vendor

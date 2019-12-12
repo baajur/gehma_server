@@ -8,6 +8,8 @@ COPY ./core ./core
 COPY ./Cargo.lock ./Cargo.lock
 COPY ./Cargo.toml ./Cargo.toml
 COPY ./src ./src
+RUN mkdir .cargo
+RUN cargo vendor > .cargo/config
 RUN cargo build --release
 
 FROM ubuntu:latest
