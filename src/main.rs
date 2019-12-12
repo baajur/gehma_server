@@ -81,7 +81,7 @@ pub(crate) fn main() {
     let server = HttpServer::new(move || {
         App::new()
             .data(pool.clone())
-            .data(get_auth())
+            .data(set_testing_auth())
             .wrap(
                 Cors::new()
                     .allowed_origin("http://localhost:3000")
@@ -92,6 +92,7 @@ pub(crate) fn main() {
                     .max_age(3600),
             )
             .wrap(actix_middleware::Logger::default())
+
             .data(web::JsonConfig::default().limit(4048 * 1024))
             .wrap(actix_middleware::Compress::default())
             .service(

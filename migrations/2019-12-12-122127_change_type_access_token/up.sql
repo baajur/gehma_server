@@ -1,0 +1,1 @@
+ALTER TABLE users ALTER COLUMN access_token TYPE VARCHAR(32);
