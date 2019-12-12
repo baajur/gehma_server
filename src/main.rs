@@ -81,7 +81,7 @@ pub(crate) fn main() {
     let server = HttpServer::new(move || {
         App::new()
             .data(pool.clone())
-            .data(set_testing_auth())
+            .data(get_auth())
             .wrap(
                 Cors::new()
                     .allowed_origin("http://localhost:3000")

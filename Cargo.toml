@@ -37,6 +37,10 @@ reqwest = "0.9"
 tokio = "0.1.22"
 diesel_migrations= "1.4.0"
 
+[[bin]]
+name = "sprechstunde"
+path = "src/main.rs"
+
 [dev-dependencies]
 tempfile = "3"
 reqwest = "0.9"

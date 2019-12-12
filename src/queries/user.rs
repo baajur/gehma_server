@@ -267,6 +267,19 @@ fn sending_push_notifications(user: &User, pool: &web::Data<Pool>) -> Result<(),
     })
     .buffer_unordered(10)
     .and_then(|mut res| {
+        //FIXME fix error
+        /*{
+            "multicast_id": 1715198469273987789,
+            "success": 0,
+            "failure": 1,
+            "canonical_ids": 0,
+            "results": [
+                {
+                    "error": "NotRegistered"
+                }
+            ]
+        }*/
+
         println!("Response: {}", res.status());
         futures::future::ok(res.json::<serde_json::Value>())
     })
