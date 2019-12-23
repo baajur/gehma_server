@@ -23,6 +23,9 @@ pub enum ServiceError {
 
     #[display(fmt = "NotificationError: {}", _0)]
     NotificationError(String),
+
+    #[display(fmt = "Cannot parse: {}", _0)]
+    ParseError(String)
 }
 
 #[derive(Debug, Display)]
@@ -44,6 +47,7 @@ impl ResponseError for ServiceError {
             ServiceError::AlreadyExists(ref message) => HttpResponse::BadRequest().json(message),
             ServiceError::Unauthorized => HttpResponse::Unauthorized().json("Unauthorized"),
             ServiceError::NotificationError(ref message) => HttpResponse::BadRequest().json(message),
+            ServiceError::ParseError(ref message) => HttpResponse::BadRequest().json(message),
         }
     }
 }

@@ -8,7 +8,8 @@ edition = "2018"
 members = [
     "core",
     "web_contrib",
-    "schauma"
+    "schauma",
+    "schauma_spider",
 ]
 
 [dependencies]
@@ -47,6 +48,11 @@ path = "src/main.rs"
 [[bin]]
 name = "schauma"
 path = "schauma/src/main.rs"
+
+[[bin]]
+name = "schauma_spider"
+path = "schauma_spider/src/main.rs"
+
 
 [dev-dependencies]
 tempfile = "3"

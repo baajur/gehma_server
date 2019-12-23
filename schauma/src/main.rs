@@ -15,6 +15,7 @@ use std::path::PathBuf;
 use diesel_migrations::run_pending_migrations;
 use web_contrib::push_notifications::NotificationWrapper;
 
+//don't forget that `schauma_spider` also needs the lib.rs
 pub(crate) mod controllers;
 pub(crate) mod queries;
 pub(crate) mod routes;
