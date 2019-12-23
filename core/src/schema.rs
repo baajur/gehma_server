@@ -29,6 +29,22 @@ table! {
 }
 
 table! {
+    events (id) {
+        id -> Uuid,
+        name -> Varchar,
+        description -> Varchar,
+        opening -> Timestamp,
+        closing -> Timestamp,
+        country -> Varchar,
+        city -> Varchar,
+        addr -> Varchar,
+        href -> Nullable<Varchar>,
+        created_at -> Timestamp,
+        changed_at -> Timestamp,
+    }
+}
+
+table! {
     usage_statistics (id) {
         id -> Int4,
         tele_num -> Varchar,
@@ -56,6 +72,7 @@ allow_tables_to_appear_in_same_query!(
     analytics,
     blacklist,
     contacts,
+    events,
     usage_statistics,
     users,
 );

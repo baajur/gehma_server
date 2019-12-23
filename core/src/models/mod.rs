@@ -2,6 +2,10 @@ use super::schema::*;
 use crate::errors::InternalError;
 use crate::utils::phonenumber_to_international;
 
+pub mod schauma;
+
+pub use schauma::*;
+
 #[derive(Debug, Serialize, Deserialize, Queryable, Insertable, Clone, Identifiable, AsChangeset, Eq, PartialEq)]
 #[table_name = "users"]
 pub struct User {
