@@ -1,5 +1,6 @@
 pub mod auth;
 pub mod push_notifications;
+pub mod utils;
 
 #[cfg(test)]
 mod tests {

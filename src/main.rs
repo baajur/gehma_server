@@ -16,7 +16,6 @@ use std::path::PathBuf;
 use diesel_migrations::run_pending_migrations;
 use web_contrib::push_notifications::NotificationWrapper;
 
-mod utils;
 pub(crate) mod controllers;
 pub(crate) mod queries;
 pub(crate) mod routes;

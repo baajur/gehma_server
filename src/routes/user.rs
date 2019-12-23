@@ -34,7 +34,7 @@ pub fn signin(
     auth: web::Data<Auth>,
     notify_service: web::Data<NotifyService>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
-    info!("controllers/user/add");
+    info!("routes/user/signin");
 
     web::block(move || {
         user_signin(
@@ -61,12 +61,12 @@ pub fn signin(
 }
 
 pub fn get(
-    info: web::Path<(String)>,
+    info: web::Path<String>,
     pool: web::Data<Pool>,
     query: web::Query<QueryParams>,
     auth: web::Data<Auth>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
-    info!("controllers/user/get");
+    info!("routes/user/get");
 
     web::block(move || get_entry(&info.into_inner(), pool, &query.access_token, auth)).then(|res| {
         match res {
@@ -92,7 +92,7 @@ pub fn upload_profile_picture(
     query: web::Query<QueryParams>,
     auth: web::Data<Auth>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
-    info!("controllers/upload_profile_picture");
+    info!("routes/upload_profile_picture");
 
     let uid = info.into_inner();
     multipart
@@ -127,7 +127,7 @@ pub fn update(
     auth: web::Data<Auth>,
     notify_service: web::Data<NotifyService>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
-    info!("controllers/user/update");
+    info!("routes/user/update");
 
     web::block(move || {
         update_user_with_auth(
@@ -162,7 +162,7 @@ pub fn update_token(
     query: web::Query<QueryParams>,
     auth: web::Data<Auth>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
-    info!("controllers/push_notification/update_token");
+    info!("routes/push_notification/update_token");
 
     web::block(move || {
         update_token_handler(

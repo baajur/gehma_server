@@ -117,6 +117,11 @@ pub(crate) fn main() {
             .wrap(actix_middleware::Compress::default())
             .service(
                 web::scope("/api")
+                        .service(
+                        web::resource("/events/{city}").route(
+                            web::get().to_async(routes::events::get_all),
+                        ),
+                    )
                     .default_service(web::route().to(|| HttpResponse::NotFound())),
             )
     })

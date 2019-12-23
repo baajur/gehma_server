@@ -1,10 +1,12 @@
+use serde::{Deserialize};
+use actix_web::http::header::*;
+
 #[derive(Debug, Deserialize)]
 pub struct QueryParams {
     pub access_token: String,
 }
 
 pub fn set_response_headers(response: &mut actix_web::HttpResponse) {
-    use actix_web::http::header::*;
 
     response.headers_mut().insert(
         STRICT_TRANSPORT_SECURITY,
