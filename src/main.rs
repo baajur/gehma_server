@@ -11,6 +11,7 @@ use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
 use std::path::PathBuf;
 use diesel_migrations::run_pending_migrations;
+use crate::push_notifications::NotificationWrapper;
 
 mod utils;
 #[macro_use]
@@ -59,6 +60,12 @@ fn set_testing_auth() -> AuthenticatorWrapper {
     };
 
     AuthenticatorWrapper::new(Box::new(TestingAuthentificator { config: config }))
+}
+
+fn set_testing_notification() -> NotificationWrapper {
+    use crate::push_notifications::testing::*;
+
+    NotificationWrapper::new(Box::new(TestingNotificationService))
 }
 
 fn get_firebase_notification_service() -> crate::push_notifications::NotificationWrapper {

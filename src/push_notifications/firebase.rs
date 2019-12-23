@@ -2,7 +2,7 @@ use crate::push_notifications::*;
 use core::errors::ServiceError;
 
 use tokio;
-use core::models::{Analytic, Blacklist, PhoneNumber, UsageStatisticEntry, User, Contact};
+use core::models::{User, Contact};
 use log::{error, info};
 use futures::Future;
 use serde_json::json;
