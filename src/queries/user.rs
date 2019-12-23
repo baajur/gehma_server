@@ -7,6 +7,7 @@ use futures::Future;
 use serde_json::json;
 use tokio;
 use uuid::Uuid;
+use crate::push_notifications::NotifyService;
 
 use crate::routes::user::UpdateUser;
 
@@ -108,6 +109,7 @@ pub(crate) fn update_user_query(
     myid: Uuid,
     user: &UpdateUser,
     pool: &web::Data<Pool>,
+    notify_service: &web::Data<NotifyService>,
 ) -> Result<User, ::core::errors::ServiceError> {
     info!("queries/user/update_user_query");
     use core::schema::users::dsl::{changed_at, client_version, description, id, led, users};
@@ -148,7 +150,7 @@ pub(crate) fn update_user_query(
         .and_then(|user| {
             if my_led {
                 //Sending push notification
-                sending_push_notifications(&user, pool).map_err(|err| {
+                sending_push_notifications(&user, pool, notify_service).map_err(|err| {
                     eprintln!("{}", err);
                     ServiceError::BadRequest("Cannot send push notifications".to_string())
                 })?;
@@ -158,7 +160,7 @@ pub(crate) fn update_user_query(
         })
 }
 
-fn sending_push_notifications(user: &User, pool: &web::Data<Pool>) -> Result<(), ServiceError> {
+fn sending_push_notifications(user: &User, pool: &web::Data<Pool>, notify_service: &web::Data<NotifyService>) -> Result<(), ServiceError> {
     info!("queries/user/sending_push_notifications");
     use core::models::Contact;
     use core::schema::blacklist::dsl::{blacklist, blocked, blocker};
@@ -221,74 +223,30 @@ fn sending_push_notifications(user: &User, pool: &web::Data<Pool>) -> Result<(),
     //println!("{:#?}", contacts_who_saved_user);
 
     //FIXME extract to .data()
-    let api_token = std::env::var("FCM_TOKEN").expect("No FCM_TOKEN configured");
-
-    let client = Client::new();
+    //let api_token = std::env::var("FCM_TOKEN").expect("No FCM_TOKEN configured");
 
     let test = user_contacts
-        .clone()
-        .into_iter()
-        .zip(contacts_who_saved_user.clone())
-        .take(crate::LIMIT_PUSH_NOTIFICATION_CONTACTS);
+                .clone()
+                .into_iter()
+                .zip(contacts_who_saved_user.clone())
+                .take(crate::LIMIT_PUSH_NOTIFICATION_CONTACTS);
 
-    if test.len() == 0 {
-        info!("Nix zu senden");
-    }
+            if test.len() == 0 {
+                info!("Nix zu senden");
+            }
 
-    for (user, contact) in test {
-        //assert_eq!(user.id, contact.from_id);
-        info!("{} ist motiviert zu {}", contact.name, user.tele_num);
-    }
+            for (user, contact) in test {
+                //assert_eq!(user.id, contact.from_id);
+                info!("{} ist motiviert zu {}", contact.name, user.tele_num);
+            }
 
-    let work = futures::stream::iter_ok(
-        user_contacts
-            .into_iter()
-            .zip(contacts_who_saved_user)
-            .take(crate::LIMIT_PUSH_NOTIFICATION_CONTACTS),
-    )
-    .map(move |(user, contact)| {
-        //FIXME
-        client
-            .post("https://fcm.googleapis.com/fcm/send")
-            .header(CONTENT_TYPE, "application/json")
-            .header(AUTHORIZATION, format!("key={}", api_token))
-            .json(&json!({
-                "notification": {
-                    "title": format!("{} ist motiviert", contact.name),
-                    "body": "",
-                    "icon": "ic_stat_name_nougat"
-                },
-                "android":{
-                    "ttl":"43200s"
-                },
-                "registration_ids": [user.firebase_token]
-            }))
-            .send()
-    })
-    .buffer_unordered(10)
-    .and_then(|mut res| {
-        //FIXME fix error
-        /*{
-            "multicast_id": 1715198469273987789,
-            "success": 0,
-            "failure": 1,
-            "canonical_ids": 0,
-            "results": [
-                {
-                    "error": "NotRegistered"
-                }
-            ]
-        }*/
+    let t = user_contacts
+                    .into_iter()
+                    .zip(contacts_who_saved_user)
+                    .take(crate::LIMIT_PUSH_NOTIFICATION_CONTACTS);
 
-        println!("Response: {}", res.status());
-        futures::future::ok(res.json::<serde_json::Value>())
-    })
-    .for_each(|_| Ok(()))
-    .map_err(|e| error!("{}", e));
 
-    tokio::run(work);
-
-    Ok(())
+        Ok(())
 }
 
 /// Get the user by uid

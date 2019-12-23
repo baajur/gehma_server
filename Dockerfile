@@ -1,4 +1,4 @@
-FROM rust:1.38 as builder
+FROM rust:1.40 as builder
 RUN apt-get update
 RUN apt-get install -y openssl postgresql postgresql-contrib
 

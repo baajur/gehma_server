@@ -3,7 +3,6 @@ use core::models::PhoneNumber;
 use log::{error, info};
 use reqwest::Client;
 
-//pub mod firebase;
 pub mod testing;
 pub mod twilio;
 
@@ -12,7 +11,6 @@ pub type Auth = AuthenticatorWrapper;
 /// The actix's routes cannot handle `web::Data<impl Authenticator + 'static>`.
 /// That's why I use a wrapper struct to make it easier to guess the type
 pub struct AuthenticatorWrapper {
-    //pub authenticator: crate::auth::firebase::FirebaseAuthenticator
     pub authenticator: Box<dyn Authenticator>
 }
 
@@ -23,13 +21,6 @@ impl AuthenticatorWrapper {
         }
     }
 }
-
-/*
-pub trait AuthenticatorConfiguration : Send + Sync {
-    fn get_project_id(&self) -> &String;
-    fn get_auth_token(&self) -> &String;
-}
-*/
 
 pub trait Authenticator : Send + Sync {
     fn check_code(

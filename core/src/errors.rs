@@ -20,6 +20,9 @@ pub enum ServiceError {
 
     #[display(fmt = "Unauthorized")]
     Unauthorized,
+
+    #[display(fmt = "NotificationError: {}", _0)]
+    NotificationError(String),
 }
 
 #[derive(Debug, Display)]
@@ -40,6 +43,7 @@ impl ResponseError for ServiceError {
             ServiceError::BadRequest(ref message) => HttpResponse::BadRequest().json(message),
             ServiceError::AlreadyExists(ref message) => HttpResponse::BadRequest().json(message),
             ServiceError::Unauthorized => HttpResponse::Unauthorized().json("Unauthorized"),
+            ServiceError::NotificationError(ref message) => HttpResponse::BadRequest().json(message),
         }
     }
 }

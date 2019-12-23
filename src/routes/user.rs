@@ -9,6 +9,7 @@ use futures::Future;
 use log::{error, info};
 
 use crate::auth::Auth;
+use crate::push_notifications::NotifyService;
 use crate::controllers::user::{user_signin, get_entry, save_file, update_user_with_auth};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -31,6 +32,7 @@ pub fn signin(
     pool: web::Data<Pool>,
     query: web::Query<QueryParams>,
     auth: web::Data<Auth>,
+    notify_service: web::Data<NotifyService>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
     info!("controllers/user/add");
 
@@ -39,7 +41,8 @@ pub fn signin(
             body.into_inner(),
             pool,
             &query.access_token,
-            auth
+            auth,
+            notify_service,
         )
     })
     .then(|res| match res {
@@ -122,6 +125,7 @@ pub fn update(
     pool: web::Data<Pool>,
     query: web::Query<QueryParams>,
     auth: web::Data<Auth>,
+    notify_service: web::Data<NotifyService>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
     info!("controllers/user/update");
 
@@ -132,6 +136,7 @@ pub fn update(
             &pool,
             &query.access_token,
             auth,
+            &notify_service,
         )
     })
     .then(|res| match res {

@@ -7,6 +7,7 @@ pub struct FirebaseDatabaseConfiguration {
     pub firebase_auth_token: String,
 }
 
+//OLD
 impl AuthenticatorConfiguration for FirebaseDatabaseConfiguration {
     fn get_project_id(&self) -> &String {
         &self.firebase_project_id

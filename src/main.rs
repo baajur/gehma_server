@@ -18,6 +18,7 @@ mod auth;
 pub(crate) mod controllers;
 pub(crate) mod queries;
 pub(crate) mod routes;
+pub(crate) mod push_notifications;
 
 mod middleware;
 
@@ -60,6 +61,21 @@ fn set_testing_auth() -> AuthenticatorWrapper {
     AuthenticatorWrapper::new(Box::new(TestingAuthentificator { config: config }))
 }
 
+fn get_firebase_notification_service() -> crate::push_notifications::NotificationWrapper {
+    use crate::push_notifications::firebase::FirebaseConfiguration;
+    use crate::push_notifications::firebase::FirebaseNotificationService;
+
+    let api_token = std::env::var("FCM_TOKEN").expect("No FCM_TOKEN configured");
+
+    let config = FirebaseConfiguration {
+        fcm_token: api_token
+    };
+
+    crate::push_notifications::NotificationWrapper::new(Box::new(FirebaseNotificationService {
+        config
+    }))
+}
+
 pub(crate) fn main() {
     dotenv::dotenv().ok();
     std::env::set_var("RUST_LOG", "info,actix_web=info,actix_server=info");
@@ -82,6 +98,7 @@ pub(crate) fn main() {
         App::new()
             .data(pool.clone())
             .data(set_testing_auth())
+            .data(get_firebase_notification_service())
             .wrap(
                 Cors::new()
                     .allowed_origin("http://localhost:3000")

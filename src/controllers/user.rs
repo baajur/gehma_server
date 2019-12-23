@@ -1,4 +1,5 @@
 use crate::auth::Auth;
+use crate::push_notifications::NotifyService;
 use crate::Pool;
 use actix_multipart::{Field, MultipartError};
 use actix_web::{error::BlockingError, error::PayloadError, web};
@@ -21,6 +22,7 @@ pub(crate) fn user_signin(
     pool: web::Data<Pool>,
     access_token: &String,
     _auth: web::Data<Auth>,
+    notify_service: web::Data<NotifyService>,
 ) -> Result<User, ServiceError> {
     info!("controllers/user/user_signin");
 
@@ -46,6 +48,7 @@ pub(crate) fn user_signin(
                 client_version: body.client_version.clone(),
             },
             &pool,
+            &notify_service
         )?;
     }
 
@@ -71,6 +74,7 @@ pub(crate) fn update_user_with_auth(
     pool: &web::Data<Pool>,
     access_token: &String,
     _auth: web::Data<Auth>,
+    notify_service: &web::Data<NotifyService>,
 ) -> Result<User, ::core::errors::ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
 
@@ -79,16 +83,17 @@ pub(crate) fn update_user_with_auth(
 
     muser?;
 
-    update_user_without_auth(&parsed, user, pool)
+    update_user_without_auth(&parsed, user, pool, notify_service)
 }
 
 pub(crate) fn update_user_without_auth(
     uid: &Uuid,
     user: &UpdateUser,
     pool: &web::Data<Pool>,
+    notify_service: &web::Data<NotifyService>,
 ) -> Result<User, ::core::errors::ServiceError> {
     //let parsed = Uuid::parse_str(uid)?;
-    let user = crate::queries::user::update_user_query(*uid, user, &pool)?;
+    let user = crate::queries::user::update_user_query(*uid, user, &pool, notify_service)?;
 
     crate::queries::user::analytics_user(&pool, &user)?;
 
