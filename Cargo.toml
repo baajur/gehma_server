@@ -7,10 +7,12 @@ edition = "2018"
 [workspace]
 members = [
     "core",
+    "web_contrib",
 ]
 
 [dependencies]
 core = { path = "core" }
+web_contrib = { path = "web_contrib" }
 actix-identity = "0.1.0"
 actix-multipart = "0.1.1"
 actix-cors = "0.1.0"

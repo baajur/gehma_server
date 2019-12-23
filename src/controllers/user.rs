@@ -1,5 +1,5 @@
-use crate::auth::Auth;
-use crate::push_notifications::NotifyService;
+use web_contrib::auth::Auth;
+use web_contrib::push_notifications::NotifyService;
 use crate::Pool;
 use actix_multipart::{Field, MultipartError};
 use actix_web::{error::BlockingError, error::PayloadError, web};
@@ -13,7 +13,6 @@ use uuid::Uuid;
 
 use log::{error, info};
 use std::io::Write;
-//use crate::auth::authenticate_user;
 
 use crate::routes::user::{PostUser, UpdateUser, UpdateTokenPayload};
 

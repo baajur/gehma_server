@@ -4,7 +4,7 @@ use uuid::Uuid;
 use crate::Pool;
 use core::errors::ServiceError;
 
-use crate::auth::Auth;
+use web_contrib::auth::Auth;
 use core::models::User;
 
 use crate::routes::contact_exists::{PayloadUser, ResponseUser};

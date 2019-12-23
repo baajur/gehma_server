@@ -1,4 +1,4 @@
-use crate::auth::Auth;
+use web_contrib::auth::Auth;
 use actix_web::{error::BlockingError, web, HttpResponse};
 use futures::Future;
 use core::errors::ServiceError;

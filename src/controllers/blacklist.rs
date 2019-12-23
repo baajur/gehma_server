@@ -1,4 +1,4 @@
-use crate::auth::Auth;
+use web_contrib::auth::Auth;
 use actix_web::{web};
 use diesel::{prelude::*, PgConnection};
 use uuid::Uuid;

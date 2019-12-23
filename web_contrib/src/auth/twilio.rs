@@ -1,6 +1,7 @@
 use crate::auth::*;
 use chrono::prelude::*;
 use core::models::PhoneNumber;
+use serde::{Serialize, Deserialize};
 
 //FIXME drop Debug
 #[derive(Debug, Clone)]
@@ -40,7 +41,7 @@ impl TwilioConfiguration {
 }
 */
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct TwilioVerificationCheckResponse {
     sid: String,
     service_sid: String,
@@ -56,7 +57,7 @@ struct TwilioVerificationCheckResponse {
 }
 
 /// Request a code
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct TwilioVerificationResponse {
     sid: String,
     service_sid: String,

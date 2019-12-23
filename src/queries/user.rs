@@ -7,7 +7,7 @@ use futures::Future;
 use serde_json::json;
 use tokio;
 use uuid::Uuid;
-use crate::push_notifications::NotifyService;
+use web_contrib::push_notifications::NotifyService;
 
 use crate::routes::user::UpdateUser;
 

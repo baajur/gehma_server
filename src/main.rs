@@ -2,7 +2,10 @@ extern crate diesel;
 #[macro_use]
 extern crate serde_derive;
 
-use crate::auth::AuthenticatorWrapper;
+#[macro_use]
+extern crate web_contrib;
+
+use web_contrib::auth::AuthenticatorWrapper;
 use actix_cors::Cors;
 use actix_files::NamedFile;
 use actix_web::http::header;
@@ -11,15 +14,12 @@ use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
 use std::path::PathBuf;
 use diesel_migrations::run_pending_migrations;
-use crate::push_notifications::NotificationWrapper;
+use web_contrib::push_notifications::NotificationWrapper;
 
 mod utils;
-#[macro_use]
-mod auth;
 pub(crate) mod controllers;
 pub(crate) mod queries;
 pub(crate) mod routes;
-pub(crate) mod push_notifications;
 
 mod middleware;
 
@@ -32,9 +32,9 @@ pub const ALLOWED_PROFILE_PICTURE_SIZE: usize = 10_000; //in Kilobytes
 
 pub type Pool = r2d2::Pool<ConnectionManager<PgConnection>>;
 
-fn get_auth() -> crate::auth::AuthenticatorWrapper {
-    use crate::auth::twilio::TwilioAuthenticator;
-    use crate::auth::twilio::TwilioConfiguration;
+fn get_auth() -> web_contrib::auth::AuthenticatorWrapper {
+    use web_contrib::auth::twilio::TwilioAuthenticator;
+    use web_contrib::auth::twilio::TwilioConfiguration;
 
     let project_id = std::env::var("TWILIO_PROJECT_ID").expect("no PROJECT_ID");
     let auth_token = std::env::var("TWILIO_AUTH_TOKEN").expect("no AUTH_TOKEN");
@@ -46,13 +46,13 @@ fn get_auth() -> crate::auth::AuthenticatorWrapper {
         auth_token: auth_token,
     };
 
-    crate::auth::AuthenticatorWrapper::new(Box::new(TwilioAuthenticator {
+    web_contrib::auth::AuthenticatorWrapper::new(Box::new(TwilioAuthenticator {
         config
     }))
 }
 
 fn set_testing_auth() -> AuthenticatorWrapper {
-    use crate::auth::testing::*;
+    use web_contrib::auth::testing::*;
 
     let config = TestingAuthConfiguration {
         id: "test".to_string(),
@@ -63,14 +63,14 @@ fn set_testing_auth() -> AuthenticatorWrapper {
 }
 
 fn set_testing_notification() -> NotificationWrapper {
-    use crate::push_notifications::testing::*;
+    use web_contrib::push_notifications::testing::*;
 
     NotificationWrapper::new(Box::new(TestingNotificationService))
 }
 
-fn get_firebase_notification_service() -> crate::push_notifications::NotificationWrapper {
-    use crate::push_notifications::firebase::FirebaseConfiguration;
-    use crate::push_notifications::firebase::FirebaseNotificationService;
+fn get_firebase_notification_service() -> NotificationWrapper {
+    use web_contrib::push_notifications::firebase::FirebaseConfiguration;
+    use web_contrib::push_notifications::firebase::FirebaseNotificationService;
 
     let api_token = std::env::var("FCM_TOKEN").expect("No FCM_TOKEN configured");
 
@@ -78,7 +78,7 @@ fn get_firebase_notification_service() -> crate::push_notifications::Notificatio
         fcm_token: api_token
     };
 
-    crate::push_notifications::NotificationWrapper::new(Box::new(FirebaseNotificationService {
+    web_contrib::push_notifications::NotificationWrapper::new(Box::new(FirebaseNotificationService {
         config
     }))
 }

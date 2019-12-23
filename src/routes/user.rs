@@ -8,8 +8,8 @@ use crate::utils::QueryParams;
 use futures::Future;
 use log::{error, info};
 
-use crate::auth::Auth;
-use crate::push_notifications::NotifyService;
+use web_contrib::auth::Auth;
+use web_contrib::push_notifications::NotifyService;
 use crate::controllers::user::{user_signin, get_entry, save_file, update_user_with_auth, update_token_handler};
 
 #[derive(Debug, Serialize, Deserialize)]

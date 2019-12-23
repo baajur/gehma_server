@@ -5,7 +5,7 @@ use crate::Pool;
 use core::errors::ServiceError;
 use core::models::DowngradedUser;
 
-use crate::auth::Auth;
+use web_contrib::auth::Auth;
 use crate::utils::QueryParams;
 
 use crate::controllers::contact_exists::get_entry;

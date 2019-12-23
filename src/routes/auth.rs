@@ -1,7 +1,7 @@
 use crate::Pool;
 use actix_web::{error::BlockingError, web, HttpResponse};
 use core::errors::ServiceError;
-use crate::auth::Auth;
+use web_contrib::auth::Auth;
 
 use log::{info};
 use futures::Future;

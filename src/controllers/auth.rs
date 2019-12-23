@@ -1,4 +1,4 @@
-use crate::auth::Auth;
+use web_contrib::auth::Auth;
 use crate::Pool;
 use actix_web::web;
 use core::errors::ServiceError;
