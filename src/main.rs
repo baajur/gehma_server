@@ -131,7 +131,7 @@ pub(crate) fn main() {
                     )
                     .service(
                         web::resource("/user/{uid}/token").route(
-                            web::put().to_async(routes::push_notification::update_token),
+                            web::put().to_async(routes::user::update_token),
                         ),
                     )
                     .service(

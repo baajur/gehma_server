@@ -10,7 +10,7 @@ use log::{error, info};
 
 use crate::auth::Auth;
 use crate::push_notifications::NotifyService;
-use crate::controllers::user::{user_signin, get_entry, save_file, update_user_with_auth};
+use crate::controllers::user::{user_signin, get_entry, save_file, update_user_with_auth, update_token_handler};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PostUser {
@@ -143,6 +143,44 @@ pub fn update(
         Ok(user) => Ok(HttpResponse::Ok()
             .content_type("application/json")
             .json(&user)),
+        Err(err) => match err {
+            BlockingError::Error(service_error) => Err(service_error),
+            BlockingError::Canceled => Err(ServiceError::InternalServerError),
+        },
+    })
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UpdateTokenPayload {
+    pub token: String,
+}
+
+pub fn update_token(
+    _info: web::Path<(String)>,
+    body: web::Json<UpdateTokenPayload>,
+    pool: web::Data<Pool>,
+    query: web::Query<QueryParams>,
+    auth: web::Data<Auth>,
+) -> impl Future<Item = HttpResponse, Error = ServiceError> {
+    info!("controllers/push_notification/update_token");
+
+    web::block(move || {
+        update_token_handler(
+            _info.into_inner(),
+            body.into_inner(),
+            pool,
+            &query.access_token,
+            auth,
+        )
+    })
+    .then(|res| match res {
+        Ok(user) => {
+            let mut res = HttpResponse::Ok()
+                .content_type("application/json")
+                .json(user);
+            crate::utils::set_response_headers(&mut res);
+            Ok(res)
+        }
         Err(err) => match err {
             BlockingError::Error(service_error) => Err(service_error),
             BlockingError::Canceled => Err(ServiceError::InternalServerError),

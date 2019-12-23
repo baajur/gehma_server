@@ -15,7 +15,7 @@ use log::{error, info};
 use std::io::Write;
 //use crate::auth::authenticate_user;
 
-use crate::routes::user::{PostUser, UpdateUser};
+use crate::routes::user::{PostUser, UpdateUser, UpdateTokenPayload};
 
 pub(crate) fn user_signin(
     body: PostUser,
@@ -66,6 +66,23 @@ pub(crate) fn get_entry(
     let parsed = Uuid::parse_str(uid)?;
 
     get_user_by_id!(parsed, &access_token, _auth.into_inner(), &pool)
+}
+
+pub(crate) fn update_token_handler(
+    uid: String,
+    payload: UpdateTokenPayload,
+    pool: web::Data<Pool>,
+    access_token: &String,
+    _auth: web::Data<Auth>,
+) -> Result<(), ServiceError> {
+    let parsed = Uuid::parse_str(&uid)?;
+
+    let user: Result<User, ServiceError> =
+        get_user_by_id!(parsed, access_token, _auth.into_inner(), &pool);
+
+    user?;
+
+    crate::queries::user::update_token_query(parsed, payload.token, &pool)
 }
 
 pub(crate) fn update_user_with_auth(
