@@ -2,7 +2,7 @@ use web_contrib::auth::Auth;
 use actix_web::{error::BlockingError, web, HttpResponse};
 use futures::Future;
 use core::errors::ServiceError;
-use crate::utils::QueryParams;
+use web_contrib::utils::{QueryParams, set_response_headers};
 use crate::Pool;
 use log::{info};
 use crate::controllers::blacklist::{create_entry, get_entry, delete_entry};
@@ -28,7 +28,7 @@ pub fn get_all(
                 let mut res = HttpResponse::Ok()
                     .content_type("application/json")
                     .json(users);
-                crate::utils::set_response_headers(&mut res);
+                set_response_headers(&mut res);
                 Ok(res)
             }
 
@@ -61,7 +61,7 @@ pub fn add(
     .then(|res| match res {
         Ok(_) => {
             let mut res = HttpResponse::Ok().content_type("application/json").finish();
-            crate::utils::set_response_headers(&mut res);
+            set_response_headers(&mut res);
             Ok(res)
         }
         Err(err) => match err {
@@ -92,7 +92,7 @@ pub fn delete(
     .then(|res| match res {
         Ok(_) => {
             let mut res = HttpResponse::Ok().content_type("application/json").finish();
-            crate::utils::set_response_headers(&mut res);
+            set_response_headers(&mut res);
             Ok(res)
         }
         Err(err) => match err {

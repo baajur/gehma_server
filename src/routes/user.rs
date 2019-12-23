@@ -4,7 +4,7 @@ use actix_web::{error::BlockingError, web, HttpResponse};
 use core::errors::ServiceError;
 use futures::stream::Stream;
 
-use crate::utils::QueryParams;
+use web_contrib::utils::{QueryParams, set_response_headers};
 use futures::Future;
 use log::{error, info};
 
@@ -50,7 +50,7 @@ pub fn signin(
             let mut res = HttpResponse::Ok()
                 .content_type("application/json")
                 .json(user);
-            crate::utils::set_response_headers(&mut res);
+            set_response_headers(&mut res);
             Ok(res)
         }
         Err(err) => match err {
@@ -74,7 +74,7 @@ pub fn get(
                 let mut res = HttpResponse::Ok()
                     .content_type("application/json")
                     .json(users);
-                crate::utils::set_response_headers(&mut res);
+                set_response_headers(&mut res);
                 Ok(res)
             }
             Err(err) => match err {
@@ -178,7 +178,7 @@ pub fn update_token(
             let mut res = HttpResponse::Ok()
                 .content_type("application/json")
                 .json(user);
-            crate::utils::set_response_headers(&mut res);
+            set_response_headers(&mut res);
             Ok(res)
         }
         Err(err) => match err {

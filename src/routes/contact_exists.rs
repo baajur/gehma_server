@@ -6,7 +6,7 @@ use core::errors::ServiceError;
 use core::models::DowngradedUser;
 
 use web_contrib::auth::Auth;
-use crate::utils::QueryParams;
+use web_contrib::utils::{QueryParams, set_response_headers};
 
 use crate::controllers::contact_exists::get_entry;
 
@@ -56,7 +56,7 @@ pub fn exists(
             let mut res = HttpResponse::Ok()
                 .content_type("application/json")
                 .json(users);
-            crate::utils::set_response_headers(&mut res);
+            set_response_headers(&mut res);
             Ok(res)
         }
         Err(err) => match err {

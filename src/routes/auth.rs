@@ -8,6 +8,8 @@ use futures::Future;
 
 use crate::controllers::auth::{request, check_code};
 
+use web_contrib::utils::set_response_headers;
+
 #[derive(Debug, Deserialize)]
 pub struct RequestCode {
     pub tele_num: String,
@@ -42,7 +44,7 @@ pub fn request_code(
             let mut res = HttpResponse::Ok()
                 .content_type("application/json")
                 .json(res);
-            crate::utils::set_response_headers(&mut res);
+            set_response_headers(&mut res);
             Ok(res)
         }
         Err(err) => match err {
@@ -72,7 +74,7 @@ pub fn check(
             let mut res = HttpResponse::Ok()
                 .content_type("application/json")
                 .json(res);
-            crate::utils::set_response_headers(&mut res);
+            set_response_headers(&mut res);
             Ok(res)
         }
         Err(err) => match err {

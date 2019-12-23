@@ -12,7 +12,7 @@ pub(crate) fn query_all_by_city(
 ) -> Result<Vec<Event>, ::core::errors::ServiceError> {
     info!("queries/events/query_all_by_city");
 
-    use core::schema::events::dsl::*;
+    use core::schema::events::dsl::{events, city};
 
     let conn: &PgConnection = &pool.get().unwrap();
 
