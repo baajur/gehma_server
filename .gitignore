@@ -12,3 +12,5 @@ static/profile_pictures/*
 docker-compose.dev.yml
 old_env
 vendor
+schauma/target
+web_contrib/target

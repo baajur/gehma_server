@@ -8,6 +8,7 @@ edition = "2018"
 members = [
     "core",
     "web_contrib",
+    "schauma"
 ]
 
 [dependencies]
@@ -42,6 +43,10 @@ diesel_migrations= "1.4.0"
 [[bin]]
 name = "sprechstunde"
 path = "src/main.rs"
+
+[[bin]]
+name = "schauma"
+path = "schauma/src/main.rs"
 
 [dev-dependencies]
 tempfile = "3"

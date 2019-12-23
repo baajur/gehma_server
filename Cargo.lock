@@ -1821,6 +1821,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "schauma"
+version = "0.1.0"
+dependencies = [
+ "core 0.1.0",
+ "web_contrib 0.1.0",
+]
+
+[[package]]
 name = "scheduled-thread-pool"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
