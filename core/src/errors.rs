@@ -24,8 +24,8 @@ pub enum ServiceError {
     #[display(fmt = "NotificationError: {}", _0)]
     NotificationError(String),
 
-    #[display(fmt = "Cannot parse: {}", _0)]
-    ParseError(String)
+    #[display(fmt = "SchaumaError: {}", _0)]
+    SchaumaError(SchaumaError),
 }
 
 #[derive(Debug, Display)]
@@ -33,7 +33,15 @@ pub enum InternalError {
     #[display(fmt = "Invalid Phone Number: {}", _0)]
     InvalidPhoneNumber(String),
     #[display(fmt = "Invalid Country: {}", _0)]
-    InvalidCountry(String)
+    InvalidCountry(String),
+}
+
+#[derive(Debug, Display)]
+pub enum SchaumaError {
+    #[display(fmt = "Cannot parse: {}", _0)]
+    ParseError(String),
+    #[display(fmt = "Datasource error occured: {}", _0)]
+    DatasourceError(String),
 }
 
 impl ResponseError for ServiceError {
@@ -42,12 +50,27 @@ impl ResponseError for ServiceError {
             ServiceError::InternalServerError => {
                 HttpResponse::InternalServerError().json("Internal Server Error")
             }
-            ServiceError::InternalServerError2(ref message) => HttpResponse::InternalServerError().json(message),
+            ServiceError::InternalServerError2(ref message) => {
+                HttpResponse::InternalServerError().json(message)
+            }
             ServiceError::BadRequest(ref message) => HttpResponse::BadRequest().json(message),
             ServiceError::AlreadyExists(ref message) => HttpResponse::BadRequest().json(message),
             ServiceError::Unauthorized => HttpResponse::Unauthorized().json("Unauthorized"),
-            ServiceError::NotificationError(ref message) => HttpResponse::BadRequest().json(message),
-            ServiceError::ParseError(ref message) => HttpResponse::BadRequest().json(message),
+            ServiceError::NotificationError(ref message) => {
+                HttpResponse::BadRequest().json(message)
+            }
+            ServiceError::SchaumaError(ref message) => message.error_response(),
+        }
+    }
+}
+
+impl ResponseError for SchaumaError {
+    fn error_response(&self) -> HttpResponse {
+        match self {
+            SchaumaError::ParseError(ref message) => HttpResponse::BadRequest().json(message),
+            SchaumaError::DatasourceError(ref message) => {
+                HttpResponse::InternalServerError().json(message)
+            }
         }
     }
 }
@@ -74,7 +97,7 @@ impl From<DBError> for ServiceError {
                 }
                 ServiceError::InternalServerError
             }
-            _ => ServiceError::InternalServerError
+            _ => ServiceError::InternalServerError,
         }
     }
 }
