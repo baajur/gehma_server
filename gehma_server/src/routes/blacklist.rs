@@ -14,7 +14,7 @@ pub struct PostData {
 }
 
 pub fn get_all(
-    info: web::Path<(String)>,
+    info: web::Path<String>,
     pool: web::Data<Pool>,
     query: web::Query<QueryParams>,
     auth: web::Data<Auth>,
@@ -41,7 +41,7 @@ pub fn get_all(
 }
 
 pub fn add(
-    info: web::Path<(String)>,
+    info: web::Path<String>,
     data: web::Json<PostData>,
     query: web::Query<QueryParams>,
     pool: web::Data<Pool>,
@@ -72,7 +72,7 @@ pub fn add(
 }
 
 pub fn delete(
-    info: web::Path<(String)>,
+    info: web::Path<String>,
     data: web::Json<PostData>,
     pool: web::Data<Pool>,
     query: web::Query<QueryParams>,

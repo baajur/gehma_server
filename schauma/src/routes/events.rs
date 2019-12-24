@@ -1,10 +1,9 @@
 use crate::Pool;
 use actix_web::{error::BlockingError, web, HttpResponse};
 use core::errors::ServiceError;
-use futures::stream::Stream;
 
 use futures::Future;
-use log::{error, info};
+use log::info;
 
 use crate::controllers::events::get_all_by_city;
 
@@ -34,6 +33,7 @@ pub fn get_all(
 
 /// Create new events
 /// This method is not used in this crate, but in `schauma_spider`
+#[allow(dead_code)]
 pub fn populate_events(
     date: web::Path<String>,
     pool: web::Data<Pool>,

@@ -13,4 +13,6 @@ docker-compose.dev.yml
 old_env
 vendor
 schauma/target
+schauma_spider/target
 web_contrib/target
+gehma_server/target

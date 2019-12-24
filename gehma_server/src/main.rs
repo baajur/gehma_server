@@ -1,7 +1,5 @@
-extern crate diesel;
 #[macro_use]
 extern crate serde_derive;
-
 #[macro_use]
 extern crate web_contrib;
 
@@ -31,6 +29,7 @@ pub const ALLOWED_PROFILE_PICTURE_SIZE: usize = 10_000; //in Kilobytes
 
 pub type Pool = r2d2::Pool<ConnectionManager<PgConnection>>;
 
+#[allow(dead_code)]
 fn get_auth() -> web_contrib::auth::AuthenticatorWrapper {
     use web_contrib::auth::twilio::TwilioAuthenticator;
     use web_contrib::auth::twilio::TwilioConfiguration;
@@ -50,6 +49,7 @@ fn get_auth() -> web_contrib::auth::AuthenticatorWrapper {
     }))
 }
 
+#[allow(dead_code)]
 fn set_testing_auth() -> AuthenticatorWrapper {
     use web_contrib::auth::testing::*;
 
@@ -61,12 +61,14 @@ fn set_testing_auth() -> AuthenticatorWrapper {
     AuthenticatorWrapper::new(Box::new(TestingAuthentificator { config: config }))
 }
 
+#[allow(dead_code)]
 fn set_testing_notification() -> NotificationWrapper {
     use web_contrib::push_notifications::testing::*;
 
     NotificationWrapper::new(Box::new(TestingNotificationService))
 }
 
+#[allow(dead_code)]
 fn get_firebase_notification_service() -> NotificationWrapper {
     use web_contrib::push_notifications::firebase::FirebaseConfiguration;
     use web_contrib::push_notifications::firebase::FirebaseNotificationService;

@@ -3,9 +3,6 @@ use actix_web::web;
 use core::errors::ServiceError;
 use core::models::{Analytic, Blacklist, PhoneNumber, UsageStatisticEntry, User};
 use diesel::{prelude::*, PgConnection};
-use futures::Future;
-use serde_json::json;
-use tokio;
 use uuid::Uuid;
 use web_contrib::push_notifications::NotifyService;
 
@@ -166,9 +163,6 @@ fn sending_push_notifications(user: &User, pool: &web::Data<Pool>, notify_servic
     use core::schema::blacklist::dsl::{blacklist, blocked, blocker};
     use core::schema::contacts::dsl::{contacts, target_tele_num};
     use core::schema::users::dsl::{id, users};
-    use futures::stream::Stream;
-    use reqwest::header::{AUTHORIZATION, CONTENT_TYPE};
-    use reqwest::r#async::Client;
 
     let conn: &PgConnection = &pool.get().unwrap();
 
@@ -240,13 +234,14 @@ fn sending_push_notifications(user: &User, pool: &web::Data<Pool>, notify_servic
                 info!("{} ist motiviert zu {}", contact.name, user.tele_num);
             }
 
-    let t = user_contacts
+    let _ = user_contacts
                     .into_iter()
                     .zip(contacts_who_saved_user)
                     .take(crate::LIMIT_PUSH_NOTIFICATION_CONTACTS);
 
+    //FIXME this has to be done
 
-        Ok(())
+    Ok(())
 }
 
 /// Get the user by uid

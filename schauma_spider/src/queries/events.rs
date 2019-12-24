@@ -4,7 +4,7 @@ use core::errors::ServiceError;
 use core::models::{Event};
 use diesel::{prelude::*, PgConnection};
 
-use log::{info};
+use log::{error, info};
 
 pub(crate) fn query_all_by_city(
     param_city: &str,

@@ -1,8 +1,5 @@
 extern crate diesel;
-#[macro_use]
 extern crate serde_derive;
-
-#[macro_use]
 extern crate web_contrib;
 
 pub(crate) mod controllers;

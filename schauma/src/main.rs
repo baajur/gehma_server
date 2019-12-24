@@ -1,19 +1,14 @@
 extern crate diesel;
-#[macro_use]
 extern crate serde_derive;
-
-#[macro_use]
 extern crate web_contrib;
 
-use web_contrib::auth::AuthenticatorWrapper;
+//use web_contrib::auth::AuthenticatorWrapper;
 use actix_cors::Cors;
 use actix_web::http::header;
 use actix_web::{middleware as actix_middleware, web, App, HttpResponse, HttpServer};
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
-use std::path::PathBuf;
 use diesel_migrations::run_pending_migrations;
-use web_contrib::push_notifications::NotificationWrapper;
 
 //don't forget that `schauma_spider` also needs the lib.rs
 pub(crate) mod controllers;

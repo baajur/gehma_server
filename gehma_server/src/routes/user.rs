@@ -120,7 +120,7 @@ pub fn upload_profile_picture(
 }
 
 pub fn update(
-    info: web::Path<(String)>,
+    info: web::Path<String>,
     data: web::Json<UpdateUser>,
     pool: web::Data<Pool>,
     query: web::Query<QueryParams>,
@@ -156,7 +156,7 @@ pub struct UpdateTokenPayload {
 }
 
 pub fn update_token(
-    _info: web::Path<(String)>,
+    _info: web::Path<String>,
     body: web::Json<UpdateTokenPayload>,
     pool: web::Data<Pool>,
     query: web::Query<QueryParams>,

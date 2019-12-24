@@ -2,3 +2,5 @@ target
 web_contrib/target
 core/target
 schauma/target
+schauma_spider/target
+gehma_server/target
