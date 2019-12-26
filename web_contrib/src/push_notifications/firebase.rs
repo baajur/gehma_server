@@ -27,7 +27,7 @@ impl NotificationService for FirebaseNotificationService {
         let api_token = self.config.fcm_token.clone();
             let work = futures::stream::iter_ok(values)
             .map(move |(user, contact)| {
-                //FIXME
+                //FIXME implement return
                 client
                     .post("https://fcm.googleapis.com/fcm/send")
                     .header(CONTENT_TYPE, "application/json")

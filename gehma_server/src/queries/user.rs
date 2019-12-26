@@ -157,7 +157,11 @@ pub(crate) fn update_user_query(
         })
 }
 
-fn sending_push_notifications(user: &User, pool: &web::Data<Pool>, notify_service: &web::Data<NotifyService>) -> Result<(), ServiceError> {
+fn sending_push_notifications(
+    user: &User,
+    pool: &web::Data<Pool>,
+    notify_service: &web::Data<NotifyService>,
+) -> Result<(), ServiceError> {
     info!("queries/user/sending_push_notifications");
     use core::models::Contact;
     use core::schema::blacklist::dsl::{blacklist, blocked, blocker};
@@ -220,26 +224,28 @@ fn sending_push_notifications(user: &User, pool: &web::Data<Pool>, notify_servic
     //let api_token = std::env::var("FCM_TOKEN").expect("No FCM_TOKEN configured");
 
     let test = user_contacts
-                .clone()
-                .into_iter()
-                .zip(contacts_who_saved_user.clone())
-                .take(crate::LIMIT_PUSH_NOTIFICATION_CONTACTS);
+        .clone()
+        .into_iter()
+        .zip(contacts_who_saved_user.clone())
+        .take(crate::LIMIT_PUSH_NOTIFICATION_CONTACTS);
 
-            if test.len() == 0 {
-                info!("Nix zu senden");
-            }
+    if test.len() == 0 {
+        info!("Nix zu senden");
+    }
 
-            for (user, contact) in test {
-                //assert_eq!(user.id, contact.from_id);
-                info!("{} ist motiviert zu {}", contact.name, user.tele_num);
-            }
+    for (user, contact) in test {
+        //assert_eq!(user.id, contact.from_id);
+        info!("{} ist motiviert zu {}", contact.name, user.tele_num);
+    }
 
-    let _ = user_contacts
-                    .into_iter()
-                    .zip(contacts_who_saved_user)
-                    .take(crate::LIMIT_PUSH_NOTIFICATION_CONTACTS);
+    let values = user_contacts
+        .into_iter()
+        .zip(contacts_who_saved_user)
+        .take(crate::LIMIT_PUSH_NOTIFICATION_CONTACTS)
+        .collect();
 
-    //FIXME this has to be done
+    //FIXME check
+    notify_service.clone().into_inner().service.push(values)?;
 
     Ok(())
 }
