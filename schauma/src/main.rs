@@ -14,6 +14,9 @@ use diesel_migrations::run_pending_migrations;
 pub(crate) mod controllers;
 pub(crate) mod queries;
 pub(crate) mod routes;
+pub mod datasources;
+
+use datasources::EventDatasource;
 
 //#[cfg(test)]
 //mod tests;
@@ -21,59 +24,6 @@ pub(crate) mod routes;
 pub const ALLOWED_CLIENT_VERSIONS: &[&'static str] = &["0.1"];
 
 pub type Pool = r2d2::Pool<ConnectionManager<PgConnection>>;
-
-/*
-fn get_auth() -> web_contrib::auth::AuthenticatorWrapper {
-    use web_contrib::auth::twilio::TwilioAuthenticator;
-    use web_contrib::auth::twilio::TwilioConfiguration;
-
-    let project_id = std::env::var("TWILIO_PROJECT_ID").expect("no PROJECT_ID");
-    let auth_token = std::env::var("TWILIO_AUTH_TOKEN").expect("no AUTH_TOKEN");
-    let sid = std::env::var("TWILIO_ACCOUNT_ID").expect("no ACCOUNT_ID");
-
-    let config = TwilioConfiguration {
-        project_id: project_id,
-        account_id: sid,
-        auth_token: auth_token,
-    };
-
-    web_contrib::auth::AuthenticatorWrapper::new(Box::new(TwilioAuthenticator {
-        config
-    }))
-}
-
-fn set_testing_auth() -> AuthenticatorWrapper {
-    use web_contrib::auth::testing::*;
-
-    let config = TestingAuthConfiguration {
-        id: "test".to_string(),
-        auth_token: "test".to_string(),
-    };
-
-    AuthenticatorWrapper::new(Box::new(TestingAuthentificator { config: config }))
-}
-
-fn set_testing_notification() -> NotificationWrapper {
-    use web_contrib::push_notifications::testing::*;
-
-    NotificationWrapper::new(Box::new(TestingNotificationService))
-}
-
-fn get_firebase_notification_service() -> NotificationWrapper {
-    use web_contrib::push_notifications::firebase::FirebaseConfiguration;
-    use web_contrib::push_notifications::firebase::FirebaseNotificationService;
-
-    let api_token = std::env::var("FCM_TOKEN").expect("No FCM_TOKEN configured");
-
-    let config = FirebaseConfiguration {
-        fcm_token: api_token
-    };
-
-    web_contrib::push_notifications::NotificationWrapper::new(Box::new(FirebaseNotificationService {
-        config
-    }))
-}
-*/
 
 pub(crate) fn main() {
     dotenv::dotenv().ok();
@@ -96,8 +46,6 @@ pub(crate) fn main() {
     let server = HttpServer::new(move || {
         App::new()
             .data(pool.clone())
- //           .data(set_testing_auth())
- //           .data(get_firebase_notification_service())
             .wrap(
                 Cors::new()
                     .allowed_origin("http://localhost:3000")

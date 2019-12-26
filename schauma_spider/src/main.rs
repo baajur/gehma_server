@@ -7,12 +7,12 @@ use diesel_migrations::run_pending_migrations;
 
 use schauma::routes::events::populate_events;
 
-//pub(crate) mod controllers;
-//pub(crate) mod queries;
-//pub(crate) mod routes;
-
-//#[cfg(test)]
-//mod tests;
+#[allow(dead_code)]
+fn set_testing_datasources() -> schauma::datasources::EventDatasourceWrapper {
+    schauma::datasources::EventDatasourceWrapper {
+        service: Box::new(schauma::datasources::testing::TestingDatasource)
+    }
+}
 
 pub type Pool = r2d2::Pool<ConnectionManager<PgConnection>>;
 
@@ -37,6 +37,7 @@ pub(crate) fn main() {
     let server = HttpServer::new(move || {
         App::new()
             .data(pool.clone())
+            .data(set_testing_datasources())
             .wrap(
                 Cors::new()
                     .allowed_origin("http://localhost:3000")
@@ -51,10 +52,9 @@ pub(crate) fn main() {
             .wrap(actix_middleware::Compress::default())
             .service(
                 web::scope("/services")
-                        .service(
-                        web::resource("/create_events/{date}").route(
-                            web::post().to_async(populate_events),
-                        ),
+                    .service(
+                        web::resource("/create_events/{date}")
+                            .route(web::post().to_async(populate_events)),
                     )
                     .default_service(web::route().to(|| HttpResponse::NotFound())),
             )

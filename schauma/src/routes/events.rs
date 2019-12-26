@@ -6,13 +6,12 @@ use futures::Future;
 use log::info;
 
 use crate::controllers::events::get_all_by_city;
+use crate::datasources::EventDatasourceWrapper;
 
 /// Get all events by city
 pub fn get_all(
     city: web::Path<String>,
     pool: web::Data<Pool>,
-    //query: web::Query<QueryParams>,
-    //auth: web::Data<Auth>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
     info!("routes/events/get_all");
 
@@ -35,19 +34,20 @@ pub fn get_all(
 /// This method is not used in this crate, but in `schauma_spider`
 #[allow(dead_code)]
 pub fn populate_events(
-    date: web::Path<String>,
+    path: web::Path<(String, String)>,
     pool: web::Data<Pool>,
-    //query: web::Query<QueryParams>,
-    //auth: web::Data<Auth>,
+    event_datasource: web::Data<EventDatasourceWrapper>,
 ) -> impl Future<Item = HttpResponse, Error = ServiceError> {
     info!("routes/events/get_all");
 
-    web::block(move || crate::controllers::events::populate_events(&date, pool)).then(|res| {
+    let (date, city) = path.into_inner();
+
+    web::block(move || crate::controllers::events::populate_events(city, &date, pool, event_datasource)).then(|res| {
         match res {
-            Ok(users) => {
+            Ok(events) => {
                 let mut res = HttpResponse::Ok()
                     .content_type("application/json")
-                    .json(users);
+                    .json(events);
                 web_contrib::utils::set_response_headers(&mut res);
                 Ok(res)
             }
