@@ -25,6 +25,7 @@ table! {
         created_at -> Timestamp,
         name -> Varchar,
         from_tele_num -> Varchar,
+        target_hash_tele_num -> Nullable<Bpchar>,
     }
 }
 
@@ -65,6 +66,7 @@ table! {
         profile_picture -> Varchar,
         firebase_token -> Nullable<Varchar>,
         access_token -> Varchar,
+        hash_tele_num -> Nullable<Bpchar>,
     }
 }
 

@@ -2,11 +2,25 @@ use super::schema::*;
 use crate::errors::InternalError;
 use crate::utils::phonenumber_to_international;
 
+use data_encoding::HEXUPPER;
+use ring::digest;
+
 pub mod schauma;
 
 pub use schauma::*;
 
-#[derive(Debug, Serialize, Deserialize, Queryable, Insertable, Clone, Identifiable, AsChangeset, Eq, PartialEq)]
+#[derive(
+    Debug,
+    Serialize,
+    Deserialize,
+    Queryable,
+    Insertable,
+    Clone,
+    Identifiable,
+    AsChangeset,
+    Eq,
+    PartialEq,
+)]
 #[table_name = "users"]
 pub struct User {
     pub id: uuid::Uuid,
@@ -20,6 +34,7 @@ pub struct User {
     pub profile_picture: String,
     pub firebase_token: Option<String>,
     pub access_token: String,
+    pub hash_tele_num: Option<String>,
 }
 
 /* We don't want to expose all user's data to everyone. That's why this struct
@@ -36,11 +51,10 @@ pub struct DowngradedUser {
 }
 
 impl User {
-    //FIXME e
-    pub fn my_from(e: &str, country_code: &str, version: &str, access_token: &str) -> Self {
+    pub fn my_from(tele_num: &str, country_code: &str, version: &str, access_token: &str) -> Self {
         User {
             id: uuid::Uuid::new_v4(),
-            tele_num: e.to_string(),
+            tele_num: tele_num.to_string(),
             led: false,
             created_at: chrono::Local::now().naive_local(),
             changed_at: chrono::Local::now().naive_local(),
@@ -50,6 +64,9 @@ impl User {
             firebase_token: None,
             profile_picture: "".to_string(),
             access_token: access_token.to_string(),
+            hash_tele_num: Some(
+                HEXUPPER.encode(digest::digest(&digest::SHA256, tele_num.as_bytes()).as_ref()),
+            ),
         }
     }
 
@@ -60,7 +77,7 @@ impl User {
             country_code: self.country_code.clone(),
             description: self.description.clone(),
             changed_at: self.changed_at,
-            profile_picture: self.profile_picture.clone()
+            profile_picture: self.profile_picture.clone(),
         }
     }
 }
@@ -97,10 +114,7 @@ impl PhoneNumber {
     }
 
     pub fn my_from(raw: &str, cc: &str) -> Result<Self, InternalError> {
-        Ok(PhoneNumber(phonenumber_to_international(
-            raw,
-            cc,
-        )?))
+        Ok(PhoneNumber(phonenumber_to_international(raw, cc)?))
     }
 }
 
@@ -159,7 +173,7 @@ impl UsageStatisticEntry {
 }
 
 #[derive(Debug, Serialize, Deserialize, Queryable, Clone, Identifiable, Associations)]
-#[belongs_to(User, foreign_key="from_tele_num")]
+#[belongs_to(User, foreign_key = "from_tele_num")]
 #[table_name = "contacts"]
 pub struct Contact {
     pub id: i32,
@@ -168,10 +182,11 @@ pub struct Contact {
     pub created_at: chrono::NaiveDateTime,
     pub name: String,
     pub from_tele_num: String,
+    pub target_hash_tele_num: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Queryable, Clone, Insertable, Associations)]
-#[belongs_to(User, foreign_key="from_tele_num")]
+#[belongs_to(User, foreign_key = "from_tele_num")]
 #[table_name = "contacts"]
 pub struct ContactInsert {
     pub from_id: uuid::Uuid,
@@ -179,16 +194,21 @@ pub struct ContactInsert {
     pub created_at: chrono::NaiveDateTime,
     pub name: String,
     pub from_tele_num: String,
+    pub target_hash_tele_num: Option<String>,
 }
 
 impl Contact {
     pub fn my_from(name: String, user: &User, target_tele_num: String) -> ContactInsert {
         ContactInsert {
             from_id: user.id,
-            target_tele_num,
+            target_tele_num: target_tele_num.clone(),
             created_at: chrono::Local::now().naive_local(),
             name,
             from_tele_num: user.tele_num.clone(),
+            target_hash_tele_num: Some(
+                HEXUPPER.encode(digest::digest(&digest::SHA256, target_tele_num.as_bytes()).as_ref()),
+            ),
+
         }
     }
 }
