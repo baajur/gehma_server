@@ -9,6 +9,8 @@ pub mod schauma;
 
 pub use schauma::*;
 
+pub type HashedTeleNum = String;
+
 #[derive(
     Debug,
     Serialize,
@@ -35,7 +37,7 @@ pub struct User {
     pub profile_picture: String,
     pub firebase_token: Option<String>,
     pub access_token: String,
-    pub hash_tele_num: Option<String>,
+    pub hash_tele_num: Option<HashedTeleNum>,
 }
 
 /* We don't want to expose all user's data to everyone. That's why this struct
@@ -91,6 +93,8 @@ pub struct Blacklist {
     pub blocker: String,
     pub blocked: String,
     pub created_at: chrono::NaiveDateTime,
+    pub hash_blocker: Option<HashedTeleNum>,
+    pub hash_blocked: Option<HashedTeleNum>,
 }
 
 impl Blacklist {
@@ -100,6 +104,12 @@ impl Blacklist {
             blocker: blocker.to_string(),
             blocked: blocked.to_string(),
             created_at: chrono::Local::now().naive_local(),
+            hash_blocker: Some(
+                HEXUPPER.encode(digest::digest(&digest::SHA256, blocker.to_string().as_bytes()).as_ref()),
+            ),
+            hash_blocked: Some(
+                HEXUPPER.encode(digest::digest(&digest::SHA256, blocked.to_string().as_bytes()).as_ref()),
+            ),
         }
     }
 }
@@ -183,7 +193,7 @@ pub struct Contact {
     pub created_at: chrono::NaiveDateTime,
     pub name: String,
     pub from_tele_num: String,
-    pub target_hash_tele_num: Option<String>,
+    pub target_hash_tele_num: Option<HashedTeleNum>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Queryable, Clone, Insertable, Associations)]
@@ -195,7 +205,7 @@ pub struct ContactInsert {
     pub created_at: chrono::NaiveDateTime,
     pub name: String,
     pub from_tele_num: String,
-    pub target_hash_tele_num: Option<String>,
+    pub target_hash_tele_num: Option<HashedTeleNum>,
 }
 
 impl Contact {

@@ -14,6 +14,8 @@ table! {
         blocker -> Varchar,
         blocked -> Varchar,
         created_at -> Timestamp,
+        hash_blocker -> Nullable<Bpchar>,
+        hash_blocked -> Nullable<Bpchar>,
     }
 }
 

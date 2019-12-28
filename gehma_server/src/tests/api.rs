@@ -33,6 +33,10 @@ fn set_notification_service() -> NotificationWrapper {
     NotificationWrapper::new(Box::new(config))
 }
 
+fn hash(value: impl Into<String>) -> String {
+    HEXUPPER.encode(digest::digest(&digest::SHA256, value.into().as_bytes()).as_ref())
+}
+
 fn create_user(tele_num: &str) -> User {
     let mut app = test::init_service(
         App::new()
@@ -398,7 +402,7 @@ fn test_contacts() {
         .set_json(&crate::routes::contact_exists::Payload {
             numbers: vec![crate::routes::contact_exists::PayloadUser {
                 name: "Test".to_string(),
-                tele_num: "+4365012345678".to_string(), //TODO for #27 required
+                hash_tele_num: hash("+4365012345678"),
             }],
         })
         .to_request();
@@ -407,8 +411,8 @@ fn test_contacts() {
 
     assert_eq!(users.len(), 1);
     assert_eq!(
-        users.get(0).unwrap().calculated_tele,
-        "+4365012345678".to_string()
+        users.get(0).unwrap().hash_tele_num,
+        hash("+4365012345678")
     );
     assert_eq!(users.get(0).unwrap().name, "Test".to_string());
     assert_eq!(
@@ -442,10 +446,10 @@ fn test_contacts2() {
         .set_json(&crate::routes::contact_exists::Payload {
             numbers: vec![crate::routes::contact_exists::PayloadUser {
                 name: "Test".to_string(),
-                tele_num: "+4365012345678".to_string(),
+                hash_tele_num: hash("+4365012345678"),
             }, crate::routes::contact_exists::PayloadUser {
                 name: "Ich".to_string(),
-                tele_num: "+4366412345678".to_string(),
+                hash_tele_num: hash("+4366412345678"),
             },],
         })
         .to_request();
@@ -454,9 +458,8 @@ fn test_contacts2() {
 
     assert_eq!(users.len(), 2);
     assert_eq!(
-        users.get(0).unwrap().calculated_tele,
-        "+4365012345678".to_string()
-    );
+        users.get(0).unwrap().hash_tele_num,
+        hash("+4365012345678"));
     assert_eq!(users.get(0).unwrap().name, "Test".to_string());
     assert_eq!(
         users.get(0).unwrap().user.as_ref().unwrap().tele_num,
@@ -468,9 +471,8 @@ fn test_contacts2() {
     );
     // User 2
     assert_eq!(
-        users.get(1).unwrap().calculated_tele,
-        "+4366412345678".to_string()
-    );
+        users.get(1).unwrap().hash_tele_num,
+        hash("+4366412345678"));
     assert_eq!(users.get(1).unwrap().name, "Ich".to_string());
     assert_eq!(
         users.get(1).unwrap().user.as_ref().unwrap().tele_num,

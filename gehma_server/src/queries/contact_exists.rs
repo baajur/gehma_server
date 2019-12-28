@@ -23,8 +23,8 @@ pub(crate) fn get_query(
     info!("queries/push_notification/get_query");
     use ::core::models::Contact;
     use ::core::models::PhoneNumber;
-    use ::core::schema::blacklist::dsl::{blacklist, blocked, blocker};
-    use ::core::schema::users::dsl::{changed_at, id, tele_num, users};
+    use ::core::schema::blacklist::dsl::{blacklist, hash_blocked, hash_blocker};
+    use ::core::schema::users::dsl::{changed_at, id, hash_tele_num, users};
 
     let conn: &PgConnection = &pool.get().unwrap();
 
@@ -36,6 +36,7 @@ pub(crate) fn get_query(
         return Err(ServiceError::BadRequest("Too many contacts".into()));
     }
 
+    /*
     let mut numbers: Vec<ResponseUser> = phone_numbers
         .iter_mut()
         .filter(|w| w.tele_num.len() > MIN_TELE_NUM_LENGTH)
@@ -52,6 +53,18 @@ pub(crate) fn get_query(
             }
         })
         .collect();
+    */
+
+    let mut numbers : Vec<ResponseUser> = phone_numbers
+        .iter_mut()
+        .map(|w| {
+            ResponseUser {
+                hash_tele_num: w.hash_tele_num.clone(),
+                name: w.name.clone(),
+                user: None,
+            }
+        })
+        .collect();
 
     users
         .filter(id.eq(uid))
@@ -60,25 +73,25 @@ pub(crate) fn get_query(
         .and_then(|result| {
             if let Some(user) = result.first() {
                 blacklist
-                    .filter(blocked.eq(&user.tele_num).or(blocker.eq(&user.tele_num)))
+                    .filter(hash_blocked.eq(&user.hash_tele_num).or(hash_blocker.eq(&user.hash_tele_num)))
                     .load::<Blacklist>(conn)
                     .map_err(|_db_error| ServiceError::BadRequest("Cannot find blacklists".into()))
                     .and_then(|lists| {
                         let people_who_blacklisted_user: Vec<_> = lists
                             .into_iter()
-                            .map(|w| match w.blocker == user.tele_num {
-                                true => w.blocked.clone(), //jener der blockiert soll sie auch nicht sehen
-                                false => w.blocker.clone(),
+                            .map(|w| match w.hash_blocker == user.hash_tele_num {
+                                true => w.hash_blocked.clone(), //jener der blockiert soll sie auch nicht sehen
+                                false => w.hash_blocker.clone(),
                             })
                             .collect();
 
                         users
                             .filter(
-                                tele_num.eq_any(
-                                    numbers
-                                        .iter_mut()
-                                        .map(|w| w.calculated_tele.clone())
-                                        .collect::<Vec<String>>(),
+                                hash_tele_num.eq_any(
+                                    phone_numbers 
+                                        .iter()
+                                        .map(|w| &w.hash_tele_num)
+                                        .collect::<Vec<&String>>(),
                                 ),
                             )
                             .order(changed_at.desc())
@@ -87,9 +100,9 @@ pub(crate) fn get_query(
                             .and_then(|mut result| {
                                 //i are contacts
                                 for i in result.iter_mut() {
-                                    let mut res: Vec<_> = numbers
+                                    let mut res: Vec<_> = numbers 
                                         .iter_mut()
-                                        .filter(|w| w.calculated_tele == i.tele_num)
+                                        .filter(|w| w.hash_tele_num == *i.hash_tele_num.as_ref().unwrap()) //TODO #34
                                         .collect();
 
                                     if let Some(mut res_user) = res.first_mut() {
@@ -97,10 +110,10 @@ pub(crate) fn get_query(
                                     }
                                 }
 
-                                numbers
+                                numbers 
                                     .iter_mut()
                                     .filter(|w| {
-                                        people_who_blacklisted_user.contains(&w.calculated_tele)
+                                        people_who_blacklisted_user.contains(&Some(w.hash_tele_num.clone()))
                                     })
                                     .for_each(|ref mut w| match &mut w.user {
                                         Some(ref mut u) => {
@@ -127,7 +140,7 @@ pub(crate) fn get_query(
                                         Contact::my_from(
                                             n.name.clone(),
                                             &user,
-                                            n.calculated_tele.clone(),
+                                            n.user.as_ref().unwrap().tele_num.clone()
                                         )
                                     })
                                     .collect();

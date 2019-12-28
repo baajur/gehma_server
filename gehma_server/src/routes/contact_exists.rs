@@ -3,7 +3,7 @@ use futures::Future;
 
 use crate::Pool;
 use core::errors::ServiceError;
-use core::models::DowngradedUser;
+use core::models::{DowngradedUser, HashedTeleNum};
 
 use web_contrib::auth::Auth;
 use web_contrib::utils::{QueryParams, set_response_headers};
@@ -14,8 +14,7 @@ use log::info;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResponseUser {
-    pub calculated_tele: String,
-    pub old: String,
+    pub hash_tele_num: HashedTeleNum,
     pub name: String,
     pub user: Option<DowngradedUser>,
 }
@@ -28,7 +27,7 @@ pub struct Payload {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct PayloadUser {
     pub name: String,
-    pub tele_num: String,
+    pub hash_tele_num: HashedTeleNum,
 }
 
 pub fn exists(

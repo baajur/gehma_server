@@ -7,7 +7,7 @@ use ::core::models::{Blacklist, PhoneNumber, User};
 
 use crate::Pool;
 
-use log::info;
+use log::{info, error};
 
 pub(crate) fn get_query(
     sblocker: Uuid,
@@ -44,10 +44,15 @@ pub(crate) fn create_query(
     let conn: &PgConnection = &pool.get().unwrap();
     let new_inv: Blacklist = Blacklist::my_from(blocker, blocked);
 
+    println!("{:?}", new_inv);
+
     let ins = diesel::insert_into(blacklist)
         .values(&new_inv)
-        .get_result(conn)?;
-    //.map_err(|_db_error| ServiceError::BadRequest("Cannot insert into blacklist".into()))?;
+        .get_result(conn)
+        .map_err(|_db_error| {
+            error!("{:?}", _db_error);
+            ServiceError::BadRequest("Cannot insert into blacklist".into())
+        })?;
 
     dbg!(&ins);
 
