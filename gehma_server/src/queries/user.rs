@@ -148,7 +148,7 @@ pub(crate) fn update_user_query(
             if my_led {
                 //Sending push notification
                 sending_push_notifications(&user, pool, notify_service).map_err(|err| {
-                    eprintln!("{}", err);
+                    error!("{}", err);
                     ServiceError::BadRequest("Cannot send push notifications".to_string())
                 })?;
             }
@@ -158,25 +158,49 @@ pub(crate) fn update_user_query(
 }
 
 fn sending_push_notifications(
-    user: &User,
+    user: &User, //this is the sender
     pool: &web::Data<Pool>,
     notify_service: &web::Data<NotifyService>,
 ) -> Result<(), ServiceError> {
     info!("queries/user/sending_push_notifications");
+    use diesel::sql_query;
     use core::models::Contact;
     use core::schema::blacklist::dsl::{blacklist, blocked, blocker};
-    use core::schema::contacts::dsl::{contacts, target_tele_num};
+    use core::schema::contacts::dsl::{contacts, target_hash_tele_num};
     use core::schema::users::dsl::{id, users};
 
     let conn: &PgConnection = &pool.get().unwrap();
 
+    let my_contacts : Vec<Contact> = sql_query("SELECT contacts.* FROM users JOIN contacts ON users.id = from_id JOIN users u2 ON u2.hash_tele_num = contacts.target_hash_tele_num WHERE users.tele_num = $1 AND NOT EXISTS (SELECT * FROM blacklist WHERE (blocker = users.tele_num and blocked = u2.tele_num) OR (blocker = u2.tele_num and blocked = users.tele_num)) ; ")
+        .bind::<diesel::sql_types::Varchar, _>(&user.tele_num)
+        .load::<Contact>(conn)
+        .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))?;
+
+    //TODO join contacts with users to get firebase_token
+    
+    //TODO format tuple
+
+    //FIXME check
+    //notify_service.clone().into_inner().service.push(user, &my_contacts)?;
+
+    /*
+    let mut contacts = contacts
+        .filter(target_hash_tele_num.eq(&user.hash_tele_num))
+        .load::<Contact>(conn)
+        .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))?;
+    */
+
+
+    /*
     let mut contacts_who_saved_user = contacts
-        .filter(target_tele_num.eq(&user.tele_num))
+        .filter(target_hash_tele_num.eq(&user.hash_tele_num))
         .load::<Contact>(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))?;
 
     dbg!(&contacts_who_saved_user);
 
+    // Blacklist doesn't need hashed tele_nums, because all telephone numbers
+    // are already known to the server.
     let my_filtered_contacts = blacklist
         .filter(blocker.eq(&user.tele_num).or(blocked.eq(&user.tele_num)))
         .load::<Blacklist>(conn)
@@ -207,7 +231,6 @@ fn sending_push_notifications(
         .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
         .and_then(|result| {
             Ok(result)
-            //Err(ServiceError::BadRequest("Invalid Invitation".into()))
         })?
         .into_iter()
         .filter(|w| w.firebase_token.is_some())
@@ -243,9 +266,10 @@ fn sending_push_notifications(
         .zip(contacts_who_saved_user)
         .take(crate::LIMIT_PUSH_NOTIFICATION_CONTACTS)
         .collect();
+    */
 
     //FIXME check
-    notify_service.clone().into_inner().service.push(values)?;
+    //notify_service.clone().into_inner().service.push(values)?;
 
     Ok(())
 }

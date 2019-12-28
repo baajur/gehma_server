@@ -19,6 +19,6 @@ impl NotificationWrapper {
 }
 
 pub trait NotificationService : Send + Sync {
-    fn push(&self, values: Vec<(User, Contact)>) -> Result<(), ServiceError>;
+    fn push(&self, _: Vec<(User, Contact)>) -> Result<(), ServiceError>;
 }
 

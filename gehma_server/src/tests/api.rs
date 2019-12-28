@@ -1,5 +1,10 @@
 use super::*;
-use crate::auth::AuthenticatorWrapper;
+use web_contrib::auth::AuthenticatorWrapper;
+use web_contrib::auth::testing::*;
+
+use web_contrib::push_notifications::NotificationWrapper;
+use web_contrib::push_notifications::testing::*;
+
 use crate::routes::contact_exists::ResponseUser;
 use actix_web::{test, web, App};
 use core::models::*;
@@ -10,15 +15,22 @@ use actix_service::Service;
 use diesel_migrations::run_pending_migrations;
 use serde_json::json;
 
-fn set_testing_auth() -> AuthenticatorWrapper {
-    use crate::auth::testing::*;
+use data_encoding::HEXUPPER;
+use ring::digest;
 
+fn set_testing_auth() -> AuthenticatorWrapper {
     let config = TestingAuthConfiguration {
         id: "test".to_string(),
         auth_token: "test".to_string(),
     };
 
     AuthenticatorWrapper::new(Box::new(TestingAuthentificator { config: config }))
+}
+
+fn set_notification_service() -> NotificationWrapper {
+    let config = TestingNotificationService;
+
+    NotificationWrapper::new(Box::new(config))
 }
 
 fn create_user(tele_num: &str) -> User {
@@ -141,7 +153,7 @@ fn test_sign_in() {
 
 #[test]
 fn test_get_user() {
-    let mut app = test::init_service(App::new().data(init_pool()).data(set_testing_auth()).route(
+    let mut app = test::init_service(App::new().data(init_pool()).data(set_testing_auth()).data(set_notification_service()).route(
         "/api/user/{uid}",
         web::get().to_async(crate::routes::user::get),
     ));
@@ -167,6 +179,7 @@ fn test_get_user() {
     assert_eq!(user.country_code, "AT".to_string());
     assert_eq!(user.led, false);
     assert_eq!(user.description, "".to_string());
+    assert_eq!(user.hash_tele_num, Some(HEXUPPER.encode(digest::digest(&digest::SHA256, user.tele_num.as_bytes()).as_ref())));
 
     cleanup(&user.tele_num, &init_pool().get().unwrap());
 }
@@ -174,7 +187,7 @@ fn test_get_user() {
 #[test]
 /// This updates the description of an user.
 fn test_update_user() {
-    let mut app = test::init_service(App::new().data(init_pool()).data(set_testing_auth()).route(
+    let mut app = test::init_service(App::new().data(init_pool()).data(set_testing_auth()).data(set_notification_service()).route(
         "/api/user/{uid}",
         web::put().to_async(crate::routes::user::update),
     ));
@@ -188,13 +201,13 @@ fn test_update_user() {
         ))
         .set_json(&crate::routes::user::UpdateUser {
             description: "test".to_string(),
-            led: "true".to_string(),
+            led: true,
             client_version: super::ALLOWED_CLIENT_VERSIONS[0].to_string(),
         })
         .to_request();
 
     /*
-    let resp = test::block_on(app.call(req)).unwrap();
+    let mut resp = test::block_on(test::run_on(|| app.call(req))).unwrap();
     println!("{:?}", resp);
     println!("{:?}", resp.response().error().unwrap());
     */
@@ -213,9 +226,9 @@ fn test_update_user() {
 
 #[test]
 fn test_update_token_user() {
-    let mut app = test::init_service(App::new().data(init_pool()).data(set_testing_auth()).route(
+    let mut app = test::init_service(App::new().data(init_pool()).data(set_testing_auth()).data(set_notification_service()).route(
         "/api/user/{uid}/token",
-        web::put().to_async(crate::routes::push_notification::update_token),
+        web::put().to_async(crate::routes::user::update_token),
     ));
 
     let user = create_user("+4366412345678");
@@ -225,7 +238,7 @@ fn test_update_token_user() {
             "/api/user/{}/token?access_token={}",
             user.id, user.access_token
         ))
-        .set_json(&crate::routes::push_notification::Payload {
+        .set_json(&crate::routes::user::UpdateTokenPayload {
             token: "test".to_string(),
         })
         .to_request();
@@ -238,7 +251,7 @@ fn test_update_token_user() {
 
 #[test]
 fn test_create_blacklist() {
-    let mut app = test::init_service(App::new().data(init_pool()).data(set_testing_auth()).route(
+    let mut app = test::init_service(App::new().data(init_pool()).data(set_testing_auth()).data(set_notification_service()).route(
         "/api/user/{uid}/blacklist",
         web::post().to_async(crate::routes::blacklist::add),
     ));
@@ -270,6 +283,7 @@ fn test_get_all_blacklist() {
         App::new()
             .data(init_pool())
             .data(set_testing_auth())
+            .data(set_notification_service())
             .route(
                 "/api/user/{uid}/blacklist",
                 web::post().to_async(crate::routes::blacklist::add),
@@ -320,6 +334,7 @@ fn test_remove_blacklist() {
         App::new()
             .data(init_pool())
             .data(set_testing_auth())
+            .data(set_notification_service())
             .route(
                 "/api/user/{uid}/blacklist",
                 web::post().to_async(crate::routes::blacklist::add),
@@ -367,7 +382,7 @@ fn test_remove_blacklist() {
 
 #[test]
 fn test_contacts() {
-    let mut app = test::init_service(App::new().data(init_pool()).data(set_testing_auth()).route(
+    let mut app = test::init_service(App::new().data(init_pool()).data(set_testing_auth()).data(set_notification_service()).route(
         "/api/exists/{uid}/{country_code}",
         web::post().to_async(crate::routes::contact_exists::exists),
     ));
@@ -383,7 +398,7 @@ fn test_contacts() {
         .set_json(&crate::routes::contact_exists::Payload {
             numbers: vec![crate::routes::contact_exists::PayloadUser {
                 name: "Test".to_string(),
-                tele_num: "+4365012345678".to_string(),
+                tele_num: "+4365012345678".to_string(), //TODO for #27 required
             }],
         })
         .to_request();
@@ -411,7 +426,7 @@ fn test_contacts() {
 
 #[test]
 fn test_contacts2() {
-    let mut app = test::init_service(App::new().data(init_pool()).data(set_testing_auth()).route(
+    let mut app = test::init_service(App::new().data(init_pool()).data(set_testing_auth()).data(set_notification_service()).route(
         "/api/exists/{uid}/{country_code}",
         web::post().to_async(crate::routes::contact_exists::exists),
     ));
@@ -472,7 +487,7 @@ fn test_contacts2() {
 
 #[test]
 fn test_empty_contacts() {
-    let mut app = test::init_service(App::new().data(init_pool()).data(set_testing_auth()).route(
+    let mut app = test::init_service(App::new().data(init_pool()).data(set_testing_auth()).data(set_notification_service()).route(
         "/api/exists/{uid}/{country_code}",
         web::post().to_async(crate::routes::contact_exists::exists),
     ));

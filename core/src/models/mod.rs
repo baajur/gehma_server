@@ -20,6 +20,7 @@ pub use schauma::*;
     AsChangeset,
     Eq,
     PartialEq,
+    QueryableByName,
 )]
 #[table_name = "users"]
 pub struct User {
@@ -172,7 +173,7 @@ impl UsageStatisticEntry {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Queryable, Clone, Identifiable, Associations)]
+#[derive(Debug, Serialize, Deserialize, Queryable, Clone, Identifiable, Associations, QueryableByName)]
 #[belongs_to(User, foreign_key = "from_tele_num")]
 #[table_name = "contacts"]
 pub struct Contact {
