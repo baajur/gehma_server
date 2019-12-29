@@ -22,10 +22,8 @@ pub(crate) fn get_entry(
     let user: Result<User, ServiceError> =
         get_user_by_id!(parsed, access_token, _auth.into_inner(), &pool);
 
-    user?;
-
     let users =
-        crate::queries::contact_exists::get_query(parsed, phone_numbers, country_code, pool)?;
+        crate::queries::contact_exists::get_query(parsed, &user?, phone_numbers, country_code, pool)?;
 
     Ok(users)
 }

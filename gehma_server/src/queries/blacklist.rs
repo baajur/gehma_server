@@ -44,7 +44,7 @@ pub(crate) fn create_query(
     let conn: &PgConnection = &pool.get().unwrap();
     let new_inv: Blacklist = Blacklist::my_from(blocker, blocked);
 
-    println!("{:?}", new_inv);
+    //println!("{:?}", new_inv);
 
     let ins = diesel::insert_into(blacklist)
         .values(&new_inv)
