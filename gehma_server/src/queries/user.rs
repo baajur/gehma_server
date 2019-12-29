@@ -248,7 +248,7 @@ fn sending_push_notifications(
         contacts, created_at, from_id, from_tele_num, id, name, target_hash_tele_num,
         target_tele_num,
     };
-    use core::schema::users::dsl::{firebase_token, users};
+    use core::schema::users::dsl::{firebase_token, users, hash_tele_num};
 
     let conn: &PgConnection = &pool.get().unwrap();
 
@@ -281,7 +281,7 @@ fn sending_push_notifications(
         .filter_map(|c| {
             // Now, I need for every contact, his/her firebase_token to send the notification to them
             let token = users
-                .find(c.from_id)
+                .filter(hash_tele_num.eq(&c.target_hash_tele_num))
                 .select(firebase_token)
                 .load::<Option<String>>(conn)
                 .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()));
