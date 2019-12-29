@@ -56,12 +56,12 @@ pub(crate) fn get_contacts(
         .filter(from_id.eq(user.id))
         .inner_join(users.on(hash_tele_num.eq(target_hash_tele_num)))
         .left_join(
-            blacklist.on(hash_tele_num
+            blacklist.on(target_hash_tele_num
                 .eq(hash_blocked)
-                .and(hash_blocker.eq(target_hash_tele_num))
+                .and(hash_blocker.eq(&user.hash_tele_num))
                 .or(hash_tele_num
                     .eq(hash_blocker)
-                    .and(hash_blocked.eq(target_hash_tele_num)))),
+                    .and(hash_blocked.eq(&user.hash_tele_num)))),
         )
         //.filter(hash_blocked.is_null().or(hash_blocker.is_null()))
         .select((
@@ -74,6 +74,7 @@ pub(crate) fn get_contacts(
             hash_tele_num,
             hash_blocked.nullable(),
         ))
+        .distinct()
         .load::<(
             String,
             bool,
@@ -86,6 +87,7 @@ pub(crate) fn get_contacts(
         )>(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
         .and_then(|values| {
+            dbg!(&values);
             Ok(values
                 .into_iter()
                 .map(
@@ -308,7 +310,11 @@ fn sending_push_notifications(
     }
 
     //FIXME check
-    notify_service.clone().into_inner().service.push(my_contacts)?;
+    notify_service
+        .clone()
+        .into_inner()
+        .service
+        .push(my_contacts)?;
 
     Ok(())
 }
