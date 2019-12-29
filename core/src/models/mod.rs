@@ -87,7 +87,8 @@ impl User {
 
 #[derive(Debug, Serialize, Deserialize, Queryable, Insertable, Clone, Identifiable)]
 #[table_name = "blacklist"]
-//#[belongs_to(User, foreign_key="blocker")]
+//#[belongs_to(User, foreign_key = "hash_blocker")]
+//#[belongs_to(User, foreign_key = "hash_blocked")]
 pub struct Blacklist {
     pub id: uuid::Uuid,
     pub blocker: String,
@@ -184,8 +185,9 @@ impl UsageStatisticEntry {
 }
 
 #[derive(Debug, Serialize, Deserialize, Queryable, Clone, Identifiable, Associations, QueryableByName)]
-#[belongs_to(User, foreign_key = "from_tele_num")]
 #[table_name = "contacts"]
+#[belongs_to(User, foreign_key = "from_id")]
+#[belongs_to(Contact, foreign_key="target_hash_tele_num")]
 pub struct Contact {
     pub id: i32,
     pub from_id: uuid::Uuid,
@@ -197,8 +199,9 @@ pub struct Contact {
 }
 
 #[derive(Debug, Serialize, Deserialize, Queryable, Clone, Insertable, Associations)]
-#[belongs_to(User, foreign_key = "from_tele_num")]
 #[table_name = "contacts"]
+#[belongs_to(User, foreign_key = "from_id")]
+#[belongs_to(Contact, foreign_key="target_hash_tele_num")]
 pub struct ContactInsert {
     pub from_id: uuid::Uuid,
     pub target_tele_num: String,

@@ -163,110 +163,75 @@ fn sending_push_notifications(
     notify_service: &web::Data<NotifyService>,
 ) -> Result<(), ServiceError> {
     info!("queries/user/sending_push_notifications");
-    use diesel::sql_query;
     use core::models::Contact;
-    use core::schema::blacklist::dsl::{blacklist, blocked, blocker};
-    use core::schema::contacts::dsl::{contacts, target_hash_tele_num};
-    use core::schema::users::dsl::{id, users};
+    use core::schema::blacklist::dsl::{blacklist, hash_blocked, hash_blocker};
+    use core::schema::contacts::dsl::{
+        contacts, created_at, from_id, from_tele_num, id, name, target_hash_tele_num,
+        target_tele_num,
+    };
+    use core::schema::users::dsl::{
+        firebase_token,
+        users,
+    };
+    use diesel::dsl::{exists, not};
 
     let conn: &PgConnection = &pool.get().unwrap();
 
-    let my_contacts : Vec<Contact> = sql_query("SELECT contacts.* FROM users JOIN contacts ON users.id = from_id JOIN users u2 ON u2.hash_tele_num = contacts.target_hash_tele_num WHERE users.tele_num = $1 AND NOT EXISTS (SELECT * FROM blacklist WHERE (blocker = users.tele_num and blocked = u2.tele_num) OR (blocker = u2.tele_num and blocked = users.tele_num)) ; ")
-        .bind::<diesel::sql_types::Varchar, _>(&user.tele_num)
-        .load::<Contact>(conn)
-        .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))?;
+    type FirebaseToken = String;
 
-    //TODO join contacts with users to get firebase_token
-    
-    //TODO format tuple
-
-    //FIXME check
-    //notify_service.clone().into_inner().service.push(user, &my_contacts)?;
-
-    /*
-    let mut contacts = contacts
-        .filter(target_hash_tele_num.eq(&user.hash_tele_num))
-        .load::<Contact>(conn)
-        .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))?;
-    */
-
-
-    /*
-    let mut contacts_who_saved_user = contacts
-        .filter(target_hash_tele_num.eq(&user.hash_tele_num))
-        .load::<Contact>(conn)
-        .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))?;
-
-    dbg!(&contacts_who_saved_user);
-
-    // Blacklist doesn't need hashed tele_nums, because all telephone numbers
-    // are already known to the server.
-    let my_filtered_contacts = blacklist
-        .filter(blocker.eq(&user.tele_num).or(blocked.eq(&user.tele_num)))
-        .load::<Blacklist>(conn)
-        .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))?;
-
-    dbg!(&my_filtered_contacts);
-
-    for i in my_filtered_contacts.iter() {
-        let r = contacts_who_saved_user.iter().position(|c| {
-            (c.target_tele_num == i.blocker && c.from_tele_num == i.blocked)
-                || (c.target_tele_num == i.blocked && c.from_tele_num == i.blocker)
-        });
-
-        if let Some(r) = r {
-            contacts_who_saved_user.remove(r);
-        }
-    }
-
-    contacts_who_saved_user.sort_by(|a, b| a.from_id.partial_cmp(&b.from_id).unwrap());
-
-    dbg!(&contacts_who_saved_user);
-
-    let targets: Vec<_> = contacts_who_saved_user.iter().map(|w| &w.from_id).collect();
-
-    let mut user_contacts: Vec<_> = users
-        .filter(id.eq_any(targets))
-        .load::<User>(conn)
-        .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
-        .and_then(|result| {
-            Ok(result)
-        })?
+    let my_contacts: Vec<(Contact, FirebaseToken)> = contacts
+        .filter(from_id.eq(&user.id))
+        .left_join(
+            blacklist.on(target_hash_tele_num
+                .eq(hash_blocked)
+                .and(hash_blocker.eq(&user.hash_tele_num))
+                .or(target_hash_tele_num
+                    .eq(hash_blocker)
+                    .and(hash_blocked.eq(&user.hash_tele_num)))),
+        )
+        .filter(hash_blocked.is_null().or(hash_blocker.is_null()))
+        .select((
+            id,
+            from_id,
+            target_tele_num,
+            created_at,
+            name,
+            from_tele_num,
+            target_hash_tele_num,
+        ))
+        .load::<Contact>(conn) //I got all my contacts here
+        .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))?
         .into_iter()
-        .filter(|w| w.firebase_token.is_some())
-        //.map(|w| w.firebase_token.unwrap())
-        //.take(crate::LIMIT_PUSH_NOTIFICATION_CONTACTS)
-        .collect();
-
-    user_contacts.sort_by(|a, b| a.id.partial_cmp(&b.id).unwrap());
-
-    //println!("{:#?}", user_contacts);
-    //println!("{:#?}", contacts_who_saved_user);
-
-    //FIXME extract to .data()
-    //let api_token = std::env::var("FCM_TOKEN").expect("No FCM_TOKEN configured");
-
-    let test = user_contacts
-        .clone()
-        .into_iter()
-        .zip(contacts_who_saved_user.clone())
-        .take(crate::LIMIT_PUSH_NOTIFICATION_CONTACTS);
-
-    if test.len() == 0 {
-        info!("Nix zu senden");
-    }
-
-    for (user, contact) in test {
-        //assert_eq!(user.id, contact.from_id);
-        info!("{} ist motiviert zu {}", contact.name, user.tele_num);
-    }
-
-    let values = user_contacts
-        .into_iter()
-        .zip(contacts_who_saved_user)
         .take(crate::LIMIT_PUSH_NOTIFICATION_CONTACTS)
+        .filter_map(|c| { // Now, I need for every contact, his/her firebase_token to send the notification to them
+            let token = users
+                .find(c.from_id)
+                .select(firebase_token)
+                .load::<Option<String>>(conn)
+                .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()));
+
+            if let Err(err) = token {
+                error!("{:?}", err);
+                return None;
+            }
+
+            let token = token.unwrap().clone();
+            let f = token.first();
+
+            if let Some(Some(token)) = f {
+                Some((c, token.clone()))
+            } else {
+                None
+            }
+        })
         .collect();
-    */
+
+    dbg!(&my_contacts);
+
+    for (contact, token) in my_contacts {
+        //assert_eq!(user.id, contact.from_id);
+        info!("{} ist motiviert zu {}", contact.name, token);
+    }
 
     //FIXME check
     //notify_service.clone().into_inner().service.push(values)?;
