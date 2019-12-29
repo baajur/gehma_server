@@ -14,7 +14,7 @@ pub(crate) fn get_query(
     pool: web::Data<Pool>,
 ) -> Result<Vec<Blacklist>, ServiceError> {
     info!("queries/blacklist/get_query");
-    use ::core::schema::blacklist::dsl::{blacklist, blocker};
+    use ::core::schema::blacklist::dsl::{blacklist, hash_blocker};
     use ::core::schema::users::dsl::{id, users};
 
     let conn: &PgConnection = &pool.get().unwrap();
@@ -28,7 +28,7 @@ pub(crate) fn get_query(
         .ok_or_else(|| ServiceError::BadRequest("No user found".into()))?;
 
     blacklist
-        .filter(blocker.eq(user.tele_num))
+        .filter(hash_blocker.eq(user.hash_tele_num))
         .load::<Blacklist>(conn)
         .map_err(|_db_err| ServiceError::BadRequest("Invalid User".into()))
 }
@@ -54,7 +54,7 @@ pub(crate) fn create_query(
             ServiceError::BadRequest("Cannot insert into blacklist".into())
         })?;
 
-    dbg!(&ins);
+    //dbg!(&ins);
 
     Ok(ins)
 }
@@ -68,6 +68,7 @@ pub(crate) fn delete_query(
     use ::core::schema::blacklist::dsl::{blacklist, blocked, blocker};
     let conn: &PgConnection = &pool.get().unwrap();
 
+    //FIXME #34
     let target = blacklist
         .filter(blocker.eq(sblocker.to_string()))
         .filter(blocked.eq(sblocked.to_string()));

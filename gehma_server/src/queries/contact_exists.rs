@@ -146,7 +146,7 @@ pub(crate) fn get_query(
                         Ok(numbers)
                     })
             } else {
-                Err(ServiceError::BadRequest("No user found".into()))
+                Ok(vec![])
             }
         })
 }
