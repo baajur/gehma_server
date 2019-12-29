@@ -23,7 +23,7 @@ mod middleware;
 #[cfg(test)]
 mod tests;
 
-pub const ALLOWED_CLIENT_VERSIONS: &[&'static str] = &["0.5.2"];
+pub const ALLOWED_CLIENT_VERSIONS: &[&'static str] = &["0.5.3"];
 pub const LIMIT_PUSH_NOTIFICATION_CONTACTS: usize = 128;
 pub const ALLOWED_PROFILE_PICTURE_SIZE: usize = 10_000; //in Kilobytes
 
