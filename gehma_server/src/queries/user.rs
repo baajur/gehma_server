@@ -247,7 +247,6 @@ fn sending_push_notifications(
         target_tele_num,
     };
     use core::schema::users::dsl::{firebase_token, users};
-    use diesel::dsl::{exists, not};
 
     let conn: &PgConnection = &pool.get().unwrap();
 
@@ -301,15 +300,15 @@ fn sending_push_notifications(
         })
         .collect();
 
-    dbg!(&my_contacts);
+    //dbg!(&my_contacts);
 
-    for (contact, token) in my_contacts {
+    for (contact, token) in my_contacts.iter() {
         //assert_eq!(user.id, contact.from_id);
         info!("{} ist motiviert zu {}", contact.name, token);
     }
 
     //FIXME check
-    //notify_service.clone().into_inner().service.push(values)?;
+    notify_service.clone().into_inner().service.push(my_contacts)?;
 
     Ok(())
 }

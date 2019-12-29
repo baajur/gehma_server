@@ -5,7 +5,7 @@ use core::errors::ServiceError;
 pub struct TestingNotificationService;
 
 impl NotificationService for TestingNotificationService {
-    fn push(&self, _: Vec<(User, Contact)>) -> Result<(), ServiceError> {
+    fn push(&self, _: Vec<(Contact, FirebaseToken)>) -> Result<(), ServiceError> {
         Ok(())
     }
 }

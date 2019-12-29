@@ -1,5 +1,6 @@
 use crate::push_notifications::*;
 use core::errors::ServiceError;
+use super::FirebaseToken;
 
 use tokio;
 use core::models::{User, Contact};
@@ -21,12 +22,12 @@ pub struct FirebaseNotificationService {
 }
 
 impl NotificationService for FirebaseNotificationService {
-    fn push(&self, values: Vec<(User, Contact)>) -> Result<(), ServiceError> {
+    fn push(&self, values: Vec<(Contact, FirebaseToken)>) -> Result<(), ServiceError> {
         let client = Client::new();
 
         let api_token = self.config.fcm_token.clone();
             let work = futures::stream::iter_ok(values)
-            .map(move |(user, contact)| {
+            .map(move |(contact, token)| {
                 //FIXME implement return
                 client
                     .post("https://fcm.googleapis.com/fcm/send")
@@ -41,7 +42,7 @@ impl NotificationService for FirebaseNotificationService {
                         "android":{
                             "ttl":"43200s"
                         },
-                        "registration_ids": [user.firebase_token]
+                        "registration_ids": [token]
                     }))
                     .send()
             })
