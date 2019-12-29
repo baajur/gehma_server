@@ -136,7 +136,7 @@ pub(crate) fn get_query(
 
                         let res = diesel::insert_into(contacts)
                             .values(user_contacts)
-                            //.on_conflict_do_nothing()
+                            .on_conflict_do_nothing()
                             .execute(conn)
                             .map_err(|_db_err| {
                                 eprintln!("{}", _db_err);
