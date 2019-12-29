@@ -1,12 +1,14 @@
 use crate::Pool;
 use actix_web::web;
 use core::errors::ServiceError;
-use core::models::{Analytic, Blacklist, PhoneNumber, UsageStatisticEntry, User};
+use core::models::{
+    Analytic, Blacklist, Contact, DowngradedUser, PhoneNumber, UsageStatisticEntry, User,
+};
 use diesel::{prelude::*, PgConnection};
 use uuid::Uuid;
 use web_contrib::push_notifications::NotifyService;
 
-use crate::routes::user::UpdateUser;
+use crate::routes::user::{ResponseContact, UpdateUser};
 
 use log::{error, info};
 
@@ -36,6 +38,81 @@ pub(crate) fn get_entry_by_tel_query(
     res.first()
         .cloned()
         .ok_or_else(|| ServiceError::BadRequest("No user found".into()))
+}
+
+pub(crate) fn get_contacts(
+    user: &User,
+    pool: &web::Data<Pool>,
+) -> Result<Vec<ResponseContact>, ::core::errors::ServiceError> {
+    info!("queries/user/get_contacts");
+
+    use core::schema::blacklist::dsl::{blacklist, hash_blocked, hash_blocker};
+    use core::schema::contacts::dsl::{contacts, from_id, target_hash_tele_num};
+    use core::schema::users::dsl::*;
+
+    let conn: &PgConnection = &pool.get().unwrap();
+
+    contacts
+        .filter(from_id.eq(user.id))
+        .inner_join(users.on(hash_tele_num.eq(target_hash_tele_num)))
+        .left_join(
+            blacklist.on(hash_tele_num
+                .eq(hash_blocked)
+                .and(hash_blocker.eq(target_hash_tele_num))
+                .or(hash_tele_num
+                    .eq(hash_blocker)
+                    .and(hash_blocked.eq(target_hash_tele_num)))),
+        )
+        //.filter(hash_blocked.is_null().or(hash_blocker.is_null()))
+        .select((
+            tele_num,
+            led,
+            country_code,
+            description,
+            changed_at,
+            profile_picture,
+            hash_tele_num,
+            hash_blocked.nullable(),
+        ))
+        .load::<(
+            String,
+            bool,
+            String,
+            String,
+            chrono::NaiveDateTime,
+            String,
+            Option<String>,
+            Option<String>,
+        )>(conn)
+        .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
+        .and_then(|values| {
+            Ok(values
+                .into_iter()
+                .map(
+                    |(
+                        _tele_num,
+                        _led,
+                        _country_code,
+                        _description,
+                        _changed_at,
+                        _profile_picture,
+                        _hash_tele_num,
+                        _blocked,
+                    )| {
+                        ResponseContact::new(
+                            _tele_num,
+                            _led,
+                            _country_code,
+                            _description,
+                            _changed_at,
+                            _profile_picture,
+                            _hash_tele_num.unwrap(),
+                            _blocked,
+                        )
+                    },
+                )
+                .collect())
+        })
 }
 
 pub(crate) fn analytics_user(
@@ -169,10 +246,7 @@ fn sending_push_notifications(
         contacts, created_at, from_id, from_tele_num, id, name, target_hash_tele_num,
         target_tele_num,
     };
-    use core::schema::users::dsl::{
-        firebase_token,
-        users,
-    };
+    use core::schema::users::dsl::{firebase_token, users};
     use diesel::dsl::{exists, not};
 
     let conn: &PgConnection = &pool.get().unwrap();
@@ -203,7 +277,8 @@ fn sending_push_notifications(
         .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))?
         .into_iter()
         .take(crate::LIMIT_PUSH_NOTIFICATION_CONTACTS)
-        .filter_map(|c| { // Now, I need for every contact, his/her firebase_token to send the notification to them
+        .filter_map(|c| {
+            // Now, I need for every contact, his/her firebase_token to send the notification to them
             let token = users
                 .find(c.from_id)
                 .select(firebase_token)

@@ -1,6 +1,7 @@
 use crate::Pool;
 use actix_multipart::Multipart;
 use actix_web::{error::BlockingError, web, HttpResponse};
+use core::models::DowngradedUser;
 use core::errors::ServiceError;
 use futures::stream::Stream;
 
@@ -69,6 +70,54 @@ pub fn get(
     info!("routes/user/get");
 
     web::block(move || get_entry(&info.into_inner(), pool, &query.access_token, auth)).then(|res| {
+        match res {
+            Ok(users) => {
+                let mut res = HttpResponse::Ok()
+                    .content_type("application/json")
+                    .json(users);
+                set_response_headers(&mut res);
+                Ok(res)
+            }
+            Err(err) => match err {
+                BlockingError::Error(service_error) => Err(service_error),
+                BlockingError::Canceled => Err(ServiceError::InternalServerError),
+            },
+        }
+    })
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ResponseContact {
+    user: DowngradedUser,
+    blocked: bool
+}
+
+impl ResponseContact {
+    pub fn new(tele_num: String, led: bool, country_code: String, description: String, changed_at: chrono::NaiveDateTime, profile_picture: String, hash_tele_num: String, blocked: Option<String>) -> Self {
+        ResponseContact {
+            user: DowngradedUser {
+                tele_num,
+                led,
+                country_code,
+                description,
+                changed_at,
+                profile_picture,
+                hash_tele_num,
+            },
+            blocked: blocked.is_some()
+        }
+    }
+}
+
+pub fn get_contacts(
+    info: web::Path<String>,
+    pool: web::Data<Pool>,
+    query: web::Query<QueryParams>,
+    auth: web::Data<Auth>,
+) -> impl Future<Item = HttpResponse, Error = ServiceError> {
+    info!("routes/user/get_contacts");
+
+    web::block(move || crate::controllers::user::get_contacts(&info.into_inner(), pool, &query.access_token, auth)).then(|res| {
         match res {
             Ok(users) => {
                 let mut res = HttpResponse::Ok()

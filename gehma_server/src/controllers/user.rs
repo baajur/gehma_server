@@ -1,20 +1,20 @@
-use web_contrib::auth::Auth;
-use web_contrib::push_notifications::NotifyService;
 use crate::Pool;
 use actix_multipart::{Field, MultipartError};
 use actix_web::{error::BlockingError, error::PayloadError, web};
 use core::errors::ServiceError;
-use core::models::{PhoneNumber, User};
+use core::models::{DowngradedUser, PhoneNumber, User};
 use diesel::{prelude::*, PgConnection};
 use futures::future::{err, Either};
 use futures::stream::Stream;
 use futures::Future;
 use uuid::Uuid;
+use web_contrib::auth::Auth;
+use web_contrib::push_notifications::NotifyService;
 
 use log::{error, info};
 use std::io::Write;
 
-use crate::routes::user::{PostUser, UpdateUser, UpdateTokenPayload};
+use crate::routes::user::{PostUser, UpdateTokenPayload, UpdateUser, ResponseContact};
 
 pub(crate) fn user_signin(
     body: PostUser,
@@ -47,7 +47,7 @@ pub(crate) fn user_signin(
                 client_version: body.client_version.clone(),
             },
             &pool,
-            &notify_service
+            &notify_service,
         )?;
     }
 
@@ -65,6 +65,20 @@ pub(crate) fn get_entry(
     let parsed = Uuid::parse_str(uid)?;
 
     get_user_by_id!(parsed, &access_token, _auth.into_inner(), &pool)
+}
+
+pub(crate) fn get_contacts(
+    uid: &str,
+    pool: web::Data<Pool>,
+    access_token: &String,
+    _auth: web::Data<Auth>,
+) -> Result<Vec<ResponseContact>, ServiceError> {
+    let parsed = Uuid::parse_str(uid)?;
+
+    let user: Result<User, ServiceError> =
+        get_user_by_id!(parsed, &access_token, _auth.into_inner(), &pool);
+
+    crate::queries::user::get_contacts(&user?, &pool)
 }
 
 pub(crate) fn update_token_handler(

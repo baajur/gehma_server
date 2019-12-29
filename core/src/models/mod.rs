@@ -51,6 +51,7 @@ pub struct DowngradedUser {
     pub description: String,
     pub changed_at: chrono::NaiveDateTime,
     pub profile_picture: String,
+    pub hash_tele_num: String
 }
 
 impl User {
@@ -81,6 +82,7 @@ impl User {
             description: self.description.clone(),
             changed_at: self.changed_at,
             profile_picture: self.profile_picture.clone(),
+            hash_tele_num: self.hash_tele_num.as_ref().expect("invalid option").clone(),
         }
     }
 }

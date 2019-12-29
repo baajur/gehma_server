@@ -151,6 +151,10 @@ pub(crate) fn main() {
                             .route(web::put().to_async(routes::user::update)),
                     )
                     .service(
+                        web::resource("/user/{uid}/contacts")
+                            .route(web::get().to_async(routes::user::get_contacts))
+                    )
+                    .service(
                         web::resource("/exists/{uid}/{country_code}")
                             .route(web::post().to_async(routes::contact_exists::exists)),
                     )
