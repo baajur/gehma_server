@@ -105,7 +105,7 @@ pub(crate) fn main() {
     let server = HttpServer::new(move || {
         App::new()
             .data(pool.clone())
-            .data(set_testing_auth())
+            .data(get_auth())
             .data(get_firebase_notification_service())
             .wrap(
                 Cors::new()
