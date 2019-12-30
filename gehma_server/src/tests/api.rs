@@ -1,9 +1,9 @@
 use super::*;
-use web_contrib::auth::AuthenticatorWrapper;
 use web_contrib::auth::testing::*;
+use web_contrib::auth::AuthenticatorWrapper;
 
-use web_contrib::push_notifications::NotificationWrapper;
 use web_contrib::push_notifications::testing::*;
+use web_contrib::push_notifications::NotificationWrapper;
 
 use crate::routes::contact_exists::ResponseUser;
 use actix_web::{test, web, App};
@@ -157,10 +157,16 @@ fn test_sign_in() {
 
 #[test]
 fn test_get_user() {
-    let mut app = test::init_service(App::new().data(init_pool()).data(set_testing_auth()).data(set_notification_service()).route(
-        "/api/user/{uid}",
-        web::get().to_async(crate::routes::user::get),
-    ));
+    let mut app = test::init_service(
+        App::new()
+            .data(init_pool())
+            .data(set_testing_auth())
+            .data(set_notification_service())
+            .route(
+                "/api/user/{uid}",
+                web::get().to_async(crate::routes::user::get),
+            ),
+    );
 
     let user = create_user("+4366412345678");
 
@@ -183,7 +189,10 @@ fn test_get_user() {
     assert_eq!(user.country_code, "AT".to_string());
     assert_eq!(user.led, false);
     assert_eq!(user.description, "".to_string());
-    assert_eq!(user.hash_tele_num, Some(HEXUPPER.encode(digest::digest(&digest::SHA256, user.tele_num.as_bytes()).as_ref())));
+    assert_eq!(
+        user.hash_tele_num,
+        Some(HEXUPPER.encode(digest::digest(&digest::SHA256, user.tele_num.as_bytes()).as_ref()))
+    );
 
     cleanup(&user.tele_num, &init_pool().get().unwrap());
 }
@@ -191,10 +200,16 @@ fn test_get_user() {
 #[test]
 /// This updates the description of an user.
 fn test_update_user() {
-    let mut app = test::init_service(App::new().data(init_pool()).data(set_testing_auth()).data(set_notification_service()).route(
-        "/api/user/{uid}",
-        web::put().to_async(crate::routes::user::update),
-    ));
+    let mut app = test::init_service(
+        App::new()
+            .data(init_pool())
+            .data(set_testing_auth())
+            .data(set_notification_service())
+            .route(
+                "/api/user/{uid}",
+                web::put().to_async(crate::routes::user::update),
+            ),
+    );
 
     let user = create_user("+4366412345678");
 
@@ -230,10 +245,16 @@ fn test_update_user() {
 
 #[test]
 fn test_update_token_user() {
-    let mut app = test::init_service(App::new().data(init_pool()).data(set_testing_auth()).data(set_notification_service()).route(
-        "/api/user/{uid}/token",
-        web::put().to_async(crate::routes::user::update_token),
-    ));
+    let mut app = test::init_service(
+        App::new()
+            .data(init_pool())
+            .data(set_testing_auth())
+            .data(set_notification_service())
+            .route(
+                "/api/user/{uid}/token",
+                web::put().to_async(crate::routes::user::update_token),
+            ),
+    );
 
     let user = create_user("+4366412345678");
 
@@ -255,10 +276,16 @@ fn test_update_token_user() {
 
 #[test]
 fn test_create_blacklist() {
-    let mut app = test::init_service(App::new().data(init_pool()).data(set_testing_auth()).data(set_notification_service()).route(
-        "/api/user/{uid}/blacklist",
-        web::post().to_async(crate::routes::blacklist::add),
-    ));
+    let mut app = test::init_service(
+        App::new()
+            .data(init_pool())
+            .data(set_testing_auth())
+            .data(set_notification_service())
+            .route(
+                "/api/user/{uid}/blacklist",
+                web::post().to_async(crate::routes::blacklist::add),
+            ),
+    );
 
     let user = create_user("+4366412345678");
     let user2 = create_user("+4365012345678");
@@ -386,10 +413,16 @@ fn test_remove_blacklist() {
 
 #[test]
 fn test_contacts() {
-    let mut app = test::init_service(App::new().data(init_pool()).data(set_testing_auth()).data(set_notification_service()).route(
-        "/api/exists/{uid}/{country_code}",
-        web::post().to_async(crate::routes::contact_exists::exists),
-    ));
+    let mut app = test::init_service(
+        App::new()
+            .data(init_pool())
+            .data(set_testing_auth())
+            .data(set_notification_service())
+            .route(
+                "/api/exists/{uid}/{country_code}",
+                web::post().to_async(crate::routes::contact_exists::exists),
+            ),
+    );
 
     let user = create_user("+4366412345678");
     let user2 = create_user("+4365012345678");
@@ -410,10 +443,7 @@ fn test_contacts() {
     let users: Vec<ResponseUser> = test::read_response_json(&mut app, req);
 
     assert_eq!(users.len(), 1);
-    assert_eq!(
-        users.get(0).unwrap().hash_tele_num,
-        hash("+4365012345678")
-    );
+    assert_eq!(users.get(0).unwrap().hash_tele_num, hash("+4365012345678"));
     assert_eq!(users.get(0).unwrap().name, "Test".to_string());
     assert_eq!(
         users.get(0).unwrap().user.as_ref().unwrap().tele_num,
@@ -430,10 +460,16 @@ fn test_contacts() {
 
 #[test]
 fn test_contacts2() {
-    let mut app = test::init_service(App::new().data(init_pool()).data(set_testing_auth()).data(set_notification_service()).route(
-        "/api/exists/{uid}/{country_code}",
-        web::post().to_async(crate::routes::contact_exists::exists),
-    ));
+    let mut app = test::init_service(
+        App::new()
+            .data(init_pool())
+            .data(set_testing_auth())
+            .data(set_notification_service())
+            .route(
+                "/api/exists/{uid}/{country_code}",
+                web::post().to_async(crate::routes::contact_exists::exists),
+            ),
+    );
 
     let user = create_user("+4366412345678");
     let user2 = create_user("+4365012345678");
@@ -444,22 +480,23 @@ fn test_contacts2() {
             user.id, "AT", user.access_token
         ))
         .set_json(&crate::routes::contact_exists::Payload {
-            numbers: vec![crate::routes::contact_exists::PayloadUser {
-                name: "Test".to_string(),
-                hash_tele_num: hash("+4365012345678"),
-            }, crate::routes::contact_exists::PayloadUser {
-                name: "Ich".to_string(),
-                hash_tele_num: hash("+4366412345678"),
-            },],
+            numbers: vec![
+                crate::routes::contact_exists::PayloadUser {
+                    name: "Test".to_string(),
+                    hash_tele_num: hash("+4365012345678"),
+                },
+                crate::routes::contact_exists::PayloadUser {
+                    name: "Ich".to_string(),
+                    hash_tele_num: hash("+4366412345678"),
+                },
+            ],
         })
         .to_request();
 
     let users: Vec<ResponseUser> = test::read_response_json(&mut app, req);
 
     assert_eq!(users.len(), 2);
-    assert_eq!(
-        users.get(0).unwrap().hash_tele_num,
-        hash("+4365012345678"));
+    assert_eq!(users.get(0).unwrap().hash_tele_num, hash("+4365012345678"));
     assert_eq!(users.get(0).unwrap().name, "Test".to_string());
     assert_eq!(
         users.get(0).unwrap().user.as_ref().unwrap().tele_num,
@@ -470,9 +507,7 @@ fn test_contacts2() {
         "AT".to_string()
     );
     // User 2
-    assert_eq!(
-        users.get(1).unwrap().hash_tele_num,
-        hash("+4366412345678"));
+    assert_eq!(users.get(1).unwrap().hash_tele_num, hash("+4366412345678"));
     assert_eq!(users.get(1).unwrap().name, "Ich".to_string());
     assert_eq!(
         users.get(1).unwrap().user.as_ref().unwrap().tele_num,
@@ -489,10 +524,16 @@ fn test_contacts2() {
 
 #[test]
 fn test_empty_contacts() {
-    let mut app = test::init_service(App::new().data(init_pool()).data(set_testing_auth()).data(set_notification_service()).route(
-        "/api/exists/{uid}/{country_code}",
-        web::post().to_async(crate::routes::contact_exists::exists),
-    ));
+    let mut app = test::init_service(
+        App::new()
+            .data(init_pool())
+            .data(set_testing_auth())
+            .data(set_notification_service())
+            .route(
+                "/api/exists/{uid}/{country_code}",
+                web::post().to_async(crate::routes::contact_exists::exists),
+            ),
+    );
 
     let user = create_user("+4366412345678");
 
@@ -510,4 +551,169 @@ fn test_empty_contacts() {
 
     assert_eq!(users.len(), 0);
     cleanup(&user.tele_num, &init_pool().get().unwrap());
+}
+
+#[test]
+fn test_blocking() {
+    let mut app = test::init_service(
+        App::new()
+            .data(init_pool())
+            .data(set_testing_auth())
+            .data(set_notification_service())
+            .route(
+                "/api/user/{uid}/contacts",
+                web::get().to_async(crate::routes::user::get_contacts),
+            )
+            .route(
+                "/api/exists/{uid}/{country_code}",
+                web::post().to_async(crate::routes::contact_exists::exists),
+            )
+            .route(
+                "/api/user/{uid}/blacklist",
+                web::post().to_async(crate::routes::blacklist::add),
+            )
+            .route(
+                "/api/user/{uid}/blacklist",
+                web::put().to_async(crate::routes::blacklist::delete), //delete
+            )
+,
+    );
+
+    let user = create_user("+4366412345678");
+    let user2 = create_user("+4365012345678");
+    let user3 = create_user("+43699012345678");
+    
+    let req = test::TestRequest::post()
+        .uri(&format!(
+            "/api/exists/{}/{}?access_token={}",
+            user.id, "AT", user.access_token
+        ))
+        .set_json(&crate::routes::contact_exists::Payload {
+            numbers: vec![
+                crate::routes::contact_exists::PayloadUser {
+                    name: "Test1".to_string(),
+                    hash_tele_num: hash("+4366412345678"),
+                },
+                crate::routes::contact_exists::PayloadUser {
+                    name: "Test2".to_string(),
+                    hash_tele_num: hash("+4365012345678"),
+                },
+                crate::routes::contact_exists::PayloadUser {
+                    name: "Test3".to_string(),
+                    hash_tele_num: hash("+43699012345678"),
+                },
+            ],
+        })
+        .to_request();
+
+    println!("Contact exists");
+    //let users: Vec<ResponseUser> = test::read_response_json(&mut app, req);
+    //assert_eq!(users.len(), 3);
+
+    let resp = test::block_on(test::run_on(|| app.call(req))).unwrap();
+    assert!(resp.status().is_success());
+
+    //println!("{:?}", serde_json::to_string_pretty(resp.response().body()));
+    //println!("{:?}", resp.response().error().unwrap());
+
+
+    //Get contacts
+    let req = test::TestRequest::get()
+        .uri(&format!(
+            "/api/user/{}/contacts?access_token={}",
+            user.id, user.access_token
+        )).to_request();
+
+    let users: Vec<crate::routes::user::ResponseContact> = test::read_response_json(&mut app, req);
+    println!("{:#?}", users);
+    assert_eq!(users.len(), 3);
+    assert!(!users.iter().fold(false, |acc, w| acc | w.blocked));
+
+//et mut resp = test::block_on(test::run_on(|| app.call(req))).unwrap();
+//rintln!("{:?}", resp);
+    //println!("{:?}", resp.response().error().unwrap());
+
+
+    let req = test::TestRequest::post()
+        .uri(&format!(
+            "/api/user/{}/blacklist?access_token={}",
+            user.id, user.access_token
+        ))
+        .set_json(&crate::routes::blacklist::PostData {
+            blocked: "+4365012345678".to_string(),
+            country_code: "AT".to_string(),
+        })
+        .to_request();
+
+    let resp = test::block_on(test::run_on(|| app.call(req))).unwrap();
+    assert!(resp.status().is_success());
+
+    //Get contacts again
+    let req = test::TestRequest::get()
+        .uri(&format!(
+            "/api/user/{}/contacts?access_token={}",
+            user.id, user.access_token
+        )).to_request();
+
+    println!("getContacts 1");
+    let users: Vec<crate::routes::user::ResponseContact> = test::read_response_json(&mut app, req);
+    assert_eq!(users.len(), 3);
+    println!("{:#?}", users);
+
+    let res_user = users.get(0).unwrap();
+    assert_eq!(res_user.user.tele_num, "+4365012345678");
+    assert_eq!(res_user.blocked, true);
+
+    let res_user = users.get(1).unwrap();
+    assert_eq!(res_user.user.tele_num, "+4366412345678");
+    assert_eq!(res_user.blocked, false);
+
+    let res_user = users.get(2).unwrap();
+    assert_eq!(res_user.user.tele_num, "+43699012345678");
+    assert_eq!(res_user.blocked, false);
+
+    //Delete
+    let req = test::TestRequest::put()
+        .uri(&format!(
+            "/api/user/{}/blacklist?access_token={}",
+            user.id, user.access_token
+        ))
+        .set_json(&crate::routes::blacklist::PostData {
+            blocked: "+4365012345678".to_string(),
+            country_code: "AT".to_string(),
+        })
+        .to_request();
+
+    let resp = test::block_on(test::run_on(|| app.call(req))).unwrap();
+    assert!(resp.status().is_success());
+
+    //Get contacts again again
+    let req = test::TestRequest::get()
+        .uri(&format!(
+            "/api/user/{}/contacts?access_token={}",
+            user.id, user.access_token
+        )).to_request();
+
+    println!("getContacts 1");
+    let users: Vec<crate::routes::user::ResponseContact> = test::read_response_json(&mut app, req);
+    assert_eq!(users.len(), 3);
+    println!("{:#?}", users);
+
+    let res_user = users.get(0).unwrap();
+    assert_eq!(res_user.user.tele_num, "+4365012345678");
+    assert_eq!(res_user.blocked, false);
+
+    let res_user = users.get(1).unwrap();
+    assert_eq!(res_user.user.tele_num, "+4366412345678");
+    assert_eq!(res_user.blocked, false);
+
+    let res_user = users.get(2).unwrap();
+    assert_eq!(res_user.user.tele_num, "+43699012345678");
+    assert_eq!(res_user.blocked, false);
+
+
+
+    cleanup(&user.tele_num, &init_pool().get().unwrap());
+    cleanup(&user2.tele_num, &init_pool().get().unwrap());
+    cleanup(&user3.tele_num, &init_pool().get().unwrap());
 }

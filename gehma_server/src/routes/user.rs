@@ -88,8 +88,8 @@ pub fn get(
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ResponseContact {
-    user: DowngradedUser,
-    blocked: bool
+    pub user: DowngradedUser,
+    pub blocked: bool
 }
 
 impl ResponseContact {
