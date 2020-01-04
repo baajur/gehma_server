@@ -243,76 +243,44 @@ fn sending_push_notifications(
 ) -> Result<(), ServiceError> {
     info!("queries/user/sending_push_notifications");
     use core::schema::blacklist::dsl::{blacklist, hash_blocked, hash_blocker};
+    use diesel::sql_types::Text;
     use core::schema::contacts::dsl::{
         contacts, created_at, from_id, name, target_hash_tele_num,
         target_tele_num,
     };
     use core::schema::users::dsl::{firebase_token, users, hash_tele_num};
+    use diesel::{QueryableByName, Queryable};
 
     let conn: &PgConnection = &pool.get().unwrap();
 
+    type FromId = String;
+    type Name = String;
     type FirebaseToken = String;
 
-    let my_contacts: Vec<(Contact, FirebaseToken)> = contacts
-        .filter(from_id.eq(&user.id))
-        .left_join(
-            blacklist.on(target_hash_tele_num
-                .eq(hash_blocked)
-                .and(hash_blocker.eq(&user.hash_tele_num))
-                .or(target_hash_tele_num
-                    .eq(hash_blocker)
-                    .and(hash_blocked.eq(&user.hash_tele_num)))),
-        )
-        .filter(hash_blocked.is_null().or(hash_blocker.is_null()))
-        //.join(contacts.on()) //reverse
-        .select((
-            from_id,
-            target_tele_num,
-            created_at,
-            name,
-            target_hash_tele_num,
-        ))
-        .load::<Contact>(conn) //I got all my contacts here
-        .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))?
+    #[derive(Debug, Deserialize, Clone, Queryable, QueryableByName)]
+    struct DatabaseResponse {
+        #[sql_type = "Text"]
+        from_id: FromId,
+        #[sql_type = "Text"]
+        name: Name,
+        #[sql_type = "Text"]
+        firebase_token: FirebaseToken
+    };
+
+      let my_contacts : Vec<DatabaseResponse> = diesel::sql_query("SELECT from_id, name, firebase_token FROM contact_view WHERE from_id = $1")
+        .bind::<Text,_ >(user.id.to_string())
+        .load::<DatabaseResponse>(conn)
+        .map_err(|_db_error| ServiceError::BadRequest("Database error".into()))?
         .into_iter()
         .take(crate::LIMIT_PUSH_NOTIFICATION_CONTACTS)
-        .filter_map(|c| {
-            // Now, I need for every contact, his/her firebase_token to send the notification to them
-            let token = users
-                .filter(hash_tele_num.eq(&c.target_hash_tele_num))
-                .select(firebase_token)
-                .load::<Option<String>>(conn)
-                .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()));
-
-            if let Err(err) = token {
-                error!("{:?}", err);
-                return None;
-            }
-
-            let token = token.unwrap().clone();
-            let f = token.first();
-
-            if let Some(Some(token)) = f {
-                Some((c, token.clone()))
-            } else {
-                None
-            }
-        })
         .collect();
-
-    dbg!(&my_contacts);
-
-    for (contact, token) in my_contacts.iter() {
-        //assert_eq!(user.id, contact.from_id);
-        info!("{} ist motiviert zu {}", contact.name, token);
-    }
-
+    
     //FIXME check
     notify_service
         .clone()
         .into_inner()
         .service
-        .push(my_contacts)?;
+        .push(my_contacts.into_iter().map(|c| (c.name, c.firebase_token)).collect())?;
 
     Ok(())
 }

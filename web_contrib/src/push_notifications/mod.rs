@@ -6,6 +6,7 @@ pub type NotifyService = NotificationWrapper;
 pub mod firebase;
 pub mod testing;
 
+type Name = String;
 type FirebaseToken = String;
 
 pub struct NotificationWrapper {
@@ -21,5 +22,5 @@ impl NotificationWrapper {
 }
 
 pub trait NotificationService : Send + Sync {
-    fn push(&self, _: Vec<(Contact, FirebaseToken)>) -> Result<(), ServiceError>;
+    fn push(&self, _: Vec<(Name, FirebaseToken)>) -> Result<(), ServiceError>;
 }

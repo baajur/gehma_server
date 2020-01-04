@@ -21,13 +21,14 @@ pub struct FirebaseNotificationService {
     pub config: FirebaseConfiguration
 }
 
+type Name = String;
 impl NotificationService for FirebaseNotificationService {
-    fn push(&self, values: Vec<(Contact, FirebaseToken)>) -> Result<(), ServiceError> {
+    fn push(&self, values: Vec<(Name, FirebaseToken)>) -> Result<(), ServiceError> {
         let client = Client::new();
 
         let api_token = self.config.fcm_token.clone();
             let work = futures::stream::iter_ok(values)
-            .map(move |(contact, token)| {
+            .map(move |(name, token)| {
                 //FIXME implement return
                 client
                     .post("https://fcm.googleapis.com/fcm/send")
@@ -35,7 +36,7 @@ impl NotificationService for FirebaseNotificationService {
                     .header(AUTHORIZATION, format!("key={}", api_token))
                     .json(&json!({
                         "notification": {
-                            "title": format!("{} ist motiviert", contact.name),
+                            "title": format!("{} ist motiviert", name),
                             "body": "",
                             "icon": "ic_stat_name_nougat"
                         },
