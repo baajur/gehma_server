@@ -194,13 +194,6 @@ pub(crate) fn update_user_query(
 
     let target = users.filter(id.eq(myid));
 
-    /*
-    let my_led = match &*user.led {
-        "true" => true,
-        "false" => false,
-        _ => false,
-    };
-    */
     let my_led = user.led;
 
     diesel::update(target)
@@ -242,24 +235,18 @@ fn sending_push_notifications(
     notify_service: &web::Data<NotifyService>,
 ) -> Result<(), ServiceError> {
     info!("queries/user/sending_push_notifications");
-    use core::schema::blacklist::dsl::{blacklist, hash_blocked, hash_blocker};
-    use diesel::sql_types::Text;
-    use core::schema::contacts::dsl::{
-        contacts, created_at, from_id, name, target_hash_tele_num,
-        target_tele_num,
-    };
-    use core::schema::users::dsl::{firebase_token, users, hash_tele_num};
+    use diesel::sql_types::{Text, Uuid};
     use diesel::{QueryableByName, Queryable};
 
     let conn: &PgConnection = &pool.get().unwrap();
 
-    type FromId = String;
+    type FromId = uuid::Uuid;
     type Name = String;
     type FirebaseToken = String;
 
     #[derive(Debug, Deserialize, Clone, Queryable, QueryableByName)]
     struct DatabaseResponse {
-        #[sql_type = "Text"]
+        #[sql_type = "Uuid"]
         from_id: FromId,
         #[sql_type = "Text"]
         name: Name,
@@ -268,9 +255,12 @@ fn sending_push_notifications(
     };
 
       let my_contacts : Vec<DatabaseResponse> = diesel::sql_query("SELECT from_id, name, firebase_token FROM contact_view WHERE from_id = $1")
-        .bind::<Text,_ >(user.id.to_string())
+        .bind::<Uuid,_ >(user.id)
         .load::<DatabaseResponse>(conn)
-        .map_err(|_db_error| ServiceError::BadRequest("Database error".into()))?
+        .map_err(|_db_error| {
+            error!("{:?}", _db_error);
+            ServiceError::BadRequest("Database error".into())
+        })?
         .into_iter()
         .take(crate::LIMIT_PUSH_NOTIFICATION_CONTACTS)
         .collect();
