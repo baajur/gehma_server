@@ -32,10 +32,8 @@ openssl = { version = "0.10", features = ["vendored"] }
 reqwest = "0.9"
 tokio = "0.1.22"
 diesel_migrations= "1.4.0"
-
-[dev-dependencies]
-tempfile = "3"
-reqwest = "0.9"
 ring = "0.14.6"
 data-encoding = "2.1.2"
 
+[dev-dependencies]
+tempfile = "3"

@@ -69,8 +69,8 @@ pub(crate) fn get_query(
             description,
             changed_at,
             client_version,
-            profile_picture,
             firebase_token,
+            profile_picture,
             access_token,
             hash_tele_num,
         ))
@@ -97,7 +97,7 @@ pub(crate) fn get_query(
                         for i in result.iter_mut() {
                             let mut res: Vec<_> = numbers
                                 .iter_mut()
-                                .filter(|w| w.hash_tele_num == *i.hash_tele_num.as_ref().unwrap()) //TODO #34
+                                .filter(|w| w.hash_tele_num == *i.hash_tele_num) //TODO #34
                                 .collect();
 
                             if let Some(mut res_user) = res.first_mut() {

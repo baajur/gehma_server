@@ -11,23 +11,19 @@ table! {
 table! {
     blacklist (id) {
         id -> Uuid,
-        blocker -> Varchar,
-        blocked -> Varchar,
         created_at -> Timestamp,
-        hash_blocker -> Nullable<Bpchar>,
-        hash_blocked -> Nullable<Bpchar>,
+        hash_blocker -> Bpchar,
+        hash_blocked -> Bpchar,
     }
 }
 
 table! {
-    contacts (id) {
-        id -> Int4,
+    contacts (from_id, target_hash_tele_num) {
         from_id -> Uuid,
         target_tele_num -> Varchar,
         created_at -> Timestamp,
         name -> Varchar,
-        from_tele_num -> Varchar,
-        target_hash_tele_num -> Nullable<Bpchar>,
+        target_hash_tele_num -> Bpchar,
     }
 }
 
@@ -65,10 +61,10 @@ table! {
         description -> Text,
         changed_at -> Timestamp,
         client_version -> Varchar,
-        profile_picture -> Varchar,
         firebase_token -> Nullable<Varchar>,
+        profile_picture -> Varchar,
         access_token -> Varchar,
-        hash_tele_num -> Nullable<Bpchar>,
+        hash_tele_num -> Bpchar,
     }
 }
 

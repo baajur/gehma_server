@@ -82,7 +82,7 @@ pub(crate) fn get_contacts(
             String,
             chrono::NaiveDateTime,
             String,
-            Option<String>,
+            String,
             Option<String>,
         )>(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
@@ -108,7 +108,7 @@ pub(crate) fn get_contacts(
                             _description,
                             _changed_at,
                             _profile_picture,
-                            _hash_tele_num.unwrap(),
+                            _hash_tele_num,
                             _blocked,
                         )
                     },
@@ -242,10 +242,9 @@ fn sending_push_notifications(
     notify_service: &web::Data<NotifyService>,
 ) -> Result<(), ServiceError> {
     info!("queries/user/sending_push_notifications");
-    use core::models::Contact;
     use core::schema::blacklist::dsl::{blacklist, hash_blocked, hash_blocker};
     use core::schema::contacts::dsl::{
-        contacts, created_at, from_id, from_tele_num, id, name, target_hash_tele_num,
+        contacts, created_at, from_id, name, target_hash_tele_num,
         target_tele_num,
     };
     use core::schema::users::dsl::{firebase_token, users, hash_tele_num};
@@ -265,13 +264,12 @@ fn sending_push_notifications(
                     .and(hash_blocked.eq(&user.hash_tele_num)))),
         )
         .filter(hash_blocked.is_null().or(hash_blocker.is_null()))
+        //.join(contacts.on()) //reverse
         .select((
-            id,
             from_id,
             target_tele_num,
             created_at,
             name,
-            from_tele_num,
             target_hash_tele_num,
         ))
         .load::<Contact>(conn) //I got all my contacts here
@@ -302,7 +300,7 @@ fn sending_push_notifications(
         })
         .collect();
 
-    //dbg!(&my_contacts);
+    dbg!(&my_contacts);
 
     for (contact, token) in my_contacts.iter() {
         //assert_eq!(user.id, contact.from_id);

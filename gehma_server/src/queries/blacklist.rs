@@ -2,20 +2,20 @@ use actix_web::web;
 use diesel::{prelude::*, PgConnection};
 use uuid::Uuid;
 
-use ::core::errors::ServiceError;
-use ::core::models::{Blacklist, PhoneNumber, User};
+use core::errors::ServiceError;
+use core::models::{Blacklist, PhoneNumber, User};
 
 use crate::Pool;
 
-use log::{info, error};
+use log::{error, info};
 
 pub(crate) fn get_query(
     sblocker: Uuid,
     pool: web::Data<Pool>,
 ) -> Result<Vec<Blacklist>, ServiceError> {
     info!("queries/blacklist/get_query");
-    use ::core::schema::blacklist::dsl::{blacklist, hash_blocker};
-    use ::core::schema::users::dsl::{id, users};
+    use core::schema::blacklist::dsl::{blacklist, hash_blocker};
+    use core::schema::users::dsl::{id, users};
 
     let conn: &PgConnection = &pool.get().unwrap();
 
@@ -39,7 +39,7 @@ pub(crate) fn create_query(
     pool: web::Data<Pool>,
 ) -> Result<Blacklist, ServiceError> {
     info!("queries/blacklist/create_query");
-    use ::core::schema::blacklist::dsl::blacklist;
+    use core::schema::blacklist::dsl::blacklist;
 
     let conn: &PgConnection = &pool.get().unwrap();
     let new_inv: Blacklist = Blacklist::my_from(blocker, blocked);
@@ -65,13 +65,22 @@ pub(crate) fn delete_query(
     pool: web::Data<Pool>,
 ) -> Result<(), ServiceError> {
     info!("queries/blacklist/delete_query");
-    use ::core::schema::blacklist::dsl::{blacklist, blocked, blocker};
+    use core::schema::blacklist::dsl::{blacklist, hash_blocked, hash_blocker};
+    use data_encoding::HEXUPPER;
+    use ring::digest;
+
     let conn: &PgConnection = &pool.get().unwrap();
+
+    let b1 =
+        HEXUPPER.encode(digest::digest(&digest::SHA256, sblocker.to_string().as_bytes()).as_ref());
+
+    let b2 =
+        HEXUPPER.encode(digest::digest(&digest::SHA256, sblocked.to_string().as_bytes()).as_ref());
 
     //FIXME #34
     let target = blacklist
-        .filter(blocker.eq(sblocker.to_string()))
-        .filter(blocked.eq(sblocked.to_string()));
+        .filter(hash_blocker.eq(b1.to_string()))
+        .filter(hash_blocked.eq(b2.to_string()));
 
     diesel::delete(target)
         .execute(conn)

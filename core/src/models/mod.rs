@@ -34,10 +34,10 @@ pub struct User {
     pub description: String,
     pub changed_at: chrono::NaiveDateTime,
     pub client_version: String,
-    pub profile_picture: String,
     pub firebase_token: Option<String>,
+    pub profile_picture: String,
     pub access_token: String,
-    pub hash_tele_num: Option<HashedTeleNum>,
+    pub hash_tele_num: String,
 }
 
 /* We don't want to expose all user's data to everyone. That's why this struct
@@ -51,7 +51,7 @@ pub struct DowngradedUser {
     pub description: String,
     pub changed_at: chrono::NaiveDateTime,
     pub profile_picture: String,
-    pub hash_tele_num: String
+    pub hash_tele_num: String,
 }
 
 impl User {
@@ -68,9 +68,8 @@ impl User {
             firebase_token: None,
             profile_picture: "".to_string(),
             access_token: access_token.to_string(),
-            hash_tele_num: Some(
+            hash_tele_num: 
                 HEXUPPER.encode(digest::digest(&digest::SHA256, tele_num.as_bytes()).as_ref()),
-            ),
         }
     }
 
@@ -82,7 +81,7 @@ impl User {
             description: self.description.clone(),
             changed_at: self.changed_at,
             profile_picture: self.profile_picture.clone(),
-            hash_tele_num: self.hash_tele_num.as_ref().expect("invalid option").clone(),
+            hash_tele_num: self.hash_tele_num.clone(),
         }
     }
 }
@@ -93,26 +92,20 @@ impl User {
 //#[belongs_to(User, foreign_key = "hash_blocked")]
 pub struct Blacklist {
     pub id: uuid::Uuid,
-    pub blocker: String,
-    pub blocked: String,
     pub created_at: chrono::NaiveDateTime,
-    pub hash_blocker: Option<HashedTeleNum>,
-    pub hash_blocked: Option<HashedTeleNum>,
+    pub hash_blocker: HashedTeleNum,
+    pub hash_blocked: HashedTeleNum,
 }
 
 impl Blacklist {
     pub fn my_from(blocker: &PhoneNumber, blocked: &PhoneNumber) -> Self {
         Blacklist {
             id: uuid::Uuid::new_v4(),
-            blocker: blocker.to_string(),
-            blocked: blocked.to_string(),
             created_at: chrono::Local::now().naive_local(),
-            hash_blocker: Some(
-                HEXUPPER.encode(digest::digest(&digest::SHA256, blocker.to_string().as_bytes()).as_ref()),
-            ),
-            hash_blocked: Some(
-                HEXUPPER.encode(digest::digest(&digest::SHA256, blocked.to_string().as_bytes()).as_ref()),
-            ),
+            hash_blocker: HEXUPPER
+                .encode(digest::digest(&digest::SHA256, blocker.to_string().as_bytes()).as_ref()),
+            hash_blocked: HEXUPPER
+                .encode(digest::digest(&digest::SHA256, blocked.to_string().as_bytes()).as_ref()),
         }
     }
 }
@@ -186,31 +179,28 @@ impl UsageStatisticEntry {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Queryable, Clone, Identifiable, Associations, QueryableByName)]
+#[derive(Debug, Serialize, Deserialize, Queryable, Clone, Associations, QueryableByName)]
 #[table_name = "contacts"]
 #[belongs_to(User, foreign_key = "from_id")]
-#[belongs_to(Contact, foreign_key="target_hash_tele_num")]
+#[belongs_to(Contact, foreign_key = "target_hash_tele_num")]
 pub struct Contact {
-    pub id: i32,
     pub from_id: uuid::Uuid,
     pub target_tele_num: String,
     pub created_at: chrono::NaiveDateTime,
     pub name: String,
-    pub from_tele_num: String,
-    pub target_hash_tele_num: Option<HashedTeleNum>,
+    pub target_hash_tele_num: HashedTeleNum,
 }
 
 #[derive(Debug, Serialize, Deserialize, Queryable, Clone, Insertable, Associations)]
 #[table_name = "contacts"]
 #[belongs_to(User, foreign_key = "from_id")]
-#[belongs_to(Contact, foreign_key="target_hash_tele_num")]
+#[belongs_to(Contact, foreign_key = "target_hash_tele_num")]
 pub struct ContactInsert {
     pub from_id: uuid::Uuid,
     pub target_tele_num: String,
     pub created_at: chrono::NaiveDateTime,
     pub name: String,
-    pub from_tele_num: String,
-    pub target_hash_tele_num: Option<HashedTeleNum>,
+    pub target_hash_tele_num: HashedTeleNum,
 }
 
 impl Contact {
@@ -220,11 +210,8 @@ impl Contact {
             target_tele_num: target_tele_num.clone(),
             created_at: chrono::Local::now().naive_local(),
             name,
-            from_tele_num: user.tele_num.clone(),
-            target_hash_tele_num: Some(
-                HEXUPPER.encode(digest::digest(&digest::SHA256, target_tele_num.as_bytes()).as_ref()),
-            ),
-
+            target_hash_tele_num: HEXUPPER
+                .encode(digest::digest(&digest::SHA256, target_tele_num.as_bytes()).as_ref()),
         }
     }
 }
