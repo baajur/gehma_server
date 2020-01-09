@@ -191,7 +191,7 @@ fn test_get_user() {
     assert_eq!(user.description, "".to_string());
     assert_eq!(
         user.hash_tele_num,
-        Some(HEXUPPER.encode(digest::digest(&digest::SHA256, user.tele_num.as_bytes()).as_ref()))
+        HEXUPPER.encode(digest::digest(&digest::SHA256, user.tele_num.as_bytes()).as_ref())
     );
 
     cleanup(&user.tele_num, &init_pool().get().unwrap());
@@ -352,8 +352,8 @@ fn test_get_all_blacklist() {
     let blacklists: Vec<Blacklist> = test::read_response_json(&mut app, req);
 
     assert_eq!(blacklists.len(), 1);
-    assert_eq!(blacklists.get(0).unwrap().blocker, "+4366412345678");
-    assert_eq!(blacklists.get(0).unwrap().blocked, "+4365012345678");
+    assert_eq!(blacklists.get(0).unwrap().hash_blocker, hash("+4366412345678"));
+    assert_eq!(blacklists.get(0).unwrap().hash_blocked, hash("+4365012345678"));
 
     cleanup(&user.tele_num, &init_pool().get().unwrap());
     cleanup(&user2.tele_num, &init_pool().get().unwrap());

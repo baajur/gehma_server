@@ -20,7 +20,7 @@ fn main() {
 
     update_user(&connection);
     update_contact(&connection);
-    update_blacklist(&connection);
+    //update_blacklist(&connection);
 }
 
 fn update_user(connection: &PgConnection) {
@@ -34,9 +34,9 @@ fn update_user(connection: &PgConnection) {
 
         diesel::update(target)
             .set(
-                (hash_tele_num.eq(Some(HEXUPPER.encode(
+                (hash_tele_num.eq(HEXUPPER.encode(
                     digest::digest(&digest::SHA256, user.tele_num.as_bytes()).as_ref(),
-                )))),
+                ))),
             )
             .execute(connection)
             .unwrap();
@@ -57,15 +57,16 @@ fn update_contact(connection: &PgConnection) {
 
         diesel::update(target)
             .set(
-                (target_hash_tele_num.eq(Some(HEXUPPER.encode(
+                (target_hash_tele_num.eq(HEXUPPER.encode(
                     digest::digest(&digest::SHA256, contact.target_tele_num.as_bytes()).as_ref(),
-                )))),
+                ))),
             )
             .execute(connection)
             .unwrap();
     }
 }
 
+/*
 fn update_blacklist(connection: &PgConnection) {
     use core::schema::blacklist::dsl::{blacklist, id, blocker, blocked, hash_blocker, hash_blocked};
 
@@ -78,18 +79,18 @@ fn update_blacklist(connection: &PgConnection) {
 
         diesel::update(target)
             .set(
-                (hash_blocked.eq(Some(HEXUPPER.encode(
+                (hash_blocked.eq(HEXUPPER.encode(
                     digest::digest(&digest::SHA256, b.blocked.as_bytes()).as_ref(),
-                )))),
+                ))),
             )
             .execute(connection)
             .unwrap();
 
         diesel::update(target)
             .set(
-                (hash_blocker.eq(Some(HEXUPPER.encode(
+                (hash_blocker.eq(HEXUPPER.encode(
                     digest::digest(&digest::SHA256, b.blocker.as_bytes()).as_ref(),
-                )))),
+                ))),
             )
             .execute(connection)
             .unwrap();
@@ -97,3 +98,4 @@ fn update_blacklist(connection: &PgConnection) {
 
     }
 }
+*/
