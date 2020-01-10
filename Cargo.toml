@@ -1,6 +1,6 @@
 [package]
 name = "gehma"
-version = "0.5.2"
+version = "0.5.3"
 authors = ["Kevin Per <kevin.per@protonmail.com>"]
 edition = "2018"
 
