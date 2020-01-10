@@ -3,27 +3,25 @@ use diesel::{prelude::*, PgConnection};
 use uuid::Uuid;
 
 use core::errors::ServiceError;
-use core::models::{Blacklist, User};
+use core::models::{User};
 
 use crate::routes::contact_exists::{PayloadUser, ResponseUser};
 
 use crate::Pool;
 
-use log::{error, info};
+use log::info;
 
 pub const MAX_ALLOWED_CONTACTS: usize = 10000;
-pub const MIN_TELE_NUM_LENGTH: usize = 3;
 
 pub(crate) fn get_query(
     uid: Uuid,
     user: &User,
     phone_numbers: &mut Vec<PayloadUser>,
-    country_code: &str,
+    _country_code: &str,
     pool: web::Data<Pool>,
 ) -> Result<Vec<ResponseUser>, ServiceError> {
     info!("queries/push_notification/get_query");
     use core::models::Contact;
-    use core::models::PhoneNumber;
     use core::schema::blacklist::dsl::{blacklist, hash_blocked, hash_blocker};
     use core::schema::users::dsl::{
         access_token, changed_at, client_version, country_code, created_at, description,
@@ -134,7 +132,7 @@ pub(crate) fn get_query(
                             ServiceError::BadRequest("Could reset contacts".into())
                         })?;
 
-                        let res = diesel::insert_into(contacts)
+                        let _ = diesel::insert_into(contacts)
                             .values(user_contacts)
                             .on_conflict_do_nothing()
                             .execute(conn)

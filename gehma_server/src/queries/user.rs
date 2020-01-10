@@ -2,7 +2,7 @@ use crate::Pool;
 use actix_web::web;
 use core::errors::ServiceError;
 use core::models::{
-    Analytic, Blacklist, Contact, DowngradedUser, PhoneNumber, UsageStatisticEntry, User,
+    Analytic, PhoneNumber, UsageStatisticEntry, User,
 };
 use diesel::{prelude::*, PgConnection};
 use uuid::Uuid;
@@ -23,8 +23,6 @@ pub(crate) fn get_entry_by_tel_query(
     let conn: &PgConnection = &pool.get().unwrap();
 
     let tele = tele.to_string();
-
-    //    dbg!(&tele);
 
     let res = users
         .filter(tele_num.eq(tele))
@@ -63,7 +61,6 @@ pub(crate) fn get_contacts(
                     .eq(hash_blocker)
                     .and(hash_blocked.eq(&user.hash_tele_num)))),
         )
-        //.filter(hash_blocked.is_null().or(hash_blocker.is_null()))
         .select((
             tele_num,
             led,

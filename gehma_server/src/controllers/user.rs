@@ -2,7 +2,7 @@ use crate::Pool;
 use actix_multipart::{Field, MultipartError};
 use actix_web::{error::BlockingError, error::PayloadError, web};
 use core::errors::ServiceError;
-use core::models::{DowngradedUser, PhoneNumber, User};
+use core::models::{PhoneNumber, User};
 use diesel::{prelude::*, PgConnection};
 use futures::future::{err, Either};
 use futures::stream::Stream;

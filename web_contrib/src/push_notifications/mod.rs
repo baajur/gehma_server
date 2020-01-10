@@ -1,5 +1,4 @@
 use core::errors::ServiceError;
-use core::models::{User, Contact};
 
 pub type NotifyService = NotificationWrapper;
 

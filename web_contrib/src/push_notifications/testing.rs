@@ -1,5 +1,4 @@
 use super::*;
-use core::models::{User, Contact};
 use core::errors::ServiceError;
 
 pub struct TestingNotificationService;

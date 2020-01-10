@@ -3,7 +3,6 @@ use core::errors::ServiceError;
 use super::FirebaseToken;
 
 use tokio;
-use core::models::{User, Contact};
 use log::{error};
 use futures::Future;
 use serde_json::json;
