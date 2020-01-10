@@ -1,11 +1,12 @@
+use super::FirebaseToken;
 use crate::push_notifications::*;
 use core::errors::ServiceError;
-use super::FirebaseToken;
 
-use tokio;
-use log::{error};
 use futures::Future;
+use log::{error, info};
+use serde::Deserialize;
 use serde_json::json;
+use tokio;
 
 use futures::stream::Stream;
 use reqwest::header::{AUTHORIZATION, CONTENT_TYPE};
@@ -17,16 +18,37 @@ pub struct FirebaseConfiguration {
 }
 
 pub struct FirebaseNotificationService {
-    pub config: FirebaseConfiguration
+    pub config: FirebaseConfiguration,
+}
+
+/*{
+    "multicast_id": 1715198469273987789,
+    "success": 0,
+    "failure": 1,
+    "canonical_ids": 0,
+    "results": [
+        {
+            "error": "NotRegistered"
+        }
+    ]
+}*/
+
+#[derive(Debug, Deserialize)]
+struct FirebaseResponse {
+    multicast_id: String,
+    success: usize,
+    failure: usize,
+    canonical_ids: usize,
 }
 
 type Name = String;
 impl NotificationService for FirebaseNotificationService {
     fn push(&self, values: Vec<(Name, FirebaseToken)>) -> Result<(), ServiceError> {
         let client = Client::new();
+        let size : usize = values.len();
 
         let api_token = self.config.fcm_token.clone();
-            let work = futures::stream::iter_ok(values)
+        let work = futures::stream::iter_ok(values)
             .map(move |(name, token)| {
                 //FIXME implement return
                 client
@@ -39,36 +61,34 @@ impl NotificationService for FirebaseNotificationService {
                             "body": "",
                             "icon": "ic_stat_name_nougat"
                         },
-                        "android":{
-                            "ttl":"43200s"
-                        },
                         "registration_ids": [token]
                     }))
                     .send()
             })
             .buffer_unordered(10)
-            .and_then(|mut res| {
-                //FIXME fix error
-                /*{
-                    "multicast_id": 1715198469273987789,
-                    "success": 0,
-                    "failure": 1,
-                    "canonical_ids": 0,
-                    "results": [
-                        {
-                            "error": "NotRegistered"
-                        }
-                    ]
-                }*/
-
-                println!("Response: {}", res.status());
-                futures::future::ok(res.json::<serde_json::Value>())
+            .map_err(|w| {
+                error!("{:?}", w);
+                ServiceError::InternalServerError
             })
-            .for_each(|_| Ok(()))
+            .and_then(|mut res| {
+                res.json::<FirebaseResponse>().map_err(|w| {
+                    error!("{:?}", w);
+                    ServiceError::InternalServerError
+                })
+            })
+            .for_each(move |res| {
+                info!("{:?}", res);
+
+                if res.success != size {
+                    error!("SOME NOTIFICATIONS FAILED");
+                }
+
+                Ok(())
+            })
             .map_err(|e| error!("{}", e));
 
-            tokio::run(work);
+        tokio::run(work);
 
-            Ok(())
+        Ok(())
     }
 }
