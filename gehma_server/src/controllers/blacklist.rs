@@ -1,14 +1,14 @@
-use web_contrib::auth::Auth;
-use actix_web::{web};
+use actix_web::web;
 use diesel::{prelude::*, PgConnection};
 use uuid::Uuid;
+use web_contrib::auth::Auth;
 
 use core::errors::ServiceError;
 use core::models::{Blacklist, PhoneNumber, User};
 
 use crate::Pool;
 
-use crate::routes::blacklist::{PostData};
+use crate::routes::blacklist::PostData;
 
 pub(crate) fn get_entry(
     blocker: &str,
@@ -18,12 +18,8 @@ pub(crate) fn get_entry(
 ) -> Result<Vec<Blacklist>, ServiceError> {
     let blocker = Uuid::parse_str(blocker)?;
 
-    let user : Result<User, ServiceError> = get_user_by_id!(
-        blocker,
-        &firebase_uid,
-        _auth.into_inner(),
-        &pool
-    );
+    let user: Result<User, ServiceError> =
+        get_user_by_id!(blocker, &firebase_uid, _auth.into_inner(), &pool);
 
     user?;
 
@@ -39,20 +35,16 @@ pub(crate) fn create_entry(
     firebase_uid: &String,
     _auth: web::Data<Auth>,
 ) -> Result<Blacklist, ServiceError> {
-    use core::schema::users::dsl::{id, users};
+    use core::schema::users::dsl::{hash_tele_num, id, users};
 
     let blocker2 = Uuid::parse_str(blocker)?;
 
-    let user : Result<User, ServiceError> = get_user_by_id!(
-        blocker2,
-        &firebase_uid,
-        _auth.into_inner(),
-        &pool
-    );
+    let user: Result<User, ServiceError> =
+        get_user_by_id!(blocker2, &firebase_uid, _auth.into_inner(), &pool);
 
     user?;
 
-    let blocked = PhoneNumber::my_from(&data.blocked, &data.country_code)?;
+    //let blocked = PhoneNumber::my_from(&data.blocked, &data.country_code)?;
 
     //dbg!(&blocked);
     //dbg!(&blocker);
@@ -69,6 +61,16 @@ pub(crate) fn create_entry(
         .cloned()
         .ok_or_else(|| ServiceError::BadRequest("No user found with given uid".into()))?;
 
+    let contact = users
+        .filter(hash_tele_num.eq(data.blocked.clone()))
+        .load::<User>(conn)
+        .map_err(|_db_error| ServiceError::BadRequest("Cannot find user".into()))?
+        .first()
+        .cloned()
+        .ok_or_else(|| ServiceError::BadRequest("No user found with given hash".into()))?;
+
+    let blocked = PhoneNumber::my_from(&contact.tele_num, &contact.country_code)?;
+
     let tel = PhoneNumber::my_from(&user.tele_num, &data.country_code)?;
     let b = crate::queries::blacklist::create_query(&tel, &blocked, pool)?;
 
@@ -83,20 +85,16 @@ pub(crate) fn delete_entry(
     firebase_uid: &String,
     _auth: web::Data<Auth>,
 ) -> Result<(), ServiceError> {
-    use core::schema::users::dsl::{id, users};
+    use core::schema::users::dsl::{id, users, hash_tele_num};
 
     let blocker2 = Uuid::parse_str(blocker)?;
 
-    let user : Result<User, ServiceError>  = get_user_by_id!(
-        blocker2,
-        &firebase_uid,
-        _auth.into_inner(),
-        &pool
-    );
+    let user: Result<User, ServiceError> =
+        get_user_by_id!(blocker2, &firebase_uid, _auth.into_inner(), &pool);
 
     user?;
 
-    let blocked = PhoneNumber::my_from(&data.blocked, &data.country_code)?;
+   // let blocked = PhoneNumber::my_from(&data.blocked, &data.country_code)?;
 
     let conn: &PgConnection = &pool.get().unwrap();
 
@@ -111,6 +109,16 @@ pub(crate) fn delete_entry(
         .ok_or_else(|| ServiceError::BadRequest("No user found with given uid".into()))?;
 
     let tel = PhoneNumber::my_from(&user.tele_num, &data.country_code)?;
+
+    let contact = users
+        .filter(hash_tele_num.eq(data.blocked.clone()))
+        .load::<User>(conn)
+        .map_err(|_db_error| ServiceError::BadRequest("Cannot find user".into()))?
+        .first()
+        .cloned()
+        .ok_or_else(|| ServiceError::BadRequest("No user found with given hash".into()))?;
+
+    let blocked = PhoneNumber::my_from(&contact.tele_num, &contact.country_code)?;
 
     crate::queries::blacklist::delete_query(&tel, &blocked, pool)
 }
