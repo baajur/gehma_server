@@ -105,8 +105,8 @@ pub(crate) fn main() {
     let server = HttpServer::new(move || {
         App::new()
             .data(pool.clone())
-            .data(get_auth())
-            //.data(set_testing_auth())
+            //.data(get_auth())
+            .data(set_testing_auth())
             .data(get_firebase_notification_service())
             .wrap(
                 Cors::new()
@@ -152,7 +152,7 @@ pub(crate) fn main() {
                             .route(web::put().to_async(routes::user::update)),
                     )
                     .service(
-                        web::resource("/user/{uid}/contacts")
+                        web::resource("/user/{uid}/blacklist_contacts")
                             .route(web::get().to_async(routes::user::get_contacts))
                     )
                     .service(

@@ -89,11 +89,12 @@ pub fn get(
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ResponseContact {
     pub user: DowngradedUser,
-    pub blocked: bool
+    pub name: String,
+    pub blocked: bool,
 }
 
 impl ResponseContact {
-    pub fn new(tele_num: String, led: bool, country_code: String, description: String, changed_at: chrono::NaiveDateTime, profile_picture: String, hash_tele_num: String, blocked: Option<String>) -> Self {
+    pub fn new(name: String, tele_num: String, led: bool, country_code: String, description: String, changed_at: chrono::NaiveDateTime, profile_picture: String, hash_tele_num: String, blocked: Option<String>) -> Self {
         ResponseContact {
             user: DowngradedUser {
                 tele_num,
@@ -104,7 +105,8 @@ impl ResponseContact {
                 profile_picture,
                 hash_tele_num,
             },
-            blocked: blocked.is_some()
+            blocked: blocked.is_some(),
+            name: name,
         }
     }
 }

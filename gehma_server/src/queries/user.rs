@@ -1,9 +1,7 @@
 use crate::Pool;
 use actix_web::web;
 use core::errors::ServiceError;
-use core::models::{
-    Analytic, PhoneNumber, UsageStatisticEntry, User,
-};
+use core::models::{Analytic, PhoneNumber, UsageStatisticEntry, User};
 use diesel::{prelude::*, PgConnection};
 use uuid::Uuid;
 use web_contrib::push_notifications::NotifyService;
@@ -45,7 +43,7 @@ pub(crate) fn get_contacts(
     info!("queries/user/get_contacts");
 
     use core::schema::blacklist::dsl::{blacklist, hash_blocked, hash_blocker};
-    use core::schema::contacts::dsl::{contacts, from_id, target_hash_tele_num};
+    use core::schema::contacts::dsl::{contacts, from_id, name, target_hash_tele_num};
     use core::schema::users::dsl::*;
 
     let conn: &PgConnection = &pool.get().unwrap();
@@ -62,6 +60,7 @@ pub(crate) fn get_contacts(
                     .and(hash_blocked.eq(&user.hash_tele_num)))),
         )
         .select((
+            name,
             tele_num,
             led,
             country_code,
@@ -73,6 +72,7 @@ pub(crate) fn get_contacts(
         ))
         .distinct()
         .load::<(
+            String,
             String,
             bool,
             String,
@@ -89,6 +89,7 @@ pub(crate) fn get_contacts(
                 .into_iter()
                 .map(
                     |(
+                        _name,
                         _tele_num,
                         _led,
                         _country_code,
@@ -99,6 +100,7 @@ pub(crate) fn get_contacts(
                         _blocked,
                     )| {
                         ResponseContact::new(
+                            _name,
                             _tele_num,
                             _led,
                             _country_code,
@@ -233,7 +235,7 @@ fn sending_push_notifications(
 ) -> Result<(), ServiceError> {
     info!("queries/user/sending_push_notifications");
     use diesel::sql_types::{Text, Uuid};
-    use diesel::{QueryableByName, Queryable};
+    use diesel::{Queryable, QueryableByName};
 
     let conn: &PgConnection = &pool.get().unwrap();
 
@@ -248,26 +250,29 @@ fn sending_push_notifications(
         #[sql_type = "Text"]
         name: Name,
         #[sql_type = "Text"]
-        firebase_token: FirebaseToken
+        firebase_token: FirebaseToken,
     };
 
-      let my_contacts : Vec<DatabaseResponse> = diesel::sql_query("SELECT from_id, name, firebase_token FROM contact_view WHERE from_id = $1")
-        .bind::<Uuid,_ >(user.id)
-        .load::<DatabaseResponse>(conn)
-        .map_err(|_db_error| {
-            error!("{:?}", _db_error);
-            ServiceError::BadRequest("Database error".into())
-        })?
-        .into_iter()
-        .take(crate::LIMIT_PUSH_NOTIFICATION_CONTACTS)
-        .collect();
-    
+    let my_contacts: Vec<DatabaseResponse> = diesel::sql_query(
+        "SELECT from_id, name, firebase_token FROM contact_view WHERE from_id = $1",
+    )
+    .bind::<Uuid, _>(user.id)
+    .load::<DatabaseResponse>(conn)
+    .map_err(|_db_error| {
+        error!("{:?}", _db_error);
+        ServiceError::BadRequest("Database error".into())
+    })?
+    .into_iter()
+    .take(crate::LIMIT_PUSH_NOTIFICATION_CONTACTS)
+    .collect();
+
     //FIXME check
-    notify_service
-        .clone()
-        .into_inner()
-        .service
-        .push(my_contacts.into_iter().map(|c| (c.name, c.firebase_token)).collect())?;
+    notify_service.clone().into_inner().service.push(
+        my_contacts
+            .into_iter()
+            .map(|c| (c.name, c.firebase_token))
+            .collect(),
+    )?;
 
     Ok(())
 }
