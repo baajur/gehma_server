@@ -11,7 +11,8 @@ members = [
     "gehma_server",
     "schauma",
     "schauma_spider",
-    "migration_software/sha256_hasher"
+    "migration_software/sha256_hasher",
+    "img_profile",
 ]
 
 [dependencies]
@@ -27,6 +28,10 @@ path = "schauma/src/main.rs"
 [[bin]]
 name = "schauma_spider"
 path = "schauma_spider/src/main.rs"
+
+[[bin]]
+name = "img_profile"
+path = "img_profile/src/main.rs"
 
 [[bin]]
 name = "256_hasher"
