@@ -151,7 +151,7 @@ pub(crate) fn main() {
                     .service(
                         web::resource("/user/{uid}")
                             .route(web::get().to_async(routes::user::get))
-                            .route(web::put().to_async(routes::user::update)),
+                            .route(web::put().to_async(routes::user::update)), //token update
                     )
                     .service(
                         web::resource("/user/{uid}/blacklist_contacts")
