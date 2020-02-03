@@ -2,7 +2,7 @@ use rand::prelude::*;
 
 const MIN: usize = 5;
 
-pub fn generate(height: u32, width: u32, path: &str) {
+pub fn generate(height: u32, width: u32, path: &str) -> Result<(), std::io::Error>{
     let imgx = height;
     let imgy = width;
 
@@ -47,5 +47,5 @@ pub fn generate(height: u32, width: u32, path: &str) {
         }
     }
 
-    imgbuf.save(path).unwrap();
+    imgbuf.save(path)
 }

@@ -14,7 +14,7 @@ use web_contrib::push_notifications::NotifyService;
 use log::{error, info};
 use std::io::Write;
 
-use crate::routes::user::{PostUser, UpdateTokenPayload, UpdateUser, ResponseContact};
+use crate::routes::user::{PostUser, ResponseContact, UpdateTokenPayload, UpdateUser};
 
 pub(crate) fn user_signin(
     body: PostUser,
@@ -51,6 +51,7 @@ pub(crate) fn user_signin(
         )?;
     }
 
+    crate::queries::user::update_profile_picture(&pool, &user)?;
     crate::queries::user::analytics_usage_statistics(&pool, &user)?;
 
     Ok(user)
@@ -130,6 +131,7 @@ pub(crate) fn update_user_without_auth(
     Ok(user)
 }
 
+/*
 pub(crate) fn save_file(
     uid: String,
     field: Field,
@@ -264,6 +266,7 @@ pub(crate) fn save_file(
             }),
     )
 }
+*/
 
 ///The user can upload multiple types of images. When he uploads an image with
 ///a different type, it may happen that the old won't be overwritten.

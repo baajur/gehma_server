@@ -10,6 +10,9 @@ use crate::routes::user::{ResponseContact, UpdateUser};
 
 use log::{error, info};
 
+const PROFILE_WIDTH: u32 = 500;
+const PROFILE_HEIGHT: u32 = 500;
+
 pub(crate) fn get_entry_by_tel_query(
     tele: &PhoneNumber,
     pool: &web::Data<Pool>,
@@ -326,29 +329,30 @@ pub(crate) fn get_user_by_tele_num(
 }
 
 pub(crate) fn update_profile_picture(
-    uid: Uuid,
-    ending: String,
-    pool: web::Data<Pool>,
+    pool: &web::Data<Pool>,
+    user: &User,
 ) -> Result<(), ServiceError> {
     info!("queries/user/update_profile_picture");
-    use core::schema::users::dsl::{changed_at, id, profile_picture, users};
+    use core::errors::InternalError;
+    use core::schema::users::dsl::{id, profile_picture, users};
 
     let conn: &PgConnection = &pool.get().unwrap();
 
-    let target = users.filter(id.eq(uid));
+    let target = users.filter(id.eq(user.id));
+
+    let path = format!("static/profile_pictures/{}.jpg", user.hash_tele_num);
+    let _ = img_profile::generate(PROFILE_HEIGHT, PROFILE_WIDTH, &path)
+        .map_err(|err| InternalError::GenerateImage(err))?;
 
     diesel::update(target)
         .set((
-            changed_at.eq(chrono::Local::now().naive_local()),
-            profile_picture.eq(format!("static/profile_pictures/{}.{}", uid, ending)),
+            //changed_at.eq(chrono::Local::now().naive_local()),
+            profile_picture.eq(&path),
         ))
         .execute(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Updating state failed".into()))?;
 
-    info!(
-        "Updating profile {}",
-        format!("static/profile_pictures/{}.{}", uid, ending)
-    );
+    info!("Updating profile {}", path);
 
     Ok(())
 }

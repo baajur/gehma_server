@@ -11,7 +11,7 @@ use log::{error, info};
 
 use web_contrib::auth::Auth;
 use web_contrib::push_notifications::NotifyService;
-use crate::controllers::user::{user_signin, get_entry, save_file, update_user_with_auth, update_token_handler};
+use crate::controllers::user::{user_signin, get_entry, update_user_with_auth, update_token_handler};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PostUser {
@@ -136,6 +136,7 @@ pub fn get_contacts(
     })
 }
 
+/*
 pub fn upload_profile_picture(
     info: web::Path<String>,
     multipart: Multipart,
@@ -169,6 +170,7 @@ pub fn upload_profile_picture(
             err
         })
 }
+*/
 
 pub fn update(
     info: web::Path<String>,

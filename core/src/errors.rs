@@ -34,6 +34,8 @@ pub enum InternalError {
     InvalidPhoneNumber(String),
     #[display(fmt = "Invalid Country: {}", _0)]
     InvalidCountry(String),
+    #[display(fmt = "Cannot generate profile: {}", _0)]
+    GenerateImage(std::io::Error),
 }
 
 #[derive(Debug, Display)]

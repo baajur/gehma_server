@@ -3,15 +3,15 @@ extern crate serde_derive;
 #[macro_use]
 extern crate web_contrib;
 
-use web_contrib::auth::AuthenticatorWrapper;
 use actix_cors::Cors;
 use actix_files::NamedFile;
 use actix_web::http::header;
 use actix_web::{middleware as actix_middleware, web, App, HttpResponse, HttpServer};
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
-use std::path::PathBuf;
 use diesel_migrations::run_pending_migrations;
+use std::path::PathBuf;
+use web_contrib::auth::AuthenticatorWrapper;
 use web_contrib::push_notifications::NotificationWrapper;
 
 pub(crate) mod controllers;
@@ -44,9 +44,7 @@ fn get_auth() -> web_contrib::auth::AuthenticatorWrapper {
         auth_token: auth_token,
     };
 
-    web_contrib::auth::AuthenticatorWrapper::new(Box::new(TwilioAuthenticator {
-        config
-    }))
+    web_contrib::auth::AuthenticatorWrapper::new(Box::new(TwilioAuthenticator { config }))
 }
 
 #[allow(dead_code)]
@@ -76,12 +74,12 @@ fn get_firebase_notification_service() -> NotificationWrapper {
     let api_token = std::env::var("FCM_TOKEN").expect("No FCM_TOKEN configured");
 
     let config = FirebaseConfiguration {
-        fcm_token: api_token
+        fcm_token: api_token,
     };
 
-    web_contrib::push_notifications::NotificationWrapper::new(Box::new(FirebaseNotificationService {
-        config
-    }))
+    web_contrib::push_notifications::NotificationWrapper::new(Box::new(
+        FirebaseNotificationService { config },
+    ))
 }
 
 pub(crate) fn main() {
@@ -128,6 +126,10 @@ pub(crate) fn main() {
             .service(
                 web::scope("/api")
                     .service(
+                        web::scope("/static") // doesn't matter if '/api' or not
+                            .service(web::resource("/{filename:.*}").route(web::get().to(load_file))),
+                    )
+                    .service(
                         web::resource("/signin") //must have query string access_token
                             .route(web::post().to_async(routes::user::signin)),
                     )
@@ -142,10 +144,10 @@ pub(crate) fn main() {
                             .route(web::post().to_async(routes::blacklist::add))
                             .route(web::put().to_async(routes::blacklist::delete)), //deletes
                     )
-                    .service(
+                    /*.service(
                         web::resource("/user/{uid}/profile")
                             .route(web::post().to_async(routes::user::upload_profile_picture)),
-                    )
+                    )*/
                     .service(
                         web::resource("/user/{uid}")
                             .route(web::get().to_async(routes::user::get))
