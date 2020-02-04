@@ -84,7 +84,8 @@ fn get_firebase_notification_service() -> NotificationWrapper {
     ))
 }
 
-pub(crate) fn main() {
+#[actix_rt::main]
+pub(crate) async fn main() -> std::io::Result<()> {
     dotenv::dotenv().ok();
     std::env::set_var("RUST_LOG", "info,actix_web=info,actix_server=info");
     env_logger::init();
@@ -179,7 +180,7 @@ pub(crate) fn main() {
 
     let listener = server.bind(format!("{}:{}", addr, port));
 
-    listener.expect("Cannot bind").run();
+    listener.expect("Cannot bind").run().await
 }
 
 async fn load_file(req: actix_web::HttpRequest) -> Result<NamedFile, ServiceError> {

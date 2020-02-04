@@ -2751,6 +2751,7 @@ dependencies = [
  "actix-files 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "actix-identity 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "actix-multipart 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "actix-rt 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "actix-service 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "actix-web 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "actix-web-actors 1.0.4 (registry+https://github.com/rust-lang/crates.io-index)",

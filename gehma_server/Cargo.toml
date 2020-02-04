@@ -16,6 +16,7 @@ actix-files = "0.2"
 actix-web-actors = "1.0.0"
 actix-web = "2" 
 actix = "0.8"
+actix-rt = "1.0" 
 chrono = { version = "0.4.6", features = ["serde"] }
 diesel = { version = "1.4.*", features = ["postgres","uuidv07", "r2d2", "chrono"] }
 dotenv = "0.14.1"
