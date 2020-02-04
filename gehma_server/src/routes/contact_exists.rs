@@ -1,9 +1,8 @@
-use actix_web::{error::BlockingError, web, HttpResponse};
-use futures::Future;
+use actix_web::{web, HttpResponse};
 
 use crate::Pool;
-use core::errors::ServiceError;
 use core::models::{DowngradedUser, HashedTeleNum};
+use core::errors::ServiceError;
 
 use web_contrib::auth::Auth;
 use web_contrib::utils::{QueryParams, set_response_headers};
@@ -36,51 +35,24 @@ pub async fn exists(
     pool: web::Data<Pool>,
     query: web::Query<QueryParams>,
     auth: web::Data<Auth>,
-) -> HttpResponse {
+) -> Result<HttpResponse, ServiceError> {
     info!("controllers/contact_exists/exists");
 
     let info = info.into_inner();
-        let users = get_entry(
+    let users = get_entry(
             &info.0,
             &info.1,
             &mut payload.numbers,
             pool,
             &query.access_token,
             auth,
-        ).unwrap();
+        ).map_err(|_err| ServiceError::InternalServerError)?;
 
     let mut res = HttpResponse::Ok()
                 .content_type("application/json")
                 .json(users);
-            //set_response_headers(&mut res);
-            //Ok(res)
-    res
 
+    set_response_headers(&mut res);
 
-    /*
-    web::block(move || {
-        let info = info.into_inner();
-        get_entry(
-            &info.0,
-            &info.1,
-            &mut payload.numbers,
-            pool,
-            &query.access_token,
-            auth,
-        )
-    })
-    .then(|res| match res {
-        Ok(users) => {
-            let mut res = HttpResponse::Ok()
-                .content_type("application/json")
-                .json(users);
-            set_response_headers(&mut res);
-            Ok(res)
-        }
-        Err(err) => match err {
-            BlockingError::Error(service_error) => Err(service_error),
-            BlockingError::Canceled => Err(ServiceError::InternalServerError),
-        },
-    })
-    */
+    Ok(res)
 }

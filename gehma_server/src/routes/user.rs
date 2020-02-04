@@ -1,12 +1,9 @@
 use crate::Pool;
-//use actix_multipart::Multipart;
-use actix_web::{error::BlockingError, web, HttpResponse};
+use actix_web::{web, HttpResponse};
 use core::models::DowngradedUser;
 use core::errors::ServiceError;
-//use futures::stream::Stream;
 
 use web_contrib::utils::{QueryParams, set_response_headers};
-use futures::Future;
 use log::{info};
 
 use web_contrib::auth::Auth;
@@ -34,7 +31,7 @@ pub async fn signin(
     query: web::Query<QueryParams>,
     auth: web::Data<Auth>,
     notify_service: web::Data<NotifyService>,
-) -> HttpResponse {
+) -> Result<HttpResponse, ServiceError> {
     info!("routes/user/signin");
 
     let user = user_signin(
@@ -43,39 +40,17 @@ pub async fn signin(
             &query.access_token,
             auth,
             notify_service,
-        ).unwrap();
+    ).map_err(|_err| {
+        ServiceError::InternalServerError
+    })?;
 
     let mut res = HttpResponse::Ok()
                 .content_type("application/json")
                 .json(user);
-            //set_response_headers(&mut res);
-            //Ok(res)
-    res
 
-    /*
-    web::block(move || {
-        user_signin(
-            body.into_inner(),
-            pool,
-            &query.access_token,
-            auth,
-            notify_service,
-        )
-    })
-    .then(|res| match res {
-        Ok(user) => {
-            let mut res = HttpResponse::Ok()
-                .content_type("application/json")
-                .json(user);
-            set_response_headers(&mut res);
-            Ok(res)
-        }
-        Err(err) => match err {
-            BlockingError::Error(service_error) => Err(service_error),
-            BlockingError::Canceled => Err(ServiceError::InternalServerError),
-        },
-    })
-    */
+    set_response_headers(&mut res);
+
+    Ok(res)
 }
 
 pub async fn get(
@@ -83,36 +58,18 @@ pub async fn get(
     pool: web::Data<Pool>,
     query: web::Query<QueryParams>,
     auth: web::Data<Auth>,
-) -> HttpResponse {
+) -> Result<HttpResponse, ServiceError> {
     info!("routes/user/get");
 
-    let users = get_entry(&info.into_inner(), pool, &query.access_token, auth).unwrap();
+    let users = get_entry(&info.into_inner(), pool, &query.access_token, auth).map_err(|_err| ServiceError::InternalServerError)?;
 
     let mut res = HttpResponse::Ok()
                     .content_type("application/json")
                     .json(users);
-                //set_response_headers(&mut res);
-                //Ok(res)
-    res
 
+    set_response_headers(&mut res);
 
-    /*
-    web::block(move || get_entry(&info.into_inner(), pool, &query.access_token, auth)).then(|res| {
-        match res {
-            Ok(users) => {
-                let mut res = HttpResponse::Ok()
-                    .content_type("application/json")
-                    .json(users);
-                set_response_headers(&mut res);
-                Ok(res)
-            }
-            Err(err) => match err {
-                BlockingError::Error(service_error) => Err(service_error),
-                BlockingError::Canceled => Err(ServiceError::InternalServerError),
-            },
-        }
-    })
-    */
+    Ok(res)
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -145,36 +102,18 @@ pub async fn get_contacts(
     pool: web::Data<Pool>,
     query: web::Query<QueryParams>,
     auth: web::Data<Auth>,
-) -> HttpResponse {
+) -> Result<HttpResponse, ServiceError> {
     info!("routes/user/get_contacts");
 
-    let users = crate::controllers::user::get_contacts(&info.into_inner(), pool, &query.access_token, auth).unwrap();
+    let users = crate::controllers::user::get_contacts(&info.into_inner(), pool, &query.access_token, auth).map_err(|_err| ServiceError::InternalServerError)?;
 
     let mut res = HttpResponse::Ok()
                     .content_type("application/json")
                     .json(users);
-                //set_response_headers(&mut res);
-                //Ok(res)
-    res
 
+    set_response_headers(&mut res);
 
-    /*
-    web::block(move || crate::controllers::user::get_contacts(&info.into_inner(), pool, &query.access_token, auth)).then(|res| {
-        match res {
-            Ok(users) => {
-                let mut res = HttpResponse::Ok()
-                    .content_type("application/json")
-                    .json(users);
-                set_response_headers(&mut res);
-                Ok(res)
-            }
-            Err(err) => match err {
-                BlockingError::Error(service_error) => Err(service_error),
-                BlockingError::Canceled => Err(ServiceError::InternalServerError),
-            },
-        }
-    })
-    */
+    Ok(res)
 }
 
 /*
@@ -220,7 +159,7 @@ pub async fn update(
     query: web::Query<QueryParams>,
     auth: web::Data<Auth>,
     notify_service: web::Data<NotifyService>,
-) -> HttpResponse {
+) -> Result<HttpResponse, ServiceError> {
     info!("routes/user/update");
 
     let user = update_user_with_auth(
@@ -230,33 +169,11 @@ pub async fn update(
             &query.access_token,
             auth,
             &notify_service,
-        ).unwrap();
+        ).map_err(|_err| ServiceError::InternalServerError)?;
 
-    HttpResponse::Ok()
+    Ok(HttpResponse::Ok()
             .content_type("application/json")
-            .json(&user)
-
-    /*
-    web::block(move || {
-        update_user_with_auth(
-            &info.into_inner(),
-            &data.into_inner(),
-            &pool,
-            &query.access_token,
-            auth,
-            &notify_service,
-        )
-    })
-    .then(|res| match res {
-        Ok(user) => Ok(HttpResponse::Ok()
-            .content_type("application/json")
-            .json(&user)),
-        Err(err) => match err {
-            BlockingError::Error(service_error) => Err(service_error),
-            BlockingError::Canceled => Err(ServiceError::InternalServerError),
-        },
-    })
-    */
+            .json(&user))
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -270,7 +187,7 @@ pub async fn update_token(
     pool: web::Data<Pool>,
     query: web::Query<QueryParams>,
     auth: web::Data<Auth>,
-) -> HttpResponse {
+) -> Result<HttpResponse, ServiceError> {
     info!("routes/push_notification/update_token");
 
     let user = update_token_handler(
@@ -279,37 +196,13 @@ pub async fn update_token(
             pool,
             &query.access_token,
             auth,
-        ).unwrap();
+        ).map_err(|_err| ServiceError::InternalServerError)?;
 
     let mut res = HttpResponse::Ok()
                 .content_type("application/json")
                 .json(user);
-            //set_response_headers(&mut res);
-            //Ok(res)
-    res
 
-    /*
-    web::block(move || {
-        update_token_handler(
-            _info.into_inner(),
-            body.into_inner(),
-            pool,
-            &query.access_token,
-            auth,
-        )
-    })
-    .then(|res| match res {
-        Ok(user) => {
-            let mut res = HttpResponse::Ok()
-                .content_type("application/json")
-                .json(user);
-            set_response_headers(&mut res);
-            Ok(res)
-        }
-        Err(err) => match err {
-            BlockingError::Error(service_error) => Err(service_error),
-            BlockingError::Canceled => Err(ServiceError::InternalServerError),
-        },
-    })
-    */
+    set_response_headers(&mut res);
+
+    Ok(res)
 }

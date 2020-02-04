@@ -183,7 +183,7 @@ pub(crate) fn main() {
 }
 
 async fn load_file(req: actix_web::HttpRequest) -> Result<NamedFile, ServiceError> {
-    let path: PathBuf = req.match_info().query("filename").parse().map_err(|err| ServiceError::BadRequest("filename missing".to_string()))?;
+    let path: PathBuf = req.match_info().query("filename").parse().map_err(|_err| ServiceError::BadRequest("filename missing".to_string()))?;
     let mut dir = PathBuf::from("static");
     dir.push(path);
     Ok(NamedFile::open(dir).map_err(|err| {
