@@ -9,7 +9,7 @@ use crate::controllers::blacklist::{create_entry, get_entry, delete_entry};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PostData {
-    pub blocked: String,
+    pub blocked: String, //TODO rename `hash_blocked` #45
     pub country_code: String,
 }
 
