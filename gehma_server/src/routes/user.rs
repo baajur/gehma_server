@@ -27,16 +27,32 @@ pub struct UpdateUser {
     pub client_version: String,
 }
 
-pub fn signin(
+pub async fn signin(
     _info: web::Path<()>,
     body: web::Json<PostUser>,
     pool: web::Data<Pool>,
     query: web::Query<QueryParams>,
     auth: web::Data<Auth>,
     notify_service: web::Data<NotifyService>,
-) -> impl Future<Item = HttpResponse, Error = ServiceError> {
+) -> HttpResponse {
     info!("routes/user/signin");
 
+    let user = user_signin(
+            body.into_inner(),
+            pool,
+            &query.access_token,
+            auth,
+            notify_service,
+        ).unwrap();
+
+    let mut res = HttpResponse::Ok()
+                .content_type("application/json")
+                .json(user);
+            //set_response_headers(&mut res);
+            //Ok(res)
+    res
+
+    /*
     web::block(move || {
         user_signin(
             body.into_inner(),
@@ -59,16 +75,28 @@ pub fn signin(
             BlockingError::Canceled => Err(ServiceError::InternalServerError),
         },
     })
+    */
 }
 
-pub fn get(
+pub async fn get(
     info: web::Path<String>,
     pool: web::Data<Pool>,
     query: web::Query<QueryParams>,
     auth: web::Data<Auth>,
-) -> impl Future<Item = HttpResponse, Error = ServiceError> {
+) -> HttpResponse {
     info!("routes/user/get");
 
+    let users = get_entry(&info.into_inner(), pool, &query.access_token, auth).unwrap();
+
+    let mut res = HttpResponse::Ok()
+                    .content_type("application/json")
+                    .json(users);
+                //set_response_headers(&mut res);
+                //Ok(res)
+    res
+
+
+    /*
     web::block(move || get_entry(&info.into_inner(), pool, &query.access_token, auth)).then(|res| {
         match res {
             Ok(users) => {
@@ -84,6 +112,7 @@ pub fn get(
             },
         }
     })
+    */
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -111,14 +140,25 @@ impl ResponseContact {
     }
 }
 
-pub fn get_contacts(
+pub async fn get_contacts(
     info: web::Path<String>,
     pool: web::Data<Pool>,
     query: web::Query<QueryParams>,
     auth: web::Data<Auth>,
-) -> impl Future<Item = HttpResponse, Error = ServiceError> {
+) -> HttpResponse {
     info!("routes/user/get_contacts");
 
+    let users = crate::controllers::user::get_contacts(&info.into_inner(), pool, &query.access_token, auth).unwrap();
+
+    let mut res = HttpResponse::Ok()
+                    .content_type("application/json")
+                    .json(users);
+                //set_response_headers(&mut res);
+                //Ok(res)
+    res
+
+
+    /*
     web::block(move || crate::controllers::user::get_contacts(&info.into_inner(), pool, &query.access_token, auth)).then(|res| {
         match res {
             Ok(users) => {
@@ -134,6 +174,7 @@ pub fn get_contacts(
             },
         }
     })
+    */
 }
 
 /*
@@ -172,16 +213,30 @@ pub fn upload_profile_picture(
 }
 */
 
-pub fn update(
+pub async fn update(
     info: web::Path<String>,
     data: web::Json<UpdateUser>,
     pool: web::Data<Pool>,
     query: web::Query<QueryParams>,
     auth: web::Data<Auth>,
     notify_service: web::Data<NotifyService>,
-) -> impl Future<Item = HttpResponse, Error = ServiceError> {
+) -> HttpResponse {
     info!("routes/user/update");
 
+    let user = update_user_with_auth(
+            &info.into_inner(),
+            &data.into_inner(),
+            &pool,
+            &query.access_token,
+            auth,
+            &notify_service,
+        ).unwrap();
+
+    HttpResponse::Ok()
+            .content_type("application/json")
+            .json(&user)
+
+    /*
     web::block(move || {
         update_user_with_auth(
             &info.into_inner(),
@@ -201,6 +256,7 @@ pub fn update(
             BlockingError::Canceled => Err(ServiceError::InternalServerError),
         },
     })
+    */
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -208,15 +264,31 @@ pub struct UpdateTokenPayload {
     pub token: String,
 }
 
-pub fn update_token(
+pub async fn update_token(
     _info: web::Path<String>,
     body: web::Json<UpdateTokenPayload>,
     pool: web::Data<Pool>,
     query: web::Query<QueryParams>,
     auth: web::Data<Auth>,
-) -> impl Future<Item = HttpResponse, Error = ServiceError> {
+) -> HttpResponse {
     info!("routes/push_notification/update_token");
 
+    let user = update_token_handler(
+            _info.into_inner(),
+            body.into_inner(),
+            pool,
+            &query.access_token,
+            auth,
+        ).unwrap();
+
+    let mut res = HttpResponse::Ok()
+                .content_type("application/json")
+                .json(user);
+            //set_response_headers(&mut res);
+            //Ok(res)
+    res
+
+    /*
     web::block(move || {
         update_token_handler(
             _info.into_inner(),
@@ -239,4 +311,5 @@ pub fn update_token(
             BlockingError::Canceled => Err(ServiceError::InternalServerError),
         },
     })
+    */
 }

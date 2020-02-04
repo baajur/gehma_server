@@ -13,12 +13,14 @@ use diesel_migrations::run_pending_migrations;
 use std::path::PathBuf;
 use web_contrib::auth::AuthenticatorWrapper;
 use web_contrib::push_notifications::NotificationWrapper;
+use core::errors::ServiceError;
+use log::error;
 
 pub(crate) mod controllers;
 pub(crate) mod queries;
 pub(crate) mod routes;
 
-mod middleware;
+//mod middleware;
 
 #[cfg(test)]
 mod tests;
@@ -113,7 +115,8 @@ pub(crate) fn main() {
                     .allowed_methods(vec!["GET", "POST", "PUT", "DELETE"])
                     .allowed_headers(vec![header::AUTHORIZATION, header::ACCEPT])
                     .allowed_header(header::CONTENT_TYPE)
-                    .max_age(3600),
+                    .max_age(3600)
+                    .finish(),
             )
             .wrap(actix_middleware::Logger::default())
 
@@ -131,18 +134,18 @@ pub(crate) fn main() {
                     )
                     .service(
                         web::resource("/signin") //must have query string access_token
-                            .route(web::post().to_async(routes::user::signin)),
+                            .route(web::post().to(routes::user::signin)),
                     )
                     .service(
                         web::resource("/user/{uid}/token").route(
-                            web::put().to_async(routes::user::update_token),
+                            web::put().to(routes::user::update_token),
                         ),
                     )
                     .service(
                         web::resource("/user/{uid}/blacklist")
-                            .route(web::get().to_async(routes::blacklist::get_all))
-                            .route(web::post().to_async(routes::blacklist::add))
-                            .route(web::put().to_async(routes::blacklist::delete)), //deletes
+                            .route(web::get().to(routes::blacklist::get_all))
+                            .route(web::post().to(routes::blacklist::add))
+                            .route(web::put().to(routes::blacklist::delete)), //deletes
                     )
                     /*.service(
                         web::resource("/user/{uid}/profile")
@@ -150,24 +153,24 @@ pub(crate) fn main() {
                     )*/
                     .service(
                         web::resource("/user/{uid}")
-                            .route(web::get().to_async(routes::user::get))
-                            .route(web::put().to_async(routes::user::update)), //token update
+                            .route(web::get().to(routes::user::get))
+                            .route(web::put().to(routes::user::update)), //token update
                     )
                     .service(
                         web::resource("/user/{uid}/blacklist_contacts")
-                            .route(web::get().to_async(routes::user::get_contacts))
+                            .route(web::get().to(routes::user::get_contacts))
                     )
                     .service(
                         web::resource("/exists/{uid}/{country_code}")
-                            .route(web::post().to_async(routes::contact_exists::exists)),
+                            .route(web::post().to(routes::contact_exists::exists)),
                     )
                     .service(
                         web::resource("/auth/request_code")
-                            .route(web::post().to_async(routes::auth::request_code)),
+                            .route(web::post().to(routes::auth::request_code)),
                     )
                     .service(
                         web::resource("/auth/check")
-                            .route(web::post().to_async(routes::auth::check)),
+                            .route(web::post().to(routes::auth::check)),
                     )
                     .default_service(web::route().to(|| HttpResponse::NotFound())),
             )
@@ -176,12 +179,16 @@ pub(crate) fn main() {
 
     let listener = server.bind(format!("{}:{}", addr, port));
 
-    listener.expect("Cannot bind").run().unwrap()
+    listener.expect("Cannot bind").run();
 }
 
-fn load_file(req: actix_web::HttpRequest) -> actix_web::Result<NamedFile> {
-    let path: PathBuf = req.match_info().query("filename").parse().unwrap();
+async fn load_file(req: actix_web::HttpRequest) -> Result<NamedFile, ServiceError> {
+    let path: PathBuf = req.match_info().query("filename").parse().map_err(|err| ServiceError::BadRequest("filename missing".to_string()))?;
     let mut dir = PathBuf::from("static");
     dir.push(path);
-    Ok(NamedFile::open(dir)?)
+    Ok(NamedFile::open(dir).map_err(|err| {
+        error!("load_file {:?}", err);
+        ServiceError::InternalServerError
+    })?
+    )
 }

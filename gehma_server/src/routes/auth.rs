@@ -24,14 +24,28 @@ pub struct RequestCheckCode {
     pub client_version: String,
 }
 
-pub fn request_code(
+pub async fn request_code(
     _info: web::Path<()>,
     body: web::Json<RequestCode>,
     pool: web::Data<Pool>,
     auth: web::Data<Auth>,
-) -> impl Future<Item = HttpResponse, Error = ServiceError> {
+) -> HttpResponse {
     info!("controllers/auth/request_code");
 
+    let res = request(
+            body.into_inner(),
+            pool,
+            auth,
+        ).unwrap();
+
+    let mut res = HttpResponse::Ok()
+                .content_type("application/json")
+                .json(res);
+            //set_response_headers(&mut res);
+            //Ok(res)
+    res
+
+    /*
     web::block(move || {
         request(
             body.into_inner(),
@@ -52,16 +66,32 @@ pub fn request_code(
             BlockingError::Canceled => Err(ServiceError::InternalServerError),
         },
     })
+    */
 }
 
-pub fn check(
+pub async fn check(
     _info: web::Path<()>,
     body: web::Json<RequestCheckCode>,
     pool: web::Data<Pool>,
     auth: web::Data<Auth>,
-) -> impl Future<Item = HttpResponse, Error = ServiceError> {
+) -> HttpResponse {
     info!("controllers/auth/check");
 
+    let res = check_code(
+            body.into_inner(),
+            pool,
+            auth
+        ).unwrap();
+
+    let mut res = HttpResponse::Ok()
+                .content_type("application/json")
+                .json(res);
+            //set_response_headers(&mut res);
+            //Ok(res)
+    res
+
+
+    /*
     web::block(move || {
         check_code(
             body.into_inner(),
@@ -82,4 +112,5 @@ pub fn check(
             BlockingError::Canceled => Err(ServiceError::InternalServerError),
         },
     })
+    */
 }

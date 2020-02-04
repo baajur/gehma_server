@@ -30,15 +30,34 @@ pub struct PayloadUser {
     pub hash_tele_num: HashedTeleNum,
 }
 
-pub fn exists(
+pub async fn exists(
     info: web::Path<(String, String)>,
     mut payload: web::Json<Payload>,
     pool: web::Data<Pool>,
     query: web::Query<QueryParams>,
     auth: web::Data<Auth>,
-) -> impl Future<Item = HttpResponse, Error = ServiceError> {
+) -> HttpResponse {
     info!("controllers/contact_exists/exists");
 
+    let info = info.into_inner();
+        let users = get_entry(
+            &info.0,
+            &info.1,
+            &mut payload.numbers,
+            pool,
+            &query.access_token,
+            auth,
+        ).unwrap();
+
+    let mut res = HttpResponse::Ok()
+                .content_type("application/json")
+                .json(users);
+            //set_response_headers(&mut res);
+            //Ok(res)
+    res
+
+
+    /*
     web::block(move || {
         let info = info.into_inner();
         get_entry(
@@ -63,4 +82,5 @@ pub fn exists(
             BlockingError::Canceled => Err(ServiceError::InternalServerError),
         },
     })
+    */
 }

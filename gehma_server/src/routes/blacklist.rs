@@ -13,15 +13,27 @@ pub struct PostData {
     pub country_code: String,
 }
 
-pub fn get_all(
+pub async fn get_all(
     info: web::Path<String>,
     pool: web::Data<Pool>,
     query: web::Query<QueryParams>,
     auth: web::Data<Auth>,
-) -> impl Future<Item = HttpResponse, Error = ServiceError> {
+) -> HttpResponse {
     info!("controllers/blacklist/get_all");
 
     let info = info.into_inner();
+
+
+    let users = get_entry(&info, pool, &query.access_token, auth).unwrap();
+    let mut res = HttpResponse::Ok()
+                    .content_type("application/json")
+                    .json(users);
+        
+    //set_response_headers(&mut res);
+
+    res
+
+    /*
     web::block(move || get_entry(&info, pool, &query.access_token, auth)).then(
         |res| match res {
             Ok(users) => {
@@ -38,17 +50,33 @@ pub fn get_all(
             },
         },
     )
+    */
 }
 
-pub fn add(
+pub async fn add(
     info: web::Path<String>,
     data: web::Json<PostData>,
     query: web::Query<QueryParams>,
     pool: web::Data<Pool>,
     auth: web::Data<Auth>,
-) -> impl Future<Item = HttpResponse, Error = ServiceError> {
+) -> HttpResponse {
     info!("controllers/blacklist/add");
 
+    create_entry(
+            &info.into_inner(),
+            &data.into_inner(),
+            pool,
+            &query.access_token,
+            auth,
+        ).unwrap();
+
+    let mut res = HttpResponse::Ok().content_type("application/json").finish();
+            //set_response_headers(&mut res);
+            //Ok(res)
+    res
+
+
+    /*
     web::block(move || {
         create_entry(
             &info.into_inner(),
@@ -69,17 +97,33 @@ pub fn add(
             BlockingError::Canceled => Err(ServiceError::InternalServerError),
         },
     })
+    */
 }
 
-pub fn delete(
+pub async fn delete(
     info: web::Path<String>,
     data: web::Json<PostData>,
     pool: web::Data<Pool>,
     query: web::Query<QueryParams>,
     auth: web::Data<Auth>,
-) -> impl Future<Item = HttpResponse, Error = ServiceError> {
+) -> HttpResponse {
     info!("controllers/blacklist/delete");
 
+    delete_entry(
+            &info.into_inner(),
+            &data.into_inner(),
+            pool,
+            &query.access_token,
+            auth,
+        ).unwrap();
+
+    let mut res = HttpResponse::Ok().content_type("application/json").finish();
+            //set_response_headers(&mut res);
+            //Ok(res)
+    res
+
+
+    /*
     web::block(move || {
         delete_entry(
             &info.into_inner(),
@@ -100,4 +144,5 @@ pub fn delete(
             BlockingError::Canceled => Err(ServiceError::InternalServerError),
         },
     })
+    */
 }
