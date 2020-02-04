@@ -3,7 +3,7 @@ use crate::push_notifications::*;
 use core::errors::ServiceError;
 
 use futures::Future;
-use log::{error, info};
+use log::{error};
 use serde::Deserialize;
 use serde_json::json;
 use tokio;

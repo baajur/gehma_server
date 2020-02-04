@@ -1,13 +1,13 @@
 use crate::Pool;
-use actix_multipart::Multipart;
+//use actix_multipart::Multipart;
 use actix_web::{error::BlockingError, web, HttpResponse};
 use core::models::DowngradedUser;
 use core::errors::ServiceError;
-use futures::stream::Stream;
+//use futures::stream::Stream;
 
 use web_contrib::utils::{QueryParams, set_response_headers};
 use futures::Future;
-use log::{error, info};
+use log::{info};
 
 use web_contrib::auth::Auth;
 use web_contrib::push_notifications::NotifyService;

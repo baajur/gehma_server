@@ -13,18 +13,17 @@ use crate::Pool;
 use log::info;
 
 pub const MAX_ALLOWED_CONTACTS: usize = 10000;
-pub const MIN_TELE_NUM_LENGTH: usize = 3;
+//pub const MIN_TELE_NUM_LENGTH: usize = 3;
 
 pub(crate) fn get_query(
     uid: Uuid,
-    user: &User,
+    _user: &User,
     phone_numbers: &mut Vec<PayloadUser>,
     _country_code: &str,
     pool: web::Data<Pool>,
 ) -> Result<Vec<ResponseUser>, ServiceError> {
     info!("queries/push_notification/get_query");
     use core::models::Contact;
-    use core::models::PhoneNumber;
     use core::schema::blacklist::dsl::{blacklist, hash_blocked, hash_blocker};
     use core::schema::users::dsl::{changed_at, id, hash_tele_num, users};
 

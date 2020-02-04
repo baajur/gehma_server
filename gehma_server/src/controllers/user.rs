@@ -1,18 +1,18 @@
 use crate::Pool;
-use actix_multipart::{Field, MultipartError};
-use actix_web::{error::BlockingError, error::PayloadError, web};
+//use actix_multipart::{Field, MultipartError};
+//use actix_web::{error::BlockingError, error::PayloadError, web};
+use actix_web::{web};
 use core::errors::ServiceError;
 use core::models::{PhoneNumber, User};
-use diesel::{prelude::*, PgConnection};
-use futures::future::{err, Either};
-use futures::stream::Stream;
-use futures::Future;
+//use futures::future::{err, Either};
+//use futures::stream::Stream;
+//use futures::Future;
 use uuid::Uuid;
 use web_contrib::auth::Auth;
 use web_contrib::push_notifications::NotifyService;
 
 use log::{error, info};
-use std::io::Write;
+//use std::io::Write;
 
 use crate::routes::user::{PostUser, ResponseContact, UpdateTokenPayload, UpdateUser};
 
@@ -268,6 +268,7 @@ pub(crate) fn save_file(
 }
 */
 
+/*
 ///The user can upload multiple types of images. When he uploads an image with
 ///a different type, it may happen that the old won't be overwritten.
 fn remove_old_profile_picture(myid: Uuid, ending: String, pool: web::Data<Pool>) {
@@ -356,3 +357,4 @@ mod test {
         assert_eq!("jpg".to_string(), result.unwrap());
     }
 }
+*/
