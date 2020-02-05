@@ -25,7 +25,7 @@ pub(crate) mod routes;
 #[cfg(test)]
 mod tests;
 
-pub const ALLOWED_CLIENT_VERSIONS: &[&'static str] = &["0.5.3"];
+pub const ALLOWED_CLIENT_VERSIONS: &[&'static str] = &["0.5.4"];
 pub const LIMIT_PUSH_NOTIFICATION_CONTACTS: usize = 128;
 pub const ALLOWED_PROFILE_PICTURE_SIZE: usize = 10_000; //in Kilobytes
 
@@ -59,6 +59,18 @@ fn set_testing_auth() -> AuthenticatorWrapper {
     };
 
     AuthenticatorWrapper::new(Box::new(TestingAuthentificator { config: config }))
+}
+
+#[allow(dead_code)]
+fn set_testing_auth_false() -> AuthenticatorWrapper {
+    use web_contrib::auth::testing::*;
+
+    let config = TestingAuthConfiguration {
+        id: "test".to_string(),
+        auth_token: "test".to_string(),
+    };
+
+    AuthenticatorWrapper::new(Box::new(TestingAuthentificatorAlwaysFalse { config: config }))
 }
 
 #[allow(dead_code)]
