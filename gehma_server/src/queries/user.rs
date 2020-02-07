@@ -56,12 +56,12 @@ pub(crate) fn get_contacts(
         .inner_join(users.on(hash_tele_num.eq(target_hash_tele_num)))
         .left_join(
             blacklist.on(
-                /*target_hash_tele_num
+                target_hash_tele_num
                 .eq(hash_blocked)
-                .and(hash_blocker.eq(&user.hash_tele_num))*/
-                hash_tele_num
+                .and(hash_blocker.eq(&user.hash_tele_num)))
+                /*hash_tele_num
                     .eq(hash_blocker)
-                    .and(hash_blocked.eq(&user.hash_tele_num))),
+                    .and(hash_blocked.eq(&user.hash_tele_num)))*/,
         )
         .select((
             name,
