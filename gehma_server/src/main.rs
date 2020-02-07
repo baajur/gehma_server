@@ -115,17 +115,11 @@ pub(crate) async fn main() -> std::io::Result<()> {
     let connection: &PgConnection = &pool.get().unwrap();
     run_pending_migrations(connection).expect("cannot run pending migrations");
 
-    let enable_verification = std::env::var("ENABLE_VERIFICATION").unwrap_or_else(|_| 1);
-
-    let verification = match enable_verification {
-        0 => set_testing_auth(),
-        _ => get_auth(),
-    };
-
     let server = HttpServer::new(move || {
         App::new()
             .data(pool.clone())
-            .data(verification)
+            .data(get_auth())
+            //.data(set_testing_auth())
             .data(get_firebase_notification_service())
             .wrap(
                 Cors::new()
@@ -176,7 +170,7 @@ pub(crate) async fn main() -> std::io::Result<()> {
                             .route(web::put().to(routes::user::update)), //token update
                     )
                     .service(
-                        web::resource("/user/{uid}/blacklist_contacts") // This returns the blacklisted users from a {uid} perspective
+                        web::resource("/user/{uid}/blacklist_contacts")
                             .route(web::get().to(routes::user::get_contacts))
                     )
                     .service(
