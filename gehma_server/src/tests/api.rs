@@ -37,20 +37,20 @@ fn hash(value: impl Into<String>) -> String {
     HEXUPPER.encode(digest::digest(&digest::SHA256, value.into().as_bytes()).as_ref())
 }
 
-fn create_user(tele_num: &str) -> User {
+async fn create_user(tele_num: &str) -> User {
     let mut app = test::init_service(
         App::new()
             .data(init_pool())
             .data(set_testing_auth())
             .route(
                 "/api/auth/request_code",
-                web::post().to_async(crate::routes::auth::request_code),
+                web::post().to(crate::routes::auth::request_code),
             )
             .route(
                 "/api/auth/check",
-                web::post().to_async(crate::routes::auth::check),
+                web::post().to(crate::routes::auth::check),
             ),
-    );
+    ).await;
 
     let r1 = test::TestRequest::post()
         .uri("/api/auth/request_code")
@@ -61,7 +61,7 @@ fn create_user(tele_num: &str) -> User {
         }))
         .to_request();
 
-    let rr1 = test::block_on(test::run_on(|| app.call(r1))).unwrap();
+    let rr1 = test::call_service(&mut app, r1).await;
     assert!(rr1.status().is_success());
 
     let req = test::TestRequest::post()
@@ -74,7 +74,7 @@ fn create_user(tele_num: &str) -> User {
         }))
         .to_request();
 
-    let user: User = test::read_response_json(&mut app, req);
+    let user: User = test::read_response_json(&mut app, req).await;
 
     user
 }
@@ -104,21 +104,21 @@ fn init_pool() -> Pool {
     pool
 }
 
-#[test]
-fn test_create_user() {
+#[actix_rt::test]
+async fn test_create_user() {
     let mut app = test::init_service(
         App::new()
             .data(init_pool())
             .data(set_testing_auth())
             .route(
                 "/api/auth/request_code",
-                web::post().to_async(crate::routes::auth::request_code),
+                web::post().to(crate::routes::auth::request_code),
             )
             .route(
                 "/api/auth/check",
-                web::post().to_async(crate::routes::auth::check),
+                web::post().to(crate::routes::auth::check),
             ),
-    );
+    ).await;
 
     let tele_num = "+4366412345678";
 
@@ -141,22 +141,22 @@ fn test_create_user() {
         }))
         .to_request();
 
-    let user: User = test::read_response_json(&mut app, req);
+    let user: User = test::read_response_json(&mut app, req).await;
 
     assert_eq!(user.tele_num, tele_num.to_string());
 
     cleanup(&user.tele_num, &init_pool().get().unwrap());
 }
 
-#[test]
-fn test_sign_in() {
-    let user = create_user("+4366412345678");
+#[actix_rt::test]
+async fn test_sign_in() {
+    let user = create_user("+4366412345678").await;
     assert_eq!(user.tele_num, "+4366412345678".to_string());
     cleanup(&user.tele_num, &init_pool().get().unwrap());
 }
 
-#[test]
-fn test_get_user() {
+#[actix_rt::test]
+async fn test_get_user() {
     let mut app = test::init_service(
         App::new()
             .data(init_pool())
@@ -164,11 +164,11 @@ fn test_get_user() {
             .data(set_notification_service())
             .route(
                 "/api/user/{uid}",
-                web::get().to_async(crate::routes::user::get),
+                web::get().to(crate::routes::user::get),
             ),
-    );
+    ).await;
 
-    let user = create_user("+4366412345678");
+    let user = create_user("+4366412345678").await;
 
     let req = test::TestRequest::get()
         .uri(&format!(
@@ -183,7 +183,7 @@ fn test_get_user() {
     println!("{:?}", resp.response().error().unwrap());
     */
 
-    let user: User = test::read_response_json(&mut app, req);
+    let user: User = test::read_response_json(&mut app, req).await;
 
     assert_eq!(user.tele_num, "+4366412345678".to_string());
     assert_eq!(user.country_code, "AT".to_string());
@@ -197,9 +197,9 @@ fn test_get_user() {
     cleanup(&user.tele_num, &init_pool().get().unwrap());
 }
 
-#[test]
+#[actix_rt::test]
 /// This updates the description of an user.
-fn test_update_user() {
+async fn test_update_user() {
     let mut app = test::init_service(
         App::new()
             .data(init_pool())
@@ -207,11 +207,11 @@ fn test_update_user() {
             .data(set_notification_service())
             .route(
                 "/api/user/{uid}",
-                web::put().to_async(crate::routes::user::update),
+                web::put().to(crate::routes::user::update),
             ),
-    );
+    ).await;
 
-    let user = create_user("+4366412345678");
+    let user = create_user("+4366412345678").await;
 
     let req = test::TestRequest::put()
         .uri(&format!(
@@ -231,7 +231,7 @@ fn test_update_user() {
     println!("{:?}", resp.response().error().unwrap());
     */
 
-    let user: User = test::read_response_json(&mut app, req);
+    let user: User = test::read_response_json(&mut app, req).await;
 
     assert_eq!(user.tele_num, "+4366412345678".to_string());
     assert_eq!(user.country_code, "AT".to_string());
@@ -243,8 +243,8 @@ fn test_update_user() {
     cleanup(&user.tele_num, &init_pool().get().unwrap());
 }
 
-#[test]
-fn test_update_token_user() {
+#[actix_rt::test]
+async fn test_update_token_user() {
     let mut app = test::init_service(
         App::new()
             .data(init_pool())
@@ -252,11 +252,11 @@ fn test_update_token_user() {
             .data(set_notification_service())
             .route(
                 "/api/user/{uid}/token",
-                web::put().to_async(crate::routes::user::update_token),
+                web::put().to(crate::routes::user::update_token),
             ),
-    );
+    ).await;
 
-    let user = create_user("+4366412345678");
+    let user = create_user("+4366412345678").await;
 
     let req = test::TestRequest::put()
         .uri(&format!(
@@ -268,14 +268,14 @@ fn test_update_token_user() {
         })
         .to_request();
 
-    let resp = test::block_on(test::run_on(|| app.call(req))).unwrap();
+    let resp = test::call_service(&mut app, req).await;
     assert!(resp.status().is_success());
 
     cleanup(&user.tele_num, &init_pool().get().unwrap());
 }
 
-#[test]
-fn test_create_blacklist() {
+#[actix_rt::test]
+async fn test_create_blacklist() {
     let mut app = test::init_service(
         App::new()
             .data(init_pool())
@@ -283,12 +283,12 @@ fn test_create_blacklist() {
             .data(set_notification_service())
             .route(
                 "/api/user/{uid}/blacklist",
-                web::post().to_async(crate::routes::blacklist::add),
+                web::post().to(crate::routes::blacklist::add),
             ),
-    );
+    ).await;
 
-    let user = create_user("+4366412345678");
-    let user2 = create_user("+4365012345678");
+    let user = create_user("+4366412345678").await;
+    let user2 = create_user("+4365012345678").await;
 
     let req = test::TestRequest::post()
         .uri(&format!(
@@ -301,15 +301,15 @@ fn test_create_blacklist() {
         })
         .to_request();
 
-    let resp = test::block_on(test::run_on(|| app.call(req))).unwrap();
+    let resp = test::call_service(&mut app, req).await;
     assert!(resp.status().is_success());
 
     cleanup(&user.tele_num, &init_pool().get().unwrap());
     cleanup(&user2.tele_num, &init_pool().get().unwrap());
 }
 
-#[test]
-fn test_get_all_blacklist() {
+#[actix_rt::test]
+async fn test_get_all_blacklist() {
     let mut app = test::init_service(
         App::new()
             .data(init_pool())
@@ -317,16 +317,16 @@ fn test_get_all_blacklist() {
             .data(set_notification_service())
             .route(
                 "/api/user/{uid}/blacklist",
-                web::post().to_async(crate::routes::blacklist::add),
+                web::post().to(crate::routes::blacklist::add),
             )
             .route(
                 "/api/user/{uid}/blacklist",
-                web::get().to_async(crate::routes::blacklist::get_all),
+                web::get().to(crate::routes::blacklist::get_all),
             ),
-    );
+    ).await;
 
-    let user = create_user("+4366412345678");
-    let user2 = create_user("+4365012345678");
+    let user = create_user("+4366412345678").await;
+    let user2 = create_user("+4365012345678").await;
 
     let req = test::TestRequest::post()
         .uri(&format!(
@@ -339,7 +339,7 @@ fn test_get_all_blacklist() {
         })
         .to_request();
 
-    let resp = test::block_on(test::run_on(|| app.call(req))).unwrap();
+    let resp = test::call_service(&mut app, req).await;
     assert!(resp.status().is_success());
 
     let req = test::TestRequest::get()
@@ -349,7 +349,7 @@ fn test_get_all_blacklist() {
         ))
         .to_request();
 
-    let blacklists: Vec<Blacklist> = test::read_response_json(&mut app, req);
+    let blacklists: Vec<Blacklist> = test::read_response_json(&mut app, req).await;
 
     assert_eq!(blacklists.len(), 1);
     assert_eq!(blacklists.get(0).unwrap().hash_blocker, hash("+4366412345678"));
@@ -359,8 +359,8 @@ fn test_get_all_blacklist() {
     cleanup(&user2.tele_num, &init_pool().get().unwrap());
 }
 
-#[test]
-fn test_remove_blacklist() {
+#[actix_rt::test]
+async fn test_remove_blacklist() {
     let mut app = test::init_service(
         App::new()
             .data(init_pool())
@@ -368,16 +368,16 @@ fn test_remove_blacklist() {
             .data(set_notification_service())
             .route(
                 "/api/user/{uid}/blacklist",
-                web::post().to_async(crate::routes::blacklist::add),
+                web::post().to(crate::routes::blacklist::add),
             )
             .route(
                 "/api/user/{uid}/blacklist",
-                web::put().to_async(crate::routes::blacklist::delete),
+                web::put().to(crate::routes::blacklist::delete),
             ),
-    );
+    ).await;
 
-    let user = create_user("+4366412345678");
-    let user2 = create_user("+4365012345678");
+    let user = create_user("+4366412345678").await;
+    let user2 = create_user("+4365012345678").await;
 
     let req = test::TestRequest::post()
         .uri(&format!(
@@ -390,7 +390,7 @@ fn test_remove_blacklist() {
         })
         .to_request();
 
-    let resp = test::block_on(test::run_on(|| app.call(req))).unwrap();
+    let resp = test::call_service(&mut app, req).await;
     assert!(resp.status().is_success());
 
     let req = test::TestRequest::put()
@@ -404,15 +404,15 @@ fn test_remove_blacklist() {
         })
         .to_request();
 
-    let resp = test::block_on(test::run_on(|| app.call(req))).unwrap();
+    let resp = test::call_service(&mut app, req).await;
     assert!(resp.status().is_success());
 
     cleanup(&user.tele_num, &init_pool().get().unwrap());
     cleanup(&user2.tele_num, &init_pool().get().unwrap());
 }
 
-#[test]
-fn test_contacts() {
+#[actix_rt::test]
+async fn test_contacts() {
     let mut app = test::init_service(
         App::new()
             .data(init_pool())
@@ -420,12 +420,12 @@ fn test_contacts() {
             .data(set_notification_service())
             .route(
                 "/api/exists/{uid}/{country_code}",
-                web::post().to_async(crate::routes::contact_exists::exists),
+                web::post().to(crate::routes::contact_exists::exists),
             ),
-    );
+    ).await;
 
-    let user = create_user("+4366412345678");
-    let user2 = create_user("+4365012345678");
+    let user = create_user("+4366412345678").await;
+    let user2 = create_user("+4365012345678").await;
 
     let req = test::TestRequest::post()
         .uri(&format!(
@@ -440,7 +440,7 @@ fn test_contacts() {
         })
         .to_request();
 
-    let users: Vec<ResponseUser> = test::read_response_json(&mut app, req);
+    let users: Vec<ResponseUser> = test::read_response_json(&mut app, req).await;
 
     assert_eq!(users.len(), 1);
     assert_eq!(users.get(0).unwrap().hash_tele_num, hash("+4365012345678"));
@@ -458,8 +458,8 @@ fn test_contacts() {
     cleanup(&user2.tele_num, &init_pool().get().unwrap());
 }
 
-#[test]
-fn test_contacts2() {
+#[actix_rt::test]
+async fn test_contacts2() {
     let mut app = test::init_service(
         App::new()
             .data(init_pool())
@@ -467,12 +467,12 @@ fn test_contacts2() {
             .data(set_notification_service())
             .route(
                 "/api/exists/{uid}/{country_code}",
-                web::post().to_async(crate::routes::contact_exists::exists),
+                web::post().to(crate::routes::contact_exists::exists),
             ),
-    );
+    ).await;
 
-    let user = create_user("+4366412345678");
-    let user2 = create_user("+4365012345678");
+    let user = create_user("+4366412345678").await;
+    let user2 = create_user("+4365012345678").await;
 
     let req = test::TestRequest::post()
         .uri(&format!(
@@ -493,7 +493,7 @@ fn test_contacts2() {
         })
         .to_request();
 
-    let users: Vec<ResponseUser> = test::read_response_json(&mut app, req);
+    let users: Vec<ResponseUser> = test::read_response_json(&mut app, req).await;
 
     assert_eq!(users.len(), 2);
     assert_eq!(users.get(0).unwrap().hash_tele_num, hash("+4365012345678"));
@@ -522,8 +522,8 @@ fn test_contacts2() {
     cleanup(&user2.tele_num, &init_pool().get().unwrap());
 }
 
-#[test]
-fn test_empty_contacts() {
+#[actix_rt::test]
+async fn test_empty_contacts() {
     let mut app = test::init_service(
         App::new()
             .data(init_pool())
@@ -531,11 +531,11 @@ fn test_empty_contacts() {
             .data(set_notification_service())
             .route(
                 "/api/exists/{uid}/{country_code}",
-                web::post().to_async(crate::routes::contact_exists::exists),
+                web::post().to(crate::routes::contact_exists::exists),
             ),
-    );
+    ).await;
 
-    let user = create_user("+4366412345678");
+    let user = create_user("+4366412345678").await;
 
     let req = test::TestRequest::post()
         .uri(&format!(
@@ -547,14 +547,14 @@ fn test_empty_contacts() {
         })
         .to_request();
 
-    let users: Vec<ResponseUser> = test::read_response_json(&mut app, req);
+    let users: Vec<ResponseUser> = test::read_response_json(&mut app, req).await;
 
     assert_eq!(users.len(), 0);
     cleanup(&user.tele_num, &init_pool().get().unwrap());
 }
 
-#[test]
-fn test_blocking() {
+#[actix_rt::test]
+async fn test_blocking() {
     let mut app = test::init_service(
         App::new()
             .data(init_pool())
@@ -562,27 +562,27 @@ fn test_blocking() {
             .data(set_notification_service())
             .route(
                 "/api/user/{uid}/contacts",
-                web::get().to_async(crate::routes::user::get_contacts),
+                web::get().to(crate::routes::user::get_contacts),
             )
             .route(
                 "/api/exists/{uid}/{country_code}",
-                web::post().to_async(crate::routes::contact_exists::exists),
+                web::post().to(crate::routes::contact_exists::exists),
             )
             .route(
                 "/api/user/{uid}/blacklist",
-                web::post().to_async(crate::routes::blacklist::add),
+                web::post().to(crate::routes::blacklist::add),
             )
             .route(
                 "/api/user/{uid}/blacklist",
-                web::put().to_async(crate::routes::blacklist::delete), //delete
+                web::put().to(crate::routes::blacklist::delete), //delete
             )
 ,
-    );
+    ).await;
 
-    let user = create_user("+4366412345678");
-    let user2 = create_user("+4365012345678");
-    let user3 = create_user("+43699012345678");
-    
+    let user = create_user("+4366412345678").await;
+    let user2 = create_user("+4365012345678").await;
+    let user3 = create_user("+43699012345678").await;
+
     let req = test::TestRequest::post()
         .uri(&format!(
             "/api/exists/{}/{}?access_token={}",
@@ -610,7 +610,7 @@ fn test_blocking() {
     //let users: Vec<ResponseUser> = test::read_response_json(&mut app, req);
     //assert_eq!(users.len(), 3);
 
-    let resp = test::block_on(test::run_on(|| app.call(req))).unwrap();
+    let resp = test::call_service(&mut app, req).await;
     assert!(resp.status().is_success());
 
     //println!("{:?}", serde_json::to_string_pretty(resp.response().body()));
@@ -624,15 +624,10 @@ fn test_blocking() {
             user.id, user.access_token
         )).to_request();
 
-    let users: Vec<crate::routes::user::ResponseContact> = test::read_response_json(&mut app, req);
+    let users: Vec<crate::routes::user::ResponseContact> = test::read_response_json(&mut app, req).await;
     println!("{:#?}", users);
     assert_eq!(users.len(), 3);
     assert!(!users.iter().fold(false, |acc, w| acc | w.blocked));
-
-//et mut resp = test::block_on(test::run_on(|| app.call(req))).unwrap();
-//rintln!("{:?}", resp);
-    //println!("{:?}", resp.response().error().unwrap());
-
 
     let req = test::TestRequest::post()
         .uri(&format!(
@@ -645,7 +640,7 @@ fn test_blocking() {
         })
         .to_request();
 
-    let resp = test::block_on(test::run_on(|| app.call(req))).unwrap();
+    let resp = test::call_service(&mut app, req).await;
     assert!(resp.status().is_success());
 
     //Get contacts again
@@ -656,7 +651,7 @@ fn test_blocking() {
         )).to_request();
 
     println!("getContacts 1");
-    let users: Vec<crate::routes::user::ResponseContact> = test::read_response_json(&mut app, req);
+    let users: Vec<crate::routes::user::ResponseContact> = test::read_response_json(&mut app, req).await;
     assert_eq!(users.len(), 3);
     println!("{:#?}", users);
 
@@ -684,7 +679,7 @@ fn test_blocking() {
         })
         .to_request();
 
-    let resp = test::block_on(test::run_on(|| app.call(req))).unwrap();
+    let resp = test::call_service(&mut app, req).await;
     assert!(resp.status().is_success());
 
     //Get contacts again again
@@ -695,7 +690,7 @@ fn test_blocking() {
         )).to_request();
 
     println!("getContacts 1");
-    let users: Vec<crate::routes::user::ResponseContact> = test::read_response_json(&mut app, req);
+    let users: Vec<crate::routes::user::ResponseContact> = test::read_response_json(&mut app, req).await;
     assert_eq!(users.len(), 3);
     println!("{:#?}", users);
 
