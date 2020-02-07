@@ -11,7 +11,6 @@ use core::models::*;
 use diesel::pg::PgConnection;
 use std::env;
 
-use actix_service::Service;
 use diesel_migrations::run_pending_migrations;
 use serde_json::json;
 
@@ -296,7 +295,7 @@ async fn test_create_blacklist() {
             user.id, user.access_token
         ))
         .set_json(&crate::routes::blacklist::PostData {
-            blocked: "+4365012345678".to_string(),
+            blocked: hash("+4365012345678"),
             country_code: "AT".to_string(),
         })
         .to_request();
@@ -334,7 +333,7 @@ async fn test_get_all_blacklist() {
             user.id, user.access_token
         ))
         .set_json(&crate::routes::blacklist::PostData {
-            blocked: "+4365012345678".to_string(),
+            blocked: hash("+4365012345678"),
             country_code: "AT".to_string(),
         })
         .to_request();
@@ -385,7 +384,7 @@ async fn test_remove_blacklist() {
             user.id, user.access_token
         ))
         .set_json(&crate::routes::blacklist::PostData {
-            blocked: "+4365012345678".to_string(),
+            blocked: hash("+4365012345678"),
             country_code: "AT".to_string(),
         })
         .to_request();
@@ -399,7 +398,7 @@ async fn test_remove_blacklist() {
             user.id, user.access_token
         ))
         .set_json(&crate::routes::blacklist::PostData {
-            blocked: "+4365012345678".to_string(),
+            blocked: hash("+4365012345678"),
             country_code: "AT".to_string(),
         })
         .to_request();
@@ -561,7 +560,7 @@ async fn test_blocking() {
             .data(set_testing_auth())
             .data(set_notification_service())
             .route(
-                "/api/user/{uid}/contacts",
+                "/api/user/{uid}/blacklist_contacts",
                 web::get().to(crate::routes::user::get_contacts),
             )
             .route(
@@ -620,7 +619,7 @@ async fn test_blocking() {
     //Get contacts
     let req = test::TestRequest::get()
         .uri(&format!(
-            "/api/user/{}/contacts?access_token={}",
+            "/api/user/{}/blacklist_contacts?access_token={}",
             user.id, user.access_token
         )).to_request();
 
@@ -635,7 +634,7 @@ async fn test_blocking() {
             user.id, user.access_token
         ))
         .set_json(&crate::routes::blacklist::PostData {
-            blocked: "+4365012345678".to_string(),
+            blocked: hash("+4365012345678"),
             country_code: "AT".to_string(),
         })
         .to_request();
@@ -646,26 +645,21 @@ async fn test_blocking() {
     //Get contacts again
     let req = test::TestRequest::get()
         .uri(&format!(
-            "/api/user/{}/contacts?access_token={}",
+            "/api/user/{}/blacklist_contacts?access_token={}",
             user.id, user.access_token
         )).to_request();
 
-    println!("getContacts 1");
     let users: Vec<crate::routes::user::ResponseContact> = test::read_response_json(&mut app, req).await;
     assert_eq!(users.len(), 3);
-    println!("{:#?}", users);
 
-    let res_user = users.get(0).unwrap();
-    assert_eq!(res_user.user.tele_num, "+4365012345678");
-    assert_eq!(res_user.blocked, true);
+    let res_user = users.iter().filter(|w| w.user.tele_num == "+4365012345678" && w.blocked == true).collect::<Vec<_>>();
+    assert_eq!(res_user.len(), 1);
 
-    let res_user = users.get(1).unwrap();
-    assert_eq!(res_user.user.tele_num, "+4366412345678");
-    assert_eq!(res_user.blocked, false);
+    let res_user = users.iter().filter(|w| w.user.tele_num == "+4366412345678" && w.blocked == false).collect::<Vec<_>>();
+    assert_eq!(res_user.len(), 1);
 
-    let res_user = users.get(2).unwrap();
-    assert_eq!(res_user.user.tele_num, "+43699012345678");
-    assert_eq!(res_user.blocked, false);
+    let res_user = users.iter().filter(|w| w.user.tele_num == "+43699012345678" && w.blocked == false).collect::<Vec<_>>();
+    assert_eq!(res_user.len(), 1);
 
     //Delete
     let req = test::TestRequest::put()
@@ -674,7 +668,7 @@ async fn test_blocking() {
             user.id, user.access_token
         ))
         .set_json(&crate::routes::blacklist::PostData {
-            blocked: "+4365012345678".to_string(),
+            blocked: hash("+4365012345678"),
             country_code: "AT".to_string(),
         })
         .to_request();
@@ -685,15 +679,25 @@ async fn test_blocking() {
     //Get contacts again again
     let req = test::TestRequest::get()
         .uri(&format!(
-            "/api/user/{}/contacts?access_token={}",
+            "/api/user/{}/blacklist_contacts?access_token={}",
             user.id, user.access_token
         )).to_request();
 
-    println!("getContacts 1");
     let users: Vec<crate::routes::user::ResponseContact> = test::read_response_json(&mut app, req).await;
-    assert_eq!(users.len(), 3);
-    println!("{:#?}", users);
 
+    assert_eq!(users.len(), 3);
+
+    let res_user = users.iter().filter(|w| w.user.tele_num == "+4365012345678" && w.blocked == false).collect::<Vec<_>>();
+    assert_eq!(res_user.len(), 1);
+
+    let res_user = users.iter().filter(|w| w.user.tele_num == "+4366412345678" && w.blocked == false).collect::<Vec<_>>();
+    assert_eq!(res_user.len(), 1);
+
+    let res_user = users.iter().filter(|w| w.user.tele_num == "+43699012345678" && w.blocked == false).collect::<Vec<_>>();
+    assert_eq!(res_user.len(), 1);
+
+
+    /*
     let res_user = users.get(0).unwrap();
     assert_eq!(res_user.user.tele_num, "+4365012345678");
     assert_eq!(res_user.blocked, false);
@@ -705,6 +709,7 @@ async fn test_blocking() {
     let res_user = users.get(2).unwrap();
     assert_eq!(res_user.user.tele_num, "+43699012345678");
     assert_eq!(res_user.blocked, false);
+    */
 
 
 
