@@ -10,6 +10,9 @@ use crate::routes::user::{ResponseContact, UpdateUser};
 
 use log::{error, info};
 
+const INCREASE_XP : i32 = 100;
+
+
 const PROFILE_WIDTH: u32 = 500;
 const PROFILE_HEIGHT: u32 = 500;
 
@@ -195,7 +198,7 @@ pub(crate) fn update_user_query(
     notify_service: &web::Data<NotifyService>,
 ) -> Result<User, ::core::errors::ServiceError> {
     info!("queries/user/update_user_query");
-    use core::schema::users::dsl::{changed_at, client_version, description, id, led, users};
+    use core::schema::users::dsl::{changed_at, client_version, description, id, led, users, xp};
 
     let conn: &PgConnection = &pool.get().unwrap();
 
@@ -203,12 +206,18 @@ pub(crate) fn update_user_query(
 
     let my_led = user.led;
 
+    let inc_xp = match my_led {
+        true => INCREASE_XP,
+        false => 0
+    };
+
     diesel::update(target)
         .set((
             description.eq(user.description.to_string()),
             led.eq(my_led),
             changed_at.eq(chrono::Local::now().naive_local()),
             client_version.eq(user.client_version.clone()),
+            xp.eq(xp + inc_xp), // add experience for every event if `my_led` is true
         ))
         .execute(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Updating state failed".into()))?;

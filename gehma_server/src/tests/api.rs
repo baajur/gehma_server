@@ -188,6 +188,7 @@ async fn test_get_user() {
     assert_eq!(user.country_code, "AT".to_string());
     assert_eq!(user.led, false);
     assert_eq!(user.description, "".to_string());
+    assert_eq!(user.xp, 0);
     assert_eq!(
         user.hash_tele_num,
         HEXUPPER.encode(digest::digest(&digest::SHA256, user.tele_num.as_bytes()).as_ref())
@@ -235,9 +236,66 @@ async fn test_update_user() {
     assert_eq!(user.tele_num, "+4366412345678".to_string());
     assert_eq!(user.country_code, "AT".to_string());
     assert_eq!(user.led, true);
+    assert_eq!(user.xp, 100);
     assert_eq!(user.description, "test".to_string());
 
     //FIXME check if notification was sent
+
+    cleanup(&user.tele_num, &init_pool().get().unwrap());
+}
+
+#[actix_rt::test]
+async fn test_update_xp() {
+    let mut app = test::init_service(
+        App::new()
+            .data(init_pool())
+            .data(set_testing_auth())
+            .data(set_notification_service())
+            .route(
+                "/api/user/{uid}",
+                web::put().to(crate::routes::user::update),
+            ),
+    ).await;
+
+    let user = create_user("+4366412345678").await;
+
+    let mut expected_xp = Vec::new();
+
+    for i in 0..10 {
+        expected_xp.push(100);
+
+        if i > 0 {
+            expected_xp[i] += expected_xp[i - 1];
+        }
+    }
+
+    for i in 0..10 {
+        let req = test::TestRequest::put()
+            .uri(&format!(
+                "/api/user/{}?access_token={}",
+                user.id, user.access_token
+            ))
+            .set_json(&crate::routes::user::UpdateUser {
+                description: "test".to_string(),
+                led: true,
+                client_version: super::ALLOWED_CLIENT_VERSIONS[0].to_string(),
+            })
+            .to_request();
+
+        /*
+        let mut resp = test::block_on(test::run_on(|| app.call(req))).unwrap();
+        println!("{:?}", resp);
+        println!("{:?}", resp.response().error().unwrap());
+        */
+
+        let user: User = test::read_response_json(&mut app, req).await;
+
+        assert_eq!(user.tele_num, "+4366412345678".to_string());
+        assert_eq!(user.country_code, "AT".to_string());
+        assert_eq!(user.led, true);
+        assert_eq!(user.xp, expected_xp[i]);
+        assert_eq!(user.description, "test".to_string());
+    }
 
     cleanup(&user.tele_num, &init_pool().get().unwrap());
 }
