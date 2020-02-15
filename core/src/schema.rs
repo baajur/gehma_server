@@ -65,6 +65,7 @@ table! {
         profile_picture -> Varchar,
         access_token -> Varchar,
         hash_tele_num -> Bpchar,
+        xp -> Int4,
     }
 }
 

@@ -2,6 +2,7 @@ use crate::Pool;
 use actix_web::{web, HttpResponse};
 use core::models::DowngradedUser;
 use core::errors::ServiceError;
+use core::lvl::{get_amount_of_xp_required, get_lvl_by_xp};
 
 use web_contrib::utils::{QueryParams, set_response_headers};
 use log::{info};
@@ -9,6 +10,8 @@ use log::{info};
 use web_contrib::auth::Auth;
 use web_contrib::push_notifications::NotifyService;
 use crate::controllers::user::{user_signin, get_entry, update_user_with_auth, update_token_handler};
+
+
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PostUser {
@@ -80,7 +83,7 @@ pub struct ResponseContact {
 }
 
 impl ResponseContact {
-    pub fn new(name: String, tele_num: String, led: bool, country_code: String, description: String, changed_at: chrono::NaiveDateTime, profile_picture: String, hash_tele_num: String, blocked: Option<String>) -> Self {
+    pub fn new(name: String, tele_num: String, led: bool, country_code: String, description: String, changed_at: chrono::NaiveDateTime, profile_picture: String, hash_tele_num: String, blocked: Option<String>, xp: i32) -> Self {
         ResponseContact {
             user: DowngradedUser {
                 tele_num,
@@ -90,6 +93,9 @@ impl ResponseContact {
                 changed_at,
                 profile_picture,
                 hash_tele_num,
+                xp,
+                xp_required_nxt_lvl: get_amount_of_xp_required(xp),
+                lvl: get_lvl_by_xp(xp),
             },
             blocked: blocked.is_some(),
             name: name,

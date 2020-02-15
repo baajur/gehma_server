@@ -2,6 +2,8 @@ use super::schema::*;
 use crate::errors::InternalError;
 use crate::utils::phonenumber_to_international;
 
+use super::lvl::{get_amount_of_xp_required, get_lvl_by_xp};
+
 use data_encoding::HEXUPPER;
 use ring::digest;
 
@@ -38,6 +40,7 @@ pub struct User {
     pub profile_picture: String,
     pub access_token: String,
     pub hash_tele_num: String,
+    pub xp: i32,
 }
 
 /* We don't want to expose all user's data to everyone. That's why this struct
@@ -52,6 +55,9 @@ pub struct DowngradedUser {
     pub changed_at: chrono::NaiveDateTime,
     pub profile_picture: String,
     pub hash_tele_num: String,
+    pub xp: i32,
+    pub xp_required_nxt_lvl: i32,
+    pub lvl: i32,
 }
 
 impl User {
@@ -68,6 +74,7 @@ impl User {
             firebase_token: None,
             profile_picture: "".to_string(),
             access_token: access_token.to_string(),
+            xp: 0,
             hash_tele_num: 
                 HEXUPPER.encode(digest::digest(&digest::SHA256, tele_num.as_bytes()).as_ref()),
         }
@@ -82,6 +89,9 @@ impl User {
             changed_at: self.changed_at,
             profile_picture: self.profile_picture.clone(),
             hash_tele_num: self.hash_tele_num.clone(),
+            xp: self.xp,
+            xp_required_nxt_lvl: get_amount_of_xp_required(self.xp),
+            lvl: get_lvl_by_xp(self.xp),
         }
     }
 }

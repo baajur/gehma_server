@@ -7,6 +7,7 @@ pub mod models;
 pub mod utils;
 pub mod errors;
 pub mod schema;
+pub mod lvl;
 
 #[cfg(test)]
 mod tests {

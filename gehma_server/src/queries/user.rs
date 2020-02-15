@@ -73,6 +73,7 @@ pub(crate) fn get_contacts(
             profile_picture,
             hash_tele_num,
             hash_blocked.nullable(),
+            xp, 
         ))
         .distinct()
         .load::<(
@@ -85,6 +86,7 @@ pub(crate) fn get_contacts(
             String,
             String,
             Option<String>,
+            i32, //XP
         )>(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
         .and_then(|values| {
@@ -102,6 +104,7 @@ pub(crate) fn get_contacts(
                         _profile_picture,
                         _hash_tele_num,
                         _blocked,
+                        _xp,
                     )| {
                         ResponseContact::new(
                             _name,
@@ -113,6 +116,7 @@ pub(crate) fn get_contacts(
                             _profile_picture,
                             _hash_tele_num,
                             _blocked,
+                            _xp,
                         )
                     },
                 )
