@@ -341,6 +341,7 @@ pub(crate) fn update_profile_picture(
 
     let target = users.filter(id.eq(user.id));
 
+    //FIXME add better error message
     let path = format!("static/profile_pictures/{}.jpg", user.hash_tele_num);
     let _ = img_profile::generate(PROFILE_HEIGHT, PROFILE_WIDTH, &path)
         .map_err(|err| InternalError::GenerateImage(err))?;
