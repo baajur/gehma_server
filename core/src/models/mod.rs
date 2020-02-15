@@ -56,8 +56,6 @@ pub struct DowngradedUser {
     pub profile_picture: String,
     pub hash_tele_num: String,
     pub xp: i32,
-    pub xp_required_nxt_lvl: i32,
-    pub lvl: i32,
 }
 
 impl User {
@@ -90,8 +88,6 @@ impl User {
             profile_picture: self.profile_picture.clone(),
             hash_tele_num: self.hash_tele_num.clone(),
             xp: self.xp,
-            xp_required_nxt_lvl: get_amount_of_xp_required(self.xp),
-            lvl: get_lvl_by_xp(self.xp),
         }
     }
 }
