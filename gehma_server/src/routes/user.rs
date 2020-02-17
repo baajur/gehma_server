@@ -2,7 +2,6 @@ use crate::Pool;
 use actix_web::{web, HttpResponse};
 use core::models::DowngradedUser;
 use core::errors::ServiceError;
-use core::lvl::{get_amount_of_xp_required, get_lvl_by_xp};
 
 use web_contrib::utils::{QueryParams, set_response_headers};
 use log::{info};
@@ -94,8 +93,6 @@ impl ResponseContact {
                 profile_picture,
                 hash_tele_num,
                 xp,
-                xp_required_nxt_lvl: get_amount_of_xp_required(xp),
-                lvl: get_lvl_by_xp(xp),
             },
             blocked: blocked.is_some(),
             name: name,
