@@ -2,8 +2,6 @@ use super::schema::*;
 use crate::errors::InternalError;
 use crate::utils::phonenumber_to_international;
 
-use super::lvl::{get_amount_of_xp_required, get_lvl_by_xp};
-
 use data_encoding::HEXUPPER;
 use ring::digest;
 
