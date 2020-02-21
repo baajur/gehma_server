@@ -98,7 +98,7 @@ impl RateLimitPolicy for DefaultRateLimitPolicy {
         current_time: MyDateTime,
     ) -> Result<bool, ServiceError> {
         //TODO move into configuration
-        const LIMIT: usize = 5;
+        const LIMIT: usize = 3;
 
         self.check_rate_limit(myid, pool, current_time, LIMIT)
     }

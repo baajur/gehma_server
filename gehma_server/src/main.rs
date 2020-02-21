@@ -124,8 +124,8 @@ pub(crate) async fn main() -> std::io::Result<()> {
     let server = HttpServer::new(move || {
         App::new()
             .data(pool.clone())
-            //.data(get_auth())
-            .data(set_testing_auth())
+            .data(get_auth())
+            //.data(set_testing_auth())
             .data(get_firebase_notification_service())
             .data(get_ratelimits())
             .wrap(
