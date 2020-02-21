@@ -242,15 +242,18 @@ pub(crate) fn update_user_query(
         .and_then(|user| {
             if my_led {
                 //Sending push notification
-                if ratelimit_service.get_ref().inner.check_rate_limit_updates(&myid, pool, current_time)? {
+                if !ratelimit_service.get_ref().inner.check_rate_limit_updates(&myid, pool, current_time)? {
+                    sending_push_notifications(&user, pool, notify_service).map_err(|err| {
+                        error!("{}", err);
+                        ServiceError::BadRequest("Cannot send push notifications".to_string())
+                    })?;
+
+                    //return Err(ServiceError::RateLimit("No push notification sent. Try again later".to_string())); 
+                }
+                else {
                     info!("Ratelimit reached, not sending push notification");
-                    return Err(ServiceError::RateLimit("No push notification sent. Try again later".to_string())); 
                 }
 
-                sending_push_notifications(&user, pool, notify_service).map_err(|err| {
-                    error!("{}", err);
-                    ServiceError::BadRequest("Cannot send push notifications".to_string())
-                })?;
             }
 
             Ok(user)
