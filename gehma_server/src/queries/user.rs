@@ -202,6 +202,10 @@ pub(crate) fn update_user_query(
 
     let conn: &PgConnection = &pool.get().unwrap();
 
+    //TODO check if rate limit for update was hit
+    //TODO check if rate limit for XP was hit
+
+
     let target = users.filter(id.eq(myid));
 
     let my_led = user.led;

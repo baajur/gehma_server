@@ -117,13 +117,13 @@ pub(crate) fn update_user_with_auth(
     update_user_without_auth(&parsed, user, pool, notify_service)
 }
 
+//TODO add description
 pub(crate) fn update_user_without_auth(
     uid: &Uuid,
     user: &UpdateUser,
     pool: &web::Data<Pool>,
     notify_service: &web::Data<NotifyService>,
 ) -> Result<User, ::core::errors::ServiceError> {
-    //let parsed = Uuid::parse_str(uid)?;
     let user = crate::queries::user::update_user_query(*uid, user, &pool, notify_service)?;
 
     crate::queries::user::analytics_user(&pool, &user)?;
