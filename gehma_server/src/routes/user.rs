@@ -2,6 +2,7 @@ use crate::Pool;
 use actix_web::{web, HttpResponse};
 use core::models::DowngradedUser;
 use core::errors::ServiceError;
+use crate::ratelimits::RateLimitWrapper;
 
 use web_contrib::utils::{QueryParams, set_response_headers};
 use log::{info};
@@ -9,8 +10,7 @@ use log::{info};
 use web_contrib::auth::Auth;
 use web_contrib::push_notifications::NotifyService;
 use crate::controllers::user::{user_signin, get_entry, update_user_with_auth, update_token_handler};
-
-
+use chrono::{Local};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PostUser {
@@ -33,8 +33,11 @@ pub async fn signin(
     query: web::Query<QueryParams>,
     auth: web::Data<Auth>,
     notify_service: web::Data<NotifyService>,
+    ratelimit_service: web::Data<RateLimitWrapper>,
 ) -> Result<HttpResponse, ServiceError> {
     info!("routes/user/signin");
+
+    let current_time = Local::now();
 
     let user = user_signin(
             body.into_inner(),
@@ -42,6 +45,8 @@ pub async fn signin(
             &query.access_token,
             auth,
             notify_service,
+            ratelimit_service,
+            current_time,
     ).map_err(|_err| {
         ServiceError::InternalServerError
     })?;
@@ -162,8 +167,11 @@ pub async fn update(
     query: web::Query<QueryParams>,
     auth: web::Data<Auth>,
     notify_service: web::Data<NotifyService>,
+    ratelimit_service: web::Data<RateLimitWrapper>,
 ) -> Result<HttpResponse, ServiceError> {
     info!("routes/user/update");
+
+    let current_time = Local::now();
 
     let user = update_user_with_auth(
             &info.into_inner(),
@@ -172,6 +180,8 @@ pub async fn update(
             &query.access_token,
             auth,
             &notify_service,
+            &ratelimit_service,
+            current_time,
         ).map_err(|_err| ServiceError::InternalServerError)?;
 
     Ok(HttpResponse::Ok()

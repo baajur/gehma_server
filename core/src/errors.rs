@@ -26,6 +26,9 @@ pub enum ServiceError {
 
     #[display(fmt = "SchaumaError: {}", _0)]
     SchaumaError(SchaumaError),
+
+    #[display(fmt = "RateLimit was reached ({})", _0)]
+    RateLimit(String),
 }
 
 #[derive(Debug, Display)]
@@ -62,6 +65,7 @@ impl ResponseError for ServiceError {
                 HttpResponse::BadRequest().json(message)
             }
             ServiceError::SchaumaError(ref message) => message.error_response(),
+            ServiceError::RateLimit(ref message) => HttpResponse::TooManyRequests().json(message),
         }
     }
 }

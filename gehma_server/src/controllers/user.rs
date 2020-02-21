@@ -1,15 +1,14 @@
 use crate::Pool;
 //use actix_multipart::{Field, MultipartError};
 //use actix_web::{error::BlockingError, error::PayloadError, web};
-use actix_web::{web};
+use actix_web::web;
 use core::errors::ServiceError;
 use core::models::{PhoneNumber, User};
-//use futures::future::{err, Either};
-//use futures::stream::Stream;
-//use futures::Future;
+use crate::ratelimits::RateLimitWrapper;
 use uuid::Uuid;
 use web_contrib::auth::Auth;
 use web_contrib::push_notifications::NotifyService;
+use chrono::{DateTime, Local};
 
 use log::{error, info};
 //use std::io::Write;
@@ -22,6 +21,8 @@ pub(crate) fn user_signin(
     access_token: &String,
     _auth: web::Data<Auth>,
     notify_service: web::Data<NotifyService>,
+    ratelimit_service: web::Data<RateLimitWrapper>,
+    current_time: DateTime<Local>,
 ) -> Result<User, ServiceError> {
     info!("controllers/user/user_signin");
 
@@ -48,6 +49,8 @@ pub(crate) fn user_signin(
             },
             &pool,
             &notify_service,
+            &ratelimit_service,
+            current_time,
         )?;
     }
 
@@ -106,6 +109,8 @@ pub(crate) fn update_user_with_auth(
     access_token: &String,
     _auth: web::Data<Auth>,
     notify_service: &web::Data<NotifyService>,
+    ratelimit_service: &web::Data<RateLimitWrapper>,
+    current_time: DateTime<Local>,
 ) -> Result<User, ::core::errors::ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
 
@@ -114,17 +119,32 @@ pub(crate) fn update_user_with_auth(
 
     muser?;
 
-    update_user_without_auth(&parsed, user, pool, notify_service)
+    update_user_without_auth(
+        &parsed,
+        user,
+        pool,
+        notify_service,
+        ratelimit_service,
+        current_time,
+    )
 }
 
-//TODO add description
 pub(crate) fn update_user_without_auth(
     uid: &Uuid,
     user: &UpdateUser,
     pool: &web::Data<Pool>,
     notify_service: &web::Data<NotifyService>,
+    ratelimit_service: &web::Data<RateLimitWrapper>,
+    current_time: DateTime<Local>,
 ) -> Result<User, ::core::errors::ServiceError> {
-    let user = crate::queries::user::update_user_query(*uid, user, &pool, notify_service)?;
+    let user = crate::queries::user::update_user_query(
+        *uid,
+        user,
+        &pool,
+        notify_service,
+        ratelimit_service,
+        current_time,
+    )?;
 
     crate::queries::user::analytics_user(&pool, &user)?;
 

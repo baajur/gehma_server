@@ -19,6 +19,7 @@ use log::error;
 pub(crate) mod controllers;
 pub(crate) mod queries;
 pub(crate) mod routes;
+pub(crate) mod ratelimits;
 
 //mod middleware;
 
@@ -81,6 +82,11 @@ fn set_testing_notification() -> NotificationWrapper {
 }
 
 #[allow(dead_code)]
+fn get_ratelimits() -> ratelimits::RateLimitWrapper {
+    ratelimits::RateLimitWrapper::new(Box::new(ratelimits::DefaultRateLimitPolicy))
+}
+
+#[allow(dead_code)]
 fn get_firebase_notification_service() -> NotificationWrapper {
     use web_contrib::push_notifications::firebase::FirebaseConfiguration;
     use web_contrib::push_notifications::firebase::FirebaseNotificationService;
@@ -121,6 +127,7 @@ pub(crate) async fn main() -> std::io::Result<()> {
             //.data(get_auth())
             .data(set_testing_auth())
             .data(get_firebase_notification_service())
+            .data(get_ratelimits())
             .wrap(
                 Cors::new()
                     .allowed_origin("http://localhost:3000")

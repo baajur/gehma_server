@@ -4,7 +4,9 @@ use core::errors::ServiceError;
 use core::models::{Analytic, PhoneNumber, UsageStatisticEntry, User};
 use diesel::{prelude::*, PgConnection};
 use uuid::Uuid;
+use crate::ratelimits::RateLimitWrapper;
 use web_contrib::push_notifications::NotifyService;
+use chrono::{DateTime, Local};
 
 use crate::routes::user::{ResponseContact, UpdateUser};
 
@@ -196,23 +198,24 @@ pub(crate) fn update_user_query(
     user: &UpdateUser,
     pool: &web::Data<Pool>,
     notify_service: &web::Data<NotifyService>,
+    ratelimit_service: &web::Data<RateLimitWrapper>,
+    // based on this time, the server checks whether the ratelimit was reached or not
+    current_time: DateTime<Local>,
 ) -> Result<User, ::core::errors::ServiceError> {
     info!("queries/user/update_user_query");
     use core::schema::users::dsl::{changed_at, client_version, description, id, led, users, xp};
 
+    let xp_limit = ratelimit_service.get_ref().inner.check_rate_limit_xp(&myid, pool, current_time)?;
+
     let conn: &PgConnection = &pool.get().unwrap();
-
-    //TODO check if rate limit for update was hit
-    //TODO check if rate limit for XP was hit
-
 
     let target = users.filter(id.eq(myid));
 
     let my_led = user.led;
 
-    let inc_xp = match my_led {
-        true => INCREASE_XP,
-        false => 0
+    let inc_xp = match (my_led, xp_limit) {
+        (true, false) => INCREASE_XP,
+        _ => 0
     };
 
     diesel::update(target)
@@ -239,6 +242,11 @@ pub(crate) fn update_user_query(
         .and_then(|user| {
             if my_led {
                 //Sending push notification
+                if ratelimit_service.get_ref().inner.check_rate_limit_updates(&myid, pool, current_time)? {
+                    info!("Ratelimit reached, not sending push notification");
+                    return Err(ServiceError::RateLimit("No push notification sent. Try again later".to_string())); 
+                }
+
                 sending_push_notifications(&user, pool, notify_service).map_err(|err| {
                     error!("{}", err);
                     ServiceError::BadRequest("Cannot send push notifications".to_string())
