@@ -1,32 +1,24 @@
-#![recursion_limit = "2048"]
-
+use image::{GenericImage, GenericImageView, ImageBuffer, RgbImage, RgbaImage};
 use rand::prelude::*;
-use image::{GenericImage, GenericImageView, ImageBuffer, RgbImage};
 
 const MIN: usize = 2;
 
-pub fn generate(height: u32, width: u32, path: &str) -> Result<(), std::io::Error>{
+pub fn generate(height: u32, width: u32, path: &'static str) -> Result<(), std::io::Error> {
     let imgx = height;
     let imgy = width;
 
     //https://clrs.cc/
-    let colors = vec![
-        [255, 255, 255],
-        [0, 31, 0],
-        [0,116,217],
-        [127,219,255],
-        [57,204,204]
-    ];
+    let colors = vec![[0, 31, 0, 255], [0, 116, 217, 255], [127, 219, 255, 255], [57, 204, 204, 255], [61,153,112, 255], [46,204,64, 255], [255,220,0, 255], [255,133,27, 255], [255,65,54, 255]];
 
     // Create a new ImgBuf with width: imgx and height: imgy
-    let mut imgbuf : RgbImage = image::ImageBuffer::new(imgx, imgy);
+    let mut imgbuf: RgbaImage = image::ImageBuffer::new(imgx, imgy);
 
     // Iterate over the coordinates and pixels of the image
     for (_, _, pixel) in imgbuf.enumerate_pixels_mut() {
         //let r = (0.3 * x as f32) as u8;
         //let b = (0.3 * y as f32) as u8;
         //*pixel = image::Rgb([255, 255, 255]);
-        *pixel = image::Rgb([255, 255, 255]);
+        *pixel = image::Rgba([255, 255, 255, 255]);
     }
 
     let n: usize = thread_rng().gen_range(MIN, 5);
@@ -40,8 +32,8 @@ pub fn generate(height: u32, width: u32, path: &str) -> Result<(), std::io::Erro
         println!("Punkt 1 ({}, {})", x_0, y_0);
         println!("Punkt 2 ({}, {})", x_1, y_1);
 
-        let k : f32 = ((y_1 - y_0) as f32 / (x_1 - x_0) as f32 ) ; //delta y / delta x
-        let d = y_0 ;
+        let k: f32 = ((y_1 - y_0) as f32 / (x_1 - x_0) as f32); //delta y / delta x
+        let d = y_0;
 
         println!("{} * x + {}", k, d);
 
@@ -49,51 +41,63 @@ pub fn generate(height: u32, width: u32, path: &str) -> Result<(), std::io::Erro
             let y = (k * (i as f32) + d as f32) as u32;
 
             let pixel = imgbuf.get_pixel_mut(i, y);
-            *pixel = image::Rgb([0, 0, 0]);
+            *pixel = image::Rgba([0, 0, 0, 255]);
 
-            /*
-            //THICKER LINES
             if y > 0 {
-                let pixel = imgbuf.get_pixel_mut(i, y - 1);
-                *pixel = image::Rgb([0, 0, 0]);
+                let pixel = imgbuf.get_pixel_mut(i, y + 1);
+                *pixel = image::Rgba([0, 0, 0, 50]);
             }
 
             if y < height {
-                let pixel = imgbuf.get_pixel_mut(i, y + 1);
-                *pixel = image::Rgb([0, 0, 0]);
+                let pixel = imgbuf.get_pixel_mut(i, y - 1);
+                *pixel = image::Rgba([0, 0, 0, 50]);
             }
-            */
         }
-
-        fill(&mut imgbuf, colors[1], 0, 0, height, width);
-
-        /*
-        for i in 0..width {
-            for z in 0..height {
-                let mut pixel = imgbuf.get_pixel_mut(i, z);
-
-                if *pixel != image::Rgb([0, 0, 0]) {
-                    
-                }
-            }
-
-        }
-        */
-
     }
 
-    imgbuf.save(path)
+    let n: usize = thread_rng().gen_range(1, 10);
+    let color: usize = thread_rng().gen_range(0, colors.len());
+
+    let builder = std::thread::Builder::new()
+        .name("reductor".into())
+        .stack_size(64 * 1024 * 1024); // 32MB of stack space
+
+    let handler = builder
+        .spawn(move || {
+            for  _ in 0..n {
+                let x = thread_rng().gen_range(0, width);
+                let y = thread_rng().gen_range(0, height);
+                let color = thread_rng().gen_range(0, colors.len());
+
+                fill(
+                    &mut imgbuf,
+                    colors[color],
+                    x as i32,
+                    y as i32,
+                    height,
+                    width,
+                );
+            }
+
+            imgbuf.save(path).unwrap();
+        })
+        .unwrap();
+
+    handler.join().unwrap();
+
+    Ok(())
 }
 
-fn fill(imgbuf: &mut RgbImage, color: [u8; 3], x: i32, y: i32, height: u32, width: u32) {
+fn fill(imgbuf: &mut RgbaImage, color: [u8; 4], x: i32, y: i32, height: u32, width: u32) {
     if x < 0 || y < 0 || x >= width as i32 || y >= height as i32 {
         return;
     }
 
     let mut pixel = imgbuf.get_pixel_mut(x as u32, y as u32);
 
-    if *pixel != image::Rgb([0, 0, 0]) && *pixel == image::Rgb([255, 255, 255]) {
-        *pixel = image::Rgb(color);
+    //if *pixel != image::Rgba([0, 0, 0, 255]) && *pixel == image::Rgba([255, 255, 255, 255]) {
+    if *pixel == image::Rgba([255, 255, 255, 255]) {
+        *pixel = image::Rgba(color);
 
         fill(imgbuf, color, x, y + 1, height, width);
         fill(imgbuf, color, x - 1, y, height, width);
@@ -105,19 +109,5 @@ fn fill(imgbuf: &mut RgbImage, color: [u8; 3], x: i32, y: i32, height: u32, widt
 
         //fill(imgbuf, color, x, y - 1, height, width);
         //fill(imgbuf, color, x, y + 1, height, width);
-    }
-    else if *pixel == image::Rgb([0, 0, 0]) {
-        //https://clrs.cc/
-        let colors = vec![
-            [0, 31, 0],
-            [0,116,217],
-            [127,219,255],
-            [57,204,204]
-        ];
-
-        let c = thread_rng().gen_range(0, colors.len());
-
-        fill(imgbuf, colors[c], x + 1, y, height, width);
-        fill(imgbuf, colors[c], x, y + 1, height, width);
     }
 }
