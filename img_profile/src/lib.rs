@@ -1,9 +1,9 @@
-use image::{GenericImage, GenericImageView, ImageBuffer, RgbImage, RgbaImage};
+use image::{RgbaImage};
 use rand::prelude::*;
 
 const MIN: usize = 2;
 
-pub fn generate(height: u32, width: u32, path: &'static str) -> Result<(), std::io::Error> {
+pub fn generate(height: u32, width: u32, path: String) -> Result<(), std::io::Error> {
     let imgx = height;
     let imgy = width;
 
@@ -32,7 +32,7 @@ pub fn generate(height: u32, width: u32, path: &'static str) -> Result<(), std::
         println!("Punkt 1 ({}, {})", x_0, y_0);
         println!("Punkt 2 ({}, {})", x_1, y_1);
 
-        let k: f32 = ((y_1 - y_0) as f32 / (x_1 - x_0) as f32); //delta y / delta x
+        let k: f32 = (y_1 - y_0) as f32 / (x_1 - x_0) as f32; //delta y / delta x
         let d = y_0;
 
         println!("{} * x + {}", k, d);
@@ -56,7 +56,6 @@ pub fn generate(height: u32, width: u32, path: &'static str) -> Result<(), std::
     }
 
     let n: usize = thread_rng().gen_range(1, 10);
-    let color: usize = thread_rng().gen_range(0, colors.len());
 
     let builder = std::thread::Builder::new()
         .name("reductor".into())

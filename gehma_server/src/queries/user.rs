@@ -371,7 +371,7 @@ pub(crate) fn update_profile_picture(
 
     //FIXME add better error message
     let path = format!("static/profile_pictures/{}.jpg", user.hash_tele_num);
-    let _ = img_profile::generate(PROFILE_HEIGHT, PROFILE_WIDTH, &path)
+    let _ = img_profile::generate(PROFILE_HEIGHT, PROFILE_WIDTH, path.clone())
         .map_err(|err| InternalError::GenerateImage(err))?;
 
     diesel::update(target)
