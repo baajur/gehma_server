@@ -1,7 +1,7 @@
 use image::{RgbaImage};
 use rand::prelude::*;
 
-const MIN: usize = 2;
+const MIN: usize = 1;
 
 pub fn generate(height: u32, width: u32, path: String) -> Result<(), std::io::Error> {
     let imgx = height;
@@ -21,12 +21,13 @@ pub fn generate(height: u32, width: u32, path: String) -> Result<(), std::io::Er
         *pixel = image::Rgba([255, 255, 255, 255]);
     }
 
-    let n: usize = thread_rng().gen_range(MIN, 5);
+    let n: usize = thread_rng().gen_range(MIN, 3);
 
+    //horizontal
     for _ in 0..n {
         let x_0: i32 = 0;
         let y_0: i32 = thread_rng().gen_range(0, height as i32);
-        let y_1: i32 = thread_rng().gen_range(0, height as i32);
+        let y_1: i32 = y_0;
         let x_1: i32 = width as i32;
 
         println!("Punkt 1 ({}, {})", x_0, y_0);
@@ -38,20 +39,31 @@ pub fn generate(height: u32, width: u32, path: String) -> Result<(), std::io::Er
         println!("{} * x + {}", k, d);
 
         for i in 0..width {
-            let y = (k * (i as f32) + d as f32) as u32;
+            let y = d as u32;
 
             let pixel = imgbuf.get_pixel_mut(i, y);
             *pixel = image::Rgba([0, 0, 0, 255]);
+        }
+    }
 
-            if y > 0 {
-                let pixel = imgbuf.get_pixel_mut(i, y + 1);
-                *pixel = image::Rgba([0, 0, 0, 50]);
-            }
+    let n: usize = thread_rng().gen_range(MIN, 2);
 
-            if y < height {
-                let pixel = imgbuf.get_pixel_mut(i, y - 1);
-                *pixel = image::Rgba([0, 0, 0, 50]);
-            }
+    //vertical
+    for _ in 0..n {
+        let x_0: i32 = thread_rng().gen_range(0, width as i32);
+        let y_0: i32 = 0;
+        let y_1: i32 = height as i32;
+        let x_1: i32 = x_0;
+
+        println!("Punkt 1 ({}, {})", x_0, y_0);
+        println!("Punkt 2 ({}, {})", x_1, y_1);
+
+        let k: f32 = (y_1 - y_0) as f32 / (x_1 - x_0) as f32; //delta y / delta x
+        let d = y_0;
+
+        for i in 0..height {
+            let pixel = imgbuf.get_pixel_mut(x_0 as u32, i as u32);
+            *pixel = image::Rgba([0, 0, 0, 255]);
         }
     }
 
@@ -59,7 +71,7 @@ pub fn generate(height: u32, width: u32, path: String) -> Result<(), std::io::Er
 
     let builder = std::thread::Builder::new()
         .name("reductor".into())
-        .stack_size(64 * 1024 * 1024); // 32MB of stack space
+        .stack_size(128 * 1024 * 1024); // 32MB of stack space
 
     let handler = builder
         .spawn(move || {
@@ -79,10 +91,12 @@ pub fn generate(height: u32, width: u32, path: String) -> Result<(), std::io::Er
             }
 
             imgbuf.save(path).unwrap();
+
         })
         .unwrap();
 
     handler.join().unwrap();
+    
 
     Ok(())
 }
