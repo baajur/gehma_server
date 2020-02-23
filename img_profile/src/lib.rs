@@ -7,21 +7,6 @@ const RECT_WIDTH: u32 = 50;
 
 fn get_rect(x: u32, y: u32, height: u32, width: u32) -> Vec<(u32, u32)> {
     let mut points = Vec::with_capacity((RECT_HEIGHT * RECT_WIDTH) as usize);
-    /*
-    points.push((x, y));
-    
-    //up
-    points.extend((y..(y + RECT_HEIGHT / 2)).map(|w| (x, w)));
-    
-    //down
-    points.extend((y..(y - RECT_HEIGHT / 2)).map(|w| (x, w)));
-
-    //left
-    points.extend((x..(x - RECT_WIDTH / 2)).map(|w| (w, y)));
-
-    //right
-    points.extend((x..(x + RECT_WIDTH / 2)).map(|w| (w, y)));
-    */
 
     for i in x..(x + RECT_WIDTH) {
         for j in y..(y + RECT_HEIGHT) {
@@ -29,19 +14,26 @@ fn get_rect(x: u32, y: u32, height: u32, width: u32) -> Vec<(u32, u32)> {
         }
     }
 
-    //points.into_iter().filter(|(x, y)| (x >= &width || x < &0) || (y < &0 || y >= &height)).collect()
     points.into_iter().filter(|(x, y)| (x < &width && x >= &0) && (y >= &0 && y < &height)).collect()
 }
 
-fn change_opacity(x: u8, P: u8) -> u8 {
-    //255 - P*(255-X)
-    255 - ((P as u32 * (255 - x) as u32)  * 100) as u8
+fn change_opacity(x: u8, p: u8) -> u8 {
+    255 - ((p as u32 * (255 - x) as u32)  * 100) as u8
+}
+
+fn get_distance(p: (u32, u32), center: (u32, u32)) -> u32 {
+    let w = (p.0 as i32 - center.0 as i32, p.1 as i32 - center.1 as i32);
+
+    ((w.0.pow(2) + w.1.pow(2)) as f32).sqrt().round() as u32
 }
 
 
 pub fn generate(height: u32, width: u32, path: String) -> Result<(), std::io::Error> {
     let imgx = height;
     let imgy = width;
+
+    let center_x = width / 2;
+    let center_y = width / 2;
 
     //https://clrs.cc/
     let p: u8 = thread_rng().gen_range(67, 100);
@@ -83,7 +75,13 @@ pub fn generate(height: u32, width: u32, path: String) -> Result<(), std::io::Er
 
         let rect = get_rect(x, y, height, width);
         let c = thread_rng().gen_range(0, colors.len());
-        let color = colors[c];
+
+        let distance = get_distance((x, y), (center_x, center_y));
+
+        let alpha = (255 as f32 - (distance as f32 / width as f32) * 255 as f32);
+
+        let mut color = colors[c].clone();
+        color[3] = alpha as u8;
 
         for (x, y) in rect {
             let mut pixel = imgbuf.get_pixel_mut(x, y);
