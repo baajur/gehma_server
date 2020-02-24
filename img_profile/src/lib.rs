@@ -1,9 +1,12 @@
 use image::RgbaImage;
 use rand::prelude::*;
 
-const MIN: usize = 50;
+const MIN: usize = 100;
 const RECT_HEIGHT: u32 = 50;
 const RECT_WIDTH: u32 = 50;
+
+use std::sync::Mutex;
+use std::sync::Arc;
 
 fn get_rect(x: u32, y: u32, height: u32, width: u32) -> Vec<(u32, u32)> {
     let mut points = Vec::with_capacity((RECT_HEIGHT * RECT_WIDTH) as usize);
@@ -67,35 +70,44 @@ pub fn generate(height: u32, width: u32, path: String) -> Result<(), std::io::Er
         *pixel = image::Rgba([255, 255, 255, 255]);
     }
 
-    let n: usize = thread_rng().gen_range(MIN, 130);
+    let n: usize = thread_rng().gen_range(MIN, 500);
+
+    let mutex = Arc::new(Mutex::new(imgbuf));
+    let mut threads = Vec::new();
 
     for i in 0..n {
-        let x = thread_rng().gen_range(0, width - 1);
-        let y = thread_rng().gen_range(0, height - 1);
+        let x : i32 = thread_rng().gen_range(0, width - 1) as i32;
+        let y : i32 = thread_rng().gen_range(0, height - 1) as i32;
 
-        let rect = get_rect(x, y, height, width);
         let c = thread_rng().gen_range(0, colors.len());
 
-        let distance = get_distance((x, y), (center_x, center_y));
+        let color = colors[c].clone();
 
-        let alpha = (255 as f32 - (distance as f32 / width as f32) * 255 as f32);
+        let cpy_width = width.clone();
+        let cpy_height = height.clone();
+        
+        let clone = mutex.clone();
+        let handler = std::thread::Builder::new()
+            .stack_size(256 * 1024 * 1024)
+            .spawn(move || {
+            fill(clone, color, x, y, cpy_height, cpy_width);
+        }).unwrap();
 
-        let mut color = colors[c].clone();
-        color[3] = alpha as u8;
-
-        for (x, y) in rect {
-            let mut pixel = imgbuf.get_pixel_mut(x, y);
-
-            *pixel = image::Rgba(color);
-        }
+        threads.push(handler);
     }
 
-    imgbuf.save(path).unwrap();
+    for handler in threads {
+        handler.join();
+    }
+
+    (mutex.lock().unwrap()).save(path).unwrap();
 
     Ok(())
 }
 
-fn fill(imgbuf: &mut RgbaImage, color: [u8; 4], x: i32, y: i32, height: u32, width: u32) {
+fn fill(mutex: Arc<Mutex<RgbaImage>>, color: [u8; 4], x: i32, y: i32, height: u32, width: u32) {
+    let mut imgbuf = mutex.lock().unwrap();
+
     if x < 0 || y < 0 || x >= width as i32 || y >= height as i32 {
         return;
     }
@@ -106,15 +118,14 @@ fn fill(imgbuf: &mut RgbaImage, color: [u8; 4], x: i32, y: i32, height: u32, wid
     if *pixel == image::Rgba([255, 255, 255, 255]) {
         *pixel = image::Rgba(color);
 
-        fill(imgbuf, color, x, y + 1, height, width);
-        fill(imgbuf, color, x - 1, y, height, width);
-        fill(imgbuf, color, x, y - 1, height, width);
-        fill(imgbuf, color, x + 1, y, height, width);
+        drop(imgbuf);
 
-        //fill(imgbuf, color, x + 1, y, height, width);
-        //fill(imgbuf, color, x - 1, y, height, width);
-
-        //fill(imgbuf, color, x, y - 1, height, width);
-        //fill(imgbuf, color, x, y + 1, height, width);
+        fill(mutex.clone(), color, x, y + 1, height, width);
+        fill(mutex.clone(), color, x - 1, y, height, width);
+        fill(mutex.clone(), color, x, y - 1, height, width);
+        fill(mutex.clone(), color, x + 1, y, height, width);
+    }
+    else {
+        drop(imgbuf);
     }
 }
