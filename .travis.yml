@@ -6,6 +6,6 @@ before_script:
   - cargo install cargo-audit
 script:
   - cd gehma_server && cargo build --verbose --all
-  - cd gehma_server && cargo test --verbose --all
+    #  - cd gehma_server && cargo test --verbose --all
   - cd gehma_server && cargo clippy --all-features -- -D warnings
   - cd gehma_server && cargo audit -D
