@@ -18,7 +18,7 @@ use crate::routes::user::{PostUser, ResponseContact, UpdateTokenPayload, UpdateU
 pub(crate) fn user_signin(
     body: PostUser,
     pool: web::Data<Pool>,
-    access_token: &String,
+    access_token: &str,
     _auth: web::Data<Auth>,
     notify_service: web::Data<NotifyService>,
     ratelimit_service: web::Data<RateLimitWrapper>,
@@ -63,7 +63,7 @@ pub(crate) fn user_signin(
 pub(crate) fn get_entry(
     uid: &str,
     pool: web::Data<Pool>,
-    access_token: &String,
+    access_token: &str,
     _auth: web::Data<Auth>,
 ) -> Result<User, ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
@@ -74,7 +74,7 @@ pub(crate) fn get_entry(
 pub(crate) fn get_contacts(
     uid: &str,
     pool: web::Data<Pool>,
-    access_token: &String,
+    access_token: &str,
     _auth: web::Data<Auth>,
 ) -> Result<Vec<ResponseContact>, ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
@@ -89,7 +89,7 @@ pub(crate) fn update_token_handler(
     uid: String,
     payload: UpdateTokenPayload,
     pool: web::Data<Pool>,
-    access_token: &String,
+    access_token: &str,
     _auth: web::Data<Auth>,
 ) -> Result<(), ServiceError> {
     let parsed = Uuid::parse_str(&uid)?;
@@ -102,11 +102,12 @@ pub(crate) fn update_token_handler(
     crate::queries::user::update_token_query(parsed, payload.token, &pool)
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn update_user_with_auth(
     uid: &str,
     user: &UpdateUser,
     pool: &web::Data<Pool>,
-    access_token: &String,
+    access_token: &str,
     _auth: web::Data<Auth>,
     notify_service: &web::Data<NotifyService>,
     ratelimit_service: &web::Data<RateLimitWrapper>,

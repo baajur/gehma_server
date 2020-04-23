@@ -32,7 +32,7 @@ pub async fn request_code(
 ) -> Result<HttpResponse, ServiceError> {
     info!("controllers/auth/request_code");
 
-    let res = request(
+    let _ = request(
             body.into_inner(),
             pool,
             auth,
@@ -40,7 +40,7 @@ pub async fn request_code(
 
     let mut res = HttpResponse::Ok()
                     .content_type("application/json")
-                    .json(res);
+                    .json(());
     set_response_headers(&mut res);
 
     Ok(res)

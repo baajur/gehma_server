@@ -87,6 +87,7 @@ pub struct ResponseContact {
 }
 
 impl ResponseContact {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(name: String, tele_num: String, led: bool, country_code: String, description: String, changed_at: chrono::NaiveDateTime, profile_picture: String, hash_tele_num: String, blocked: Option<String>, xp: i32) -> Self {
         ResponseContact {
             user: DowngradedUser {
@@ -100,7 +101,7 @@ impl ResponseContact {
                 xp,
             },
             blocked: blocked.is_some(),
-            name: name,
+            name,
         }
     }
 }
@@ -203,7 +204,7 @@ pub async fn update_token(
 ) -> Result<HttpResponse, ServiceError> {
     info!("routes/push_notification/update_token");
 
-    let user = update_token_handler(
+    let _ = update_token_handler(
             _info.into_inner(),
             body.into_inner(),
             pool,
@@ -213,7 +214,7 @@ pub async fn update_token(
 
     let mut res = HttpResponse::Ok()
                 .content_type("application/json")
-                .json(user);
+                .json(());
 
     set_response_headers(&mut res);
 

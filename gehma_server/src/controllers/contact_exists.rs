@@ -14,7 +14,7 @@ pub(crate) fn get_entry(
     country_code: &str,
     phone_numbers: &mut Vec<PayloadUser>,
     pool: web::Data<Pool>,
-    access_token: &String,
+    access_token: &str,
     _auth: web::Data<Auth>,
 ) -> Result<Vec<ResponseUser>, ServiceError> {
     let parsed = Uuid::parse_str(uid)?;

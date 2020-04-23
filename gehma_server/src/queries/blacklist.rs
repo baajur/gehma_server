@@ -79,8 +79,8 @@ pub(crate) fn delete_query(
 
     //FIXME #34
     let target = blacklist
-        .filter(hash_blocker.eq(b1.to_string()))
-        .filter(hash_blocked.eq(b2.to_string()));
+        .filter(hash_blocker.eq(b1))
+        .filter(hash_blocked.eq(b2));
 
     diesel::delete(target)
         .execute(conn)

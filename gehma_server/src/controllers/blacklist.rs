@@ -13,7 +13,7 @@ use crate::routes::blacklist::PostData;
 pub(crate) fn get_entry(
     blocker: &str,
     pool: web::Data<Pool>,
-    firebase_uid: &String,
+    firebase_uid: &str,
     _auth: web::Data<Auth>,
 ) -> Result<Vec<Blacklist>, ServiceError> {
     let blocker = Uuid::parse_str(blocker)?;
@@ -32,7 +32,7 @@ pub(crate) fn create_entry(
     blocker: &str,
     data: &PostData,
     pool: web::Data<Pool>,
-    firebase_uid: &String,
+    firebase_uid: &str,
     _auth: web::Data<Auth>,
 ) -> Result<Blacklist, ServiceError> {
     use core::schema::users::dsl::{hash_tele_num, id, users};
@@ -82,7 +82,7 @@ pub(crate) fn delete_entry(
     blocker: &str,
     data: &PostData,
     pool: web::Data<Pool>,
-    firebase_uid: &String,
+    firebase_uid: &str,
     _auth: web::Data<Auth>,
 ) -> Result<(), ServiceError> {
     use core::schema::users::dsl::{id, users, hash_tele_num};

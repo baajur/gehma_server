@@ -25,7 +25,7 @@ pub(crate) fn get_query(
     info!("queries/push_notification/get_query");
     use core::models::Contact;
     use core::schema::blacklist::dsl::{blacklist, hash_blocked, hash_blocker};
-    use core::schema::users::dsl::{changed_at, id, hash_tele_num, users};
+    use core::schema::users::dsl::{changed_at, hash_tele_num, id, users};
 
     let conn: &PgConnection = &pool.get().unwrap();
 
@@ -57,16 +57,19 @@ pub(crate) fn get_query(
                     .filter(
                         hash_blocked
                             .eq(&user.hash_tele_num)
-                        .or(hash_blocker.eq(&user.hash_tele_num)),
+                            .or(hash_blocker.eq(&user.hash_tele_num)),
                     )
                     .load::<Blacklist>(conn)
                     .map_err(|_db_error| ServiceError::BadRequest("Cannot find blacklists".into()))
                     .and_then(|lists| {
                         let people_who_blacklisted_user: Vec<_> = lists
                             .into_iter()
-                            .map(|w| match w.hash_blocker == user.hash_tele_num { // 3. get the appropriate
-                                true => w.hash_blocked.clone(), //jener der blockiert soll sie auch nicht sehen
-                                false => w.hash_blocker.clone(),
+                            .map(|w| {
+                                if w.hash_blocker == user.hash_tele_num { // 3. get the appropriate
+                                    w.hash_blocked //jener der blockiert soll sie auch nicht sehen
+                                } else {
+                                    w.hash_blocker
+                                }
                             })
                             .collect();
 

@@ -26,7 +26,7 @@ pub(crate) mod ratelimits;
 #[cfg(test)]
 mod tests;
 
-pub const ALLOWED_CLIENT_VERSIONS: &[&'static str] = &["0.5.4"];
+pub const ALLOWED_CLIENT_VERSIONS: &[&str] = &["0.5.4"];
 pub const LIMIT_PUSH_NOTIFICATION_CONTACTS: usize = 128;
 pub const ALLOWED_PROFILE_PICTURE_SIZE: usize = 10_000; //in Kilobytes
 
@@ -42,9 +42,9 @@ fn get_auth() -> web_contrib::auth::AuthenticatorWrapper {
     let sid = std::env::var("TWILIO_ACCOUNT_ID").expect("no ACCOUNT_ID");
 
     let config = TwilioConfiguration {
-        project_id: project_id,
+        project_id,
         account_id: sid,
-        auth_token: auth_token,
+        auth_token,
     };
 
     web_contrib::auth::AuthenticatorWrapper::new(Box::new(TwilioAuthenticator { config }))
@@ -59,7 +59,7 @@ fn set_testing_auth() -> AuthenticatorWrapper {
         auth_token: "test".to_string(),
     };
 
-    AuthenticatorWrapper::new(Box::new(TestingAuthentificator { config: config }))
+    AuthenticatorWrapper::new(Box::new(TestingAuthentificator { config }))
 }
 
 #[allow(dead_code)]
@@ -71,7 +71,7 @@ fn set_testing_auth_false() -> AuthenticatorWrapper {
         auth_token: "test".to_string(),
     };
 
-    AuthenticatorWrapper::new(Box::new(TestingAuthentificatorAlwaysFalse { config: config }))
+    AuthenticatorWrapper::new(Box::new(TestingAuthentificatorAlwaysFalse { config }))
 }
 
 #[allow(dead_code)]
@@ -192,7 +192,7 @@ pub(crate) async fn main() -> std::io::Result<()> {
                         web::resource("/auth/check")
                             .route(web::post().to(routes::auth::check)),
                     )
-                    .default_service(web::route().to(|| HttpResponse::NotFound())),
+                    .default_service(web::route().to(HttpResponse::NotFound)),
             )
     })
     .keep_alive(None);
