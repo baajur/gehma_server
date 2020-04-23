@@ -2,41 +2,18 @@ use image::RgbaImage;
 use rand::prelude::*;
 
 const MIN: usize = 100;
-const RECT_HEIGHT: u32 = 50;
-const RECT_WIDTH: u32 = 50;
 
 use std::sync::Mutex;
 use std::sync::Arc;
 
-fn get_rect(x: u32, y: u32, height: u32, width: u32) -> Vec<(u32, u32)> {
-    let mut points = Vec::with_capacity((RECT_HEIGHT * RECT_WIDTH) as usize);
-
-    for i in x..(x + RECT_WIDTH) {
-        for j in y..(y + RECT_HEIGHT) {
-            points.push((i,j));
-        }
-    }
-
-    points.into_iter().filter(|(x, y)| (x < &width && x >= &0) && (y >= &0 && y < &height)).collect()
-}
-
 fn change_opacity(x: u8, p: u8) -> u8 {
     255 - ((p as u32 * (255 - x) as u32)  * 100) as u8
-}
-
-fn get_distance(p: (u32, u32), center: (u32, u32)) -> u32 {
-    let w = (p.0 as i32 - center.0 as i32, p.1 as i32 - center.1 as i32);
-
-    ((w.0.pow(2) + w.1.pow(2)) as f32).sqrt().round() as u32
 }
 
 
 pub fn generate(height: u32, width: u32, path: String) -> Result<(), std::io::Error> {
     let imgx = height;
     let imgy = width;
-
-    let center_x = width / 2;
-    let center_y = width / 2;
 
     //https://clrs.cc/
     let p: u8 = thread_rng().gen_range(67, 100);
@@ -75,7 +52,7 @@ pub fn generate(height: u32, width: u32, path: String) -> Result<(), std::io::Er
     let mutex = Arc::new(Mutex::new(imgbuf));
     let mut threads = Vec::new();
 
-    for i in 0..n {
+    for _i in 0..n {
         let x : i32 = thread_rng().gen_range(0, width - 1) as i32;
         let y : i32 = thread_rng().gen_range(0, height - 1) as i32;
 
@@ -97,7 +74,7 @@ pub fn generate(height: u32, width: u32, path: String) -> Result<(), std::io::Er
     }
 
     for handler in threads {
-        handler.join();
+        handler.join().expect("Joining failed");
     }
 
     (mutex.lock().unwrap()).save(path).unwrap();
@@ -112,7 +89,7 @@ fn fill(mutex: Arc<Mutex<RgbaImage>>, color: [u8; 4], x: i32, y: i32, height: u3
         return;
     }
 
-    let mut pixel = imgbuf.get_pixel_mut(x as u32, y as u32);
+    let pixel = imgbuf.get_pixel_mut(x as u32, y as u32);
 
     //if *pixel != image::Rgba([0, 0, 0, 255]) && *pixel == image::Rgba([255, 255, 255, 255]) {
     if *pixel == image::Rgba([255, 255, 255, 255]) {
