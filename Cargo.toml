@@ -1,76 +1,7 @@
-[package]
-name = "gehma"
-version = "0.5.3"
-authors = ["Kevin Per <kevin.per@protonmail.com>"]
-edition = "2018"
-
 [workspace]
 members = [
     "core",
     "web_contrib",
     "gehma_server",
-#    "schauma",
-#    "schauma_spider",
-#    "migration_software/sha256_hasher",
     "img_profile",
 ]
-
-[dependencies]
-core = { path = "./core" }
-web_contrib = { path = "./web_contrib" }
-sprechstunde = { path = "./gehma_server" }
-img_profile = { path = "./img_profile" }
-serde = "1.0"
-serde_derive = "1.0"
-serde_json = "1.0"
-chrono = { version = "0.4.6", features = ["serde"] }
-diesel = { version = "1.4.*", features = ["postgres","uuidv07", "r2d2", "chrono"] }
-futures = "0.3"
-r2d2 = "0.8.7"
-uuid = { version = "0.7", features = ["serde", "v4"] }
-openssl = { version = "0.10", features = ["vendored"] }
-reqwest = "0.10.4"
-tokio = "0.1.22"
-diesel_migrations= "1.4.0"
-actix-identity = "0.1.0"
-actix-multipart = "0.1.1"
-actix-cors = "0.2.0"
-actix-service = "0.4.1"
-bytes = "0.4"
-actix-files = "0.2"
-actix-web-actors = "1.0.0"
-actix-web = "2" 
-actix = "0.8"
-actix-rt = "1.0" 
-dotenv = "0.14.1"
-env_logger = "0.6"
-log = "0.4"
-ring = "0.14.6"
-data-encoding = "2.1.2"
-
-
-
-
-[[bin]]
-name = "sprechstunde"
-path = "gehma_server/src/main.rs"
-
-#[[bin]]
-#name = "schauma"
-#path = "schauma/src/main.rs"
-
-#[[bin]]
-#name = "schauma_spider"
-#path = "schauma_spider/src/main.rs"
-
-[[bin]]
-name = "img_profile"
-path = "img_profile/src/main.rs"
-
-#[[bin]]
-#name = "256_hasher"
-#path = "migration_software/sha256_hasher/src/main.rs"
-
-[dev-dependencies]
-tempfile = "3"
-reqwest = "0.10"

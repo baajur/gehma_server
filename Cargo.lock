@@ -946,7 +946,7 @@ checksum = "6ff9c56c9fb2a49c05ef0e431485a22400af20d33226dc0764d891d09e724127"
 
 [[package]]
 name = "core"
-version = "0.2.0"
+version = "0.0.1"
 dependencies = [
  "actix",
  "actix-web 2.0.0",
@@ -959,7 +959,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
- "uuid 0.7.4",
+ "uuid 0.6.5",
 ]
 
 [[package]]
@@ -1118,7 +1118,7 @@ dependencies = [
  "diesel_derives",
  "pq-sys",
  "r2d2",
- "uuid 0.8.1",
+ "uuid 0.6.5",
 ]
 
 [[package]]
@@ -1411,44 +1411,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c31b6d751ae2c7f11320402d34e41349dd1016f8d5d45e48c4312bc8625af50c"
 dependencies = [
  "byteorder",
-]
-
-[[package]]
-name = "gehma"
-version = "0.5.3"
-dependencies = [
- "actix",
- "actix-cors",
- "actix-files",
- "actix-identity",
- "actix-multipart",
- "actix-rt 1.1.0",
- "actix-service 0.4.2",
- "actix-web 2.0.0",
- "actix-web-actors",
- "bytes 0.4.12",
- "chrono",
- "core",
- "data-encoding",
- "diesel",
- "diesel_migrations",
- "dotenv",
- "env_logger",
- "futures 0.3.4",
- "img_profile",
- "log",
- "openssl",
- "r2d2",
- "reqwest 0.10.4",
- "ring",
- "serde",
- "serde_derive",
- "serde_json",
- "sprechstunde",
- "tempfile",
- "tokio 0.1.22",
- "uuid 0.7.4",
- "web_contrib",
 ]
 
 [[package]]
@@ -2463,6 +2425,19 @@ dependencies = [
 
 [[package]]
 name = "rand"
+version = "0.4.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "552840b97013b1a26992c11eac34bdd778e464601a4c2054b5f0bff7c6761293"
+dependencies = [
+ "fuchsia-cprng",
+ "libc",
+ "rand_core 0.3.1",
+ "rdrand",
+ "winapi 0.3.8",
+]
+
+[[package]]
+name = "rand"
 version = "0.6.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6d71dacdc3c88c1fde3885a3be3fbab9f35724e6ce99467f7d9c5026132184ca"
@@ -3011,7 +2986,7 @@ dependencies = [
  "serde_json",
  "tempfile",
  "tokio 0.1.22",
- "uuid 0.7.4",
+ "uuid 0.6.5",
  "web_contrib",
 ]
 
@@ -3591,19 +3566,23 @@ dependencies = [
 
 [[package]]
 name = "uuid"
-version = "0.7.4"
+version = "0.6.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "90dbc611eb48397705a6b0f6e917da23ae517e4d127123d2cf7674206627d32a"
+checksum = "e1436e58182935dcd9ce0add9ea0b558e8a87befe01c1a301e6020aeb0876363"
 dependencies = [
- "rand 0.6.5",
+ "cfg-if",
+ "rand 0.4.6",
  "serde",
 ]
 
 [[package]]
 name = "uuid"
-version = "0.8.1"
+version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9fde2f6a4bea1d6e007c4ad38c6839fa71cbb63b6dbf5b595aa38dc9b1093c11"
+checksum = "90dbc611eb48397705a6b0f6e917da23ae517e4d127123d2cf7674206627d32a"
+dependencies = [
+ "rand 0.6.5",
+]
 
 [[package]]
 name = "v_escape"

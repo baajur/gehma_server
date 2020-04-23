@@ -43,7 +43,7 @@ pub(crate) fn check_code(
     let res = auth.authenticator.check_code(&parsed, &body.code)?;
 
     if res {
-        let token = Uuid::new_v4().to_simple().to_string();
+        let token = Uuid::new_v4().simple().to_string();
 
         match crate::queries::user::create_query(
             &parsed,
