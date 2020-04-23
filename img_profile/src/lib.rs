@@ -31,8 +31,8 @@ pub fn generate(height: u32, width: u32, path: String) -> Result<(), std::io::Er
     ]
     .into_iter()
     .map(|color| {
-        let [a, b, c, d] = color;
-        [change_opacity(a, p), change_opacity(b, p), change_opacity(c, p), d]
+        let [ab, bc, cd, de] = color;
+        [change_opacity(ab, p), change_opacity(bc, p), change_opacity(cd, p), de]
 
     }).collect::<Vec<_>>();
 
@@ -47,21 +47,21 @@ pub fn generate(height: u32, width: u32, path: String) -> Result<(), std::io::Er
         *pixel = image::Rgba([255, 255, 255, 255]);
     }
 
-    let n: usize = thread_rng().gen_range(MIN, 500);
+    let amount: usize = thread_rng().gen_range(MIN, 500);
 
     let mutex = Arc::new(Mutex::new(imgbuf));
     let mut threads = Vec::new();
 
-    for _i in 0..n {
+    for _i in 0..amount {
         let x : i32 = thread_rng().gen_range(0, width - 1) as i32;
         let y : i32 = thread_rng().gen_range(0, height - 1) as i32;
 
-        let c = thread_rng().gen_range(0, colors.len());
+        let c_index = thread_rng().gen_range(0, colors.len());
 
-        let color = colors[c].clone();
+        let color = colors[c_index];
 
-        let cpy_width = width.clone();
-        let cpy_height = height.clone();
+        let cpy_width = width;
+        let cpy_height = height;
         
         let clone = mutex.clone();
         let handler = std::thread::Builder::new()
