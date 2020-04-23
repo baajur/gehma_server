@@ -9,6 +9,7 @@ use uuid::Uuid;
 use crate::ratelimits::RateLimitWrapper;
 use web_contrib::push_notifications::NotifyService;
 use chrono::{DateTime, Local};
+use crate::persistence::user::PersistentUserDao;
 
 //use crate::routes::user::{ResponseContact, UpdateUser};
 
@@ -18,15 +19,25 @@ const INCREASE_XP : i32 = 100;
 const PROFILE_WIDTH: u32 = 500;
 const PROFILE_HEIGHT: u32 = 500;
 
-pub(crate) fn get_entry_by_tel_query(
+#[derive(Clone)]
+pub struct PgUserDao {
+    pool: Pool,
+    notify_service: NotifyService,
+    ratelimit_service: RateLimitWrapper,
+}
+
+impl PersistentUserDao for PgUserDao {
+
+    /*
+fn get_by_tele_num(
+    &self,
     tele: &PhoneNumber,
-    pool: &web::Data<Pool>,
 ) -> Result<UserDto, ::core::errors::ServiceError> {
     info!("queries/user/get_entry_by_tel_query");
 
     use core::schema::users::dsl::*;
 
-    let conn: &PgConnection = &pool.get().unwrap();
+    let conn: &PgConnection = &self.pool.get().unwrap();
 
     let tele = tele.to_string();
 
@@ -44,10 +55,11 @@ pub(crate) fn get_entry_by_tel_query(
         .ok_or_else(|| ServiceError::BadRequest("No user found".into()))
         .map(|w| w.into())
 }
+    */
 
-pub(crate) fn get_contacts(
+fn get_contacts(
+    &self,
     user: &UserDto,
-    pool: &web::Data<Pool>,
 ) -> Result<Vec<ContactDto>, ::core::errors::ServiceError> {
     info!("queries/user/get_contacts");
 
@@ -55,7 +67,7 @@ pub(crate) fn get_contacts(
     use core::schema::contacts::dsl::{contacts, from_id, name, target_hash_tele_num};
     use core::schema::users::dsl::*;
 
-    let conn: &PgConnection = &pool.get().unwrap();
+    let conn: &PgConnection = &self.pool.get().unwrap();
 
     contacts
         .filter(from_id.eq(user.id))
@@ -153,39 +165,38 @@ pub(crate) fn get_contacts(
         })
 }
 
-pub(crate) fn analytics_user(
-    pool: &web::Data<Pool>,
+fn create_analytics_for_user(
+    &self,
     user: &UserDto,
-) -> Result<AnalyticDao, ::core::errors::ServiceError> {
+) -> Result<AnalyticDto, ::core::errors::ServiceError> {
     info!("queries/user/analytics_user");
     use core::schema::analytics::dsl::analytics;
 
     let ana = AnalyticDao::my_from(user);
-    let conn: &PgConnection = &pool.get().unwrap();
+    let conn: &PgConnection = &self.pool.get().unwrap();
 
-    let w = diesel::insert_into(analytics)
+    diesel::insert_into(analytics)
         .values(&ana)
-        .get_result(conn)
+        .get_result::<AnalyticDao>(conn)
+        .map(|w| w.into())
         .map_err(|_db_error| {
             eprintln!("{}", _db_error);
             ServiceError::BadRequest("Could not log change".into())
-        })?;
-
-    Ok(w)
+        })
 }
 
-pub(crate) fn create_query(
+fn create(
+    &self,
     tel: &PhoneNumber,
     country_code: &str,
     version: &str,
     access_token: &str,
-    pool: &web::Data<Pool>,
 ) -> Result<UserDto, ServiceError> {
     info!("queries/user/create_query");
     use core::schema::users::dsl::users;
 
     let new_inv = UserDao::my_from(&tel.to_string(), country_code, version, access_token);
-    let conn: &PgConnection = &pool.get().unwrap();
+    let conn: &PgConnection = &self.pool.get().unwrap();
 
     diesel::insert_into(users)
         .values(&new_inv)
@@ -198,15 +209,15 @@ pub(crate) fn create_query(
 
 }
 
-pub(crate) fn analytics_usage_statistics(
-    pool: &web::Data<Pool>,
+fn create_usage_statistics_for_user(
+    &self,
     user: &UserDto,
 ) -> Result<UsageStatisticEntryDto, ::core::errors::ServiceError> {
     info!("queries/user/analytics_usage_statistics");
     use core::schema::usage_statistics::dsl::usage_statistics;
 
     let ana = UsageStatisticEntryDao::my_from(user);
-    let conn: &PgConnection = &pool.get().unwrap();
+    let conn: &PgConnection = &self.pool.get().unwrap();
 
     diesel::insert_into(usage_statistics)
         .values(&ana)
@@ -218,21 +229,18 @@ pub(crate) fn analytics_usage_statistics(
         })
 }
 
-pub(crate) fn update_user_query(
-    myid: Uuid,
+fn update_user(
+    &self,
+    myid: &Uuid,
     user: &UpdateUserDto,
-    pool: &web::Data<Pool>,
-    notify_service: &web::Data<NotifyService>,
-    ratelimit_service: &web::Data<RateLimitWrapper>,
-    // based on this time, the server checks whether the ratelimit was reached or not
     current_time: DateTime<Local>,
 ) -> Result<UserDto, ::core::errors::ServiceError> {
     info!("queries/user/update_user_query");
     use core::schema::users::dsl::{changed_at, client_version, description, id, led, users, xp};
 
-    let xp_limit = ratelimit_service.get_ref().inner.check_rate_limit_xp(&myid, pool, current_time)?;
+    let xp_limit = self.ratelimit_service.inner.lock().unwrap().check_rate_limit_xp(myid, &self.pool, current_time)?;
 
-    let conn: &PgConnection = &pool.get().unwrap();
+    let conn: &PgConnection = &self.pool.get().unwrap();
 
     let target = users.filter(id.eq(myid));
 
@@ -268,8 +276,8 @@ pub(crate) fn update_user_query(
         .and_then(|user| {
             if my_led {
                 //Sending push notification
-                if !ratelimit_service.get_ref().inner.check_rate_limit_updates(&myid, pool, current_time)? {
-                    sending_push_notifications(&user, pool, notify_service).map_err(|err| {
+                if !self.ratelimit_service.inner.lock().unwrap().check_rate_limit_updates(&myid, &self.pool, current_time)? {
+                    sending_push_notifications(&user, &self.pool, &self.notify_service).map_err(|err| {
                         error!("{}", err);
                         ServiceError::BadRequest("Cannot send push notifications".to_string())
                     })?;
@@ -286,10 +294,117 @@ pub(crate) fn update_user_query(
         })
 }
 
+/// Get the user by uid
+fn get_by_id(
+    &self,
+    myid: &Uuid,
+    my_access_token: String,
+) -> Result<UserDto, ServiceError> {
+    info!("queries/user/get_query");
+    use core::schema::users::dsl::{access_token, id, users};
+
+    let conn: &PgConnection = &self.pool.get().unwrap();
+
+    users
+        .filter(id.eq(myid).and(access_token.eq(my_access_token)))
+        .load::<UserDao>(conn)
+        .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
+        .and_then(|w| {
+            w.first()
+                .cloned()
+                .ok_or_else(|| ServiceError::BadRequest("No user found".into()))
+                .map(|w| w.into())
+        })
+}
+
+fn get_by_tele_num(
+    &self,
+    phone_number: &PhoneNumber,
+    my_access_token: String,
+) -> Result<UserDto, ServiceError> {
+    info!("queries/user/get_query");
+    use core::schema::users::dsl::{access_token, tele_num, users};
+
+    let conn: &PgConnection = &self.pool.get().unwrap();
+
+    users
+        .filter(
+            tele_num
+                .eq(phone_number.to_string())
+                .and(access_token.eq(my_access_token)),
+        )
+        .load::<UserDao>(conn)
+        .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
+        .and_then(|w| {
+            w.first()
+                .cloned()
+                .ok_or_else(|| ServiceError::BadRequest("No user found".into()))
+                .map(|w| w.into())
+        })
+}
+
+fn update_profile_picture(
+    &self,
+    user: &UserDto,
+) -> Result<(), ServiceError> {
+    info!("queries/user/update_profile_picture");
+    use core::errors::InternalError;
+    use core::schema::users::dsl::{id, profile_picture, users};
+
+    let conn: &PgConnection = &self.pool.get().unwrap();
+
+    let target = users.filter(id.eq(user.id));
+
+    //FIXME add better error message
+    let path = format!("static/profile_pictures/{}.jpg", user.hash_tele_num);
+    let _ = img_profile::generate(PROFILE_HEIGHT, PROFILE_WIDTH, path.clone())
+        .map_err(InternalError::GenerateImage)?;
+
+    diesel::update(target)
+        .set((
+            //changed_at.eq(chrono::Local::now().naive_local()),
+            profile_picture.eq(&path),
+        ))
+        .execute(conn)
+        .map_err(|_db_error| ServiceError::BadRequest("Updating state failed".into()))?;
+
+    info!("Updating profile {}", path);
+
+    Ok(())
+}
+
+fn update_token(
+    &self,
+    uid: &Uuid,
+    token: String,
+) -> Result<(), ServiceError> {
+    info!("queries/push_notification/update_token_query");
+    use core::schema::users::dsl::*;
+    let conn: &PgConnection = &self.pool.get().unwrap();
+
+    let target = users.filter(id.eq(uid));
+
+
+    diesel::update(target)
+        .set(
+            firebase_token.eq(Some(token))
+            //disabled 29.11.2019
+            //changed_at.eq(chrono::Local::now().naive_local()),
+        )
+        .execute(conn)
+        .map_err(|_db_error| {
+            error!("db_error {}", _db_error);
+            ServiceError::BadRequest("Updating state failed".into())
+        })?;
+
+    Ok(())
+}
+}
+
 fn sending_push_notifications(
     user: &UserDto, //this is the sender
-    pool: &web::Data<Pool>,
-    notify_service: &web::Data<NotifyService>,
+    pool: &Pool,
+    notify_service: &NotifyService,
 ) -> Result<(), ServiceError> {
     info!("queries/user/sending_push_notifications");
     use diesel::sql_types::{Text, Uuid};
@@ -325,118 +440,12 @@ fn sending_push_notifications(
     .collect();
 
     //FIXME check
-    notify_service.clone().into_inner().service.push(
+    notify_service.clone().service.lock().unwrap().push(
         my_contacts
             .into_iter()
             .map(|c| (c.name, c.firebase_token))
             .collect(),
     )?;
-
-    Ok(())
-}
-
-/// Get the user by uid
-pub(crate) fn get_query(
-    myid: Uuid,
-    my_access_token: &str,
-    pool: &web::Data<Pool>,
-) -> Result<UserDto, ServiceError> {
-    info!("queries/user/get_query");
-    use core::schema::users::dsl::{access_token, id, users};
-
-    let conn: &PgConnection = &pool.get().unwrap();
-
-    users
-        .filter(id.eq(myid).and(access_token.eq(my_access_token)))
-        .load::<UserDao>(conn)
-        .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
-        .and_then(|w| {
-            w.first()
-                .cloned()
-                .ok_or_else(|| ServiceError::BadRequest("No user found".into()))
-                .map(|w| w.into())
-        })
-}
-
-/// Get the user by uid
-pub(crate) fn get_user_by_tele_num(
-    phone_number: &PhoneNumber,
-    my_access_token: &str,
-    pool: &web::Data<Pool>,
-) -> Result<UserDto, ServiceError> {
-    info!("queries/user/get_query");
-    use core::schema::users::dsl::{access_token, tele_num, users};
-
-    let conn: &PgConnection = &pool.get().unwrap();
-
-    users
-        .filter(
-            tele_num
-                .eq(phone_number.to_string())
-                .and(access_token.eq(my_access_token)),
-        )
-        .load::<UserDao>(conn)
-        .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
-        .and_then(|w| {
-            w.first()
-                .cloned()
-                .ok_or_else(|| ServiceError::BadRequest("No user found".into()))
-                .map(|w| w.into())
-        })
-}
-
-pub(crate) fn update_profile_picture(
-    pool: &web::Data<Pool>,
-    user: &UserDto,
-) -> Result<(), ServiceError> {
-    info!("queries/user/update_profile_picture");
-    use core::errors::InternalError;
-    use core::schema::users::dsl::{id, profile_picture, users};
-
-    let conn: &PgConnection = &pool.get().unwrap();
-
-    let target = users.filter(id.eq(user.id));
-
-    //FIXME add better error message
-    let path = format!("static/profile_pictures/{}.jpg", user.hash_tele_num);
-    let _ = img_profile::generate(PROFILE_HEIGHT, PROFILE_WIDTH, path.clone())
-        .map_err(InternalError::GenerateImage)?;
-
-    diesel::update(target)
-        .set((
-            //changed_at.eq(chrono::Local::now().naive_local()),
-            profile_picture.eq(&path),
-        ))
-        .execute(conn)
-        .map_err(|_db_error| ServiceError::BadRequest("Updating state failed".into()))?;
-
-    info!("Updating profile {}", path);
-
-    Ok(())
-}
-
-pub(crate) fn update_token_query(
-    uid: Uuid,
-    token: String,
-    pool: &web::Data<Pool>,
-) -> Result<(), ServiceError> {
-    info!("queries/push_notification/update_token_query");
-    use core::schema::users::dsl::*;
-    let conn: &PgConnection = &pool.get().unwrap();
-
-    let target = users.filter(id.eq(uid));
-
-    diesel::update(target)
-        .set(
-            firebase_token.eq(Some(token))
-            //disabled 29.11.2019
-            //changed_at.eq(chrono::Local::now().naive_local()),
-        )
-        .execute(conn)
-        .map_err(|_db_error| {
-            error!("db_error {}", _db_error);
-            ServiceError::BadRequest("Updating state failed".into())
-        })?;
 
     Ok(())
 }

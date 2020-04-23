@@ -7,20 +7,21 @@ use actix_cors::Cors;
 use actix_files::NamedFile;
 use actix_web::http::header;
 use actix_web::{middleware as actix_middleware, web, App, HttpResponse, HttpServer};
+use core::errors::ServiceError;
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
 use diesel_migrations::run_pending_migrations;
+use log::error;
 use std::path::PathBuf;
 use web_contrib::auth::AuthenticatorWrapper;
 use web_contrib::push_notifications::NotificationWrapper;
-use core::errors::ServiceError;
-use log::error;
+    use queries::user::PgUserDao;
 
 pub(crate) mod controllers;
-pub(crate) mod queries;
-pub(crate) mod routes;
-pub(crate) mod ratelimits;
 pub(crate) mod persistence;
+pub(crate) mod queries;
+pub(crate) mod ratelimits;
+pub(crate) mod routes;
 
 //mod middleware;
 
@@ -88,6 +89,20 @@ fn get_ratelimits() -> ratelimits::RateLimitWrapper {
 }
 
 #[allow(dead_code)]
+fn get_daos(
+    pool: Pool,
+    ratelimit: ratelimits::RateLimitWrapper,
+    not: NotificationWrapper,
+) -> PgUserDao {
+
+    PgUserDao {
+        pool,
+        ratelimit_service: ratelimit,
+        notify_service: not,
+    }
+}
+
+#[allow(dead_code)]
 fn get_firebase_notification_service() -> NotificationWrapper {
     use web_contrib::push_notifications::firebase::FirebaseConfiguration;
     use web_contrib::push_notifications::firebase::FirebaseNotificationService;
@@ -122,6 +137,8 @@ pub(crate) async fn main() -> std::io::Result<()> {
     let connection: &PgConnection = &pool.get().unwrap();
     run_pending_migrations(connection).expect("cannot run pending migrations");
 
+    let pers_user_dao = get_daos(pool.clone(), get_ratelimits(), get_firebase_notification_service());
+
     let server = HttpServer::new(move || {
         App::new()
             .data(pool.clone())
@@ -129,6 +146,7 @@ pub(crate) async fn main() -> std::io::Result<()> {
             .data(set_testing_auth())
             .data(get_firebase_notification_service())
             .data(get_ratelimits())
+            .data(pers_user_dao)
             .wrap(
                 Cors::new()
                     .allowed_origin("http://localhost:3000")
@@ -140,27 +158,27 @@ pub(crate) async fn main() -> std::io::Result<()> {
                     .finish(),
             )
             .wrap(actix_middleware::Logger::default())
-
             .data(web::JsonConfig::default().limit(4048 * 1024))
             .wrap(actix_middleware::Compress::default())
             .service(
                 web::scope("/static")
-                .service(web::resource("/{filename:.*}").route(web::get().to(load_file))),
+                    .service(web::resource("/{filename:.*}").route(web::get().to(load_file))),
             )
             .service(
                 web::scope("/api")
                     .service(
                         web::scope("/static") // doesn't matter if '/api' or not
-                            .service(web::resource("/{filename:.*}").route(web::get().to(load_file))),
+                            .service(
+                                web::resource("/{filename:.*}").route(web::get().to(load_file)),
+                            ),
                     )
                     .service(
                         web::resource("/signin") //must have query string access_token
                             .route(web::post().to(routes::user::signin)),
                     )
                     .service(
-                        web::resource("/user/{uid}/token").route(
-                            web::put().to(routes::user::update_token),
-                        ),
+                        web::resource("/user/{uid}/token")
+                            .route(web::put().to(routes::user::update_token)),
                     )
                     .service(
                         web::resource("/user/{uid}/blacklist")
@@ -179,7 +197,7 @@ pub(crate) async fn main() -> std::io::Result<()> {
                     )
                     .service(
                         web::resource("/user/{uid}/blacklist_contacts")
-                            .route(web::get().to(routes::user::get_contacts))
+                            .route(web::get().to(routes::user::get_contacts)),
                     )
                     .service(
                         web::resource("/exists/{uid}/{country_code}")
@@ -190,8 +208,7 @@ pub(crate) async fn main() -> std::io::Result<()> {
                             .route(web::post().to(routes::auth::request_code)),
                     )
                     .service(
-                        web::resource("/auth/check")
-                            .route(web::post().to(routes::auth::check)),
+                        web::resource("/auth/check").route(web::post().to(routes::auth::check)),
                     )
                     .default_service(web::route().to(HttpResponse::NotFound)),
             )
@@ -204,12 +221,15 @@ pub(crate) async fn main() -> std::io::Result<()> {
 }
 
 async fn load_file(req: actix_web::HttpRequest) -> Result<NamedFile, ServiceError> {
-    let path: PathBuf = req.match_info().query("filename").parse().map_err(|_err| ServiceError::BadRequest("filename missing".to_string()))?;
+    let path: PathBuf = req
+        .match_info()
+        .query("filename")
+        .parse()
+        .map_err(|_err| ServiceError::BadRequest("filename missing".to_string()))?;
     let mut dir = PathBuf::from("static");
     dir.push(path);
     Ok(NamedFile::open(dir).map_err(|err| {
         error!("load_file {:?}", err);
         ServiceError::InternalServerError
-    })?
-    )
+    })?)
 }

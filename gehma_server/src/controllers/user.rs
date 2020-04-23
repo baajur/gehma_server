@@ -1,28 +1,26 @@
 use crate::Pool;
 //use actix_multipart::{Field, MultipartError};
 //use actix_web::{error::BlockingError, error::PayloadError, web};
-use actix_web::web;
-use core::errors::ServiceError;
-use core::models::PhoneNumber;
-use core::models::dto::*;
+use crate::persistence::user::PersistentUserDao;
 use crate::ratelimits::RateLimitWrapper;
+use actix_web::web;
+use chrono::{DateTime, Local};
+use core::errors::ServiceError;
+use core::models::dto::*;
+use core::models::PhoneNumber;
 use uuid::Uuid;
 use web_contrib::auth::Auth;
 use web_contrib::push_notifications::NotifyService;
-use chrono::{DateTime, Local};
 
 use log::{error, info};
 
 //use crate::routes::user::{ResponseContact, UpdateTokenPayload, UpdateUser};
-use crate::routes::user::{UpdateTokenPayload};
+use crate::routes::user::UpdateTokenPayload;
 
 pub(crate) fn user_signin(
     body: PostUserDto,
-    pool: web::Data<Pool>,
     access_token: &str,
-    _auth: web::Data<Auth>,
-    notify_service: web::Data<NotifyService>,
-    ratelimit_service: web::Data<RateLimitWrapper>,
+    user_dao: web::Data<&dyn PersistentUserDao>,
     current_time: DateTime<Local>,
 ) -> Result<UserDto, ServiceError> {
     info!("controllers/user/user_signin");
@@ -38,7 +36,9 @@ pub(crate) fn user_signin(
     let country_code = &body.country_code;
     let tele = PhoneNumber::my_from(&body.tele_num, country_code)?;
 
-    let user = get_user_by_tele_num!(&tele, &access_token, _auth.into_inner(), &pool)?;
+    //let user = get_user_by_tele_num!(&tele, &access_token, _auth.into_inner(), &pool)?;
+
+    let user = user_dao.get_ref().get_by_tele_num(&tele, access_token.to_owned())?;
 
     if user.client_version != body.client_version {
         update_user_without_auth(
@@ -48,107 +48,80 @@ pub(crate) fn user_signin(
                 led: user.led,
                 client_version: body.client_version.clone(),
             },
-            &pool,
-            &notify_service,
-            &ratelimit_service,
+            user_dao,
             current_time,
         )?;
     }
 
-    crate::queries::user::update_profile_picture(&pool, &user)?;
-    crate::queries::user::analytics_usage_statistics(&pool, &user)?;
+    user_dao.get_ref().update_profile_picture(&user)?;
+    user_dao.get_ref().create_usage_statistics_for_user(&user)?;
 
     Ok(user)
 }
 
 pub(crate) fn get_entry(
     uid: &str,
-    pool: web::Data<Pool>,
     access_token: &str,
-    _auth: web::Data<Auth>,
+    user_dao: web::Data<&dyn PersistentUserDao>,
 ) -> Result<UserDto, ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
 
-    get_user_by_id!(parsed, &access_token, _auth.into_inner(), &pool)
+    get_user_by_id!(user_dao, parsed, &access_token)
 }
 
 pub(crate) fn get_contacts(
     uid: &str,
-    pool: web::Data<Pool>,
+    user_dao: web::Data<&dyn PersistentUserDao>,
     access_token: &str,
-    _auth: web::Data<Auth>,
 ) -> Result<Vec<ContactDto>, ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
 
-    let user: Result<UserDto, ServiceError> =
-        get_user_by_id!(parsed, &access_token, _auth.into_inner(), &pool);
+    let user: Result<UserDto, ServiceError> = get_user_by_id!(user_dao, parsed, &access_token);
 
-    crate::queries::user::get_contacts(&user?, &pool)
+    user_dao.get_ref().get_contacts(&user?)
 }
 
 pub(crate) fn update_token_handler(
     uid: String,
     payload: UpdateTokenPayload,
-    pool: web::Data<Pool>,
     access_token: &str,
-    _auth: web::Data<Auth>,
+    user_dao: web::Data<&dyn PersistentUserDao>,
 ) -> Result<(), ServiceError> {
     let parsed = Uuid::parse_str(&uid)?;
 
-    let user: Result<UserDto, ServiceError> =
-        get_user_by_id!(parsed, access_token, _auth.into_inner(), &pool);
+    let user: Result<UserDto, ServiceError> = get_user_by_id!(user_dao, parsed, access_token);
 
     user?;
 
-    crate::queries::user::update_token_query(parsed, payload.token, &pool)
+    user_dao.get_ref().update_token(&parsed, payload.token)
 }
 
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn update_user_with_auth(
     uid: &str,
     user: &UpdateUserDto,
-    pool: &web::Data<Pool>,
     access_token: &str,
-    _auth: web::Data<Auth>,
-    notify_service: &web::Data<NotifyService>,
-    ratelimit_service: &web::Data<RateLimitWrapper>,
+    user_dao: web::Data<&dyn PersistentUserDao>,
     current_time: DateTime<Local>,
 ) -> Result<UserDto, ::core::errors::ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
 
-    let muser: Result<UserDto, ServiceError> =
-        get_user_by_id!(parsed, &access_token, _auth.into_inner(), &pool);
+    let muser: Result<UserDto, ServiceError> = get_user_by_id!(user_dao, parsed, &access_token);
 
     muser?;
 
-    update_user_without_auth(
-        &parsed,
-        user,
-        pool,
-        notify_service,
-        ratelimit_service,
-        current_time,
-    )
+    update_user_without_auth(&parsed, user, user_dao, current_time)
 }
 
 pub(crate) fn update_user_without_auth(
     uid: &Uuid,
     user: &UpdateUserDto,
-    pool: &web::Data<Pool>,
-    notify_service: &web::Data<NotifyService>,
-    ratelimit_service: &web::Data<RateLimitWrapper>,
+    user_dao: web::Data<&dyn PersistentUserDao>,
     current_time: DateTime<Local>,
 ) -> Result<UserDto, ::core::errors::ServiceError> {
-    let user = crate::queries::user::update_user_query(
-        *uid,
-        user,
-        &pool,
-        notify_service,
-        ratelimit_service,
-        current_time,
-    )?;
+    let user = user_dao.get_ref().update_user(uid, user, current_time)?;
 
-    crate::queries::user::analytics_user(&pool, &user)?;
+    user_dao.get_ref().create_analytics_for_user(&user)?;
 
     Ok(user)
 }

@@ -3,20 +3,25 @@ use actix_web::web;
 use chrono::prelude::*;
 use chrono::{Duration, Local};
 use core::errors::ServiceError;
-use diesel::{prelude::*, PgConnection};
 use core::models::dao::*;
+use diesel::{prelude::*, PgConnection};
 use log::{debug, error, info};
+use std::sync::Arc;
+use std::sync::Mutex;
 use uuid::Uuid;
 
 pub type MyDateTime = DateTime<Local>;
 
+#[derive(Clone)]
 pub struct RateLimitWrapper {
-    pub inner: Box<dyn RateLimitPolicy>,
+    pub inner: Arc<Mutex<Box<dyn RateLimitPolicy + 'static + Send>>>,
 }
 
 impl RateLimitWrapper {
-    pub fn new(a: Box<dyn RateLimitPolicy>) -> Self {
-        Self { inner: a }
+    pub fn new(a: Box<dyn RateLimitPolicy + 'static + Send>) -> Self {
+        Self {
+            inner: Arc::new(Mutex::new(a)),
+        }
     }
 }
 
@@ -25,15 +30,15 @@ pub trait RateLimitPolicy {
     fn check_rate_limit_updates(
         &self,
         myid: &Uuid,
-        pool: &web::Data<Pool>,
+        pool: &Pool,
         current_time: MyDateTime,
     ) -> Result<bool, ServiceError>;
-    
+
     /// Returns true if limit was reached
     fn check_rate_limit_xp(
         &self,
         myid: &Uuid,
-        pool: &web::Data<Pool>,
+        pool: &Pool,
         current_time: MyDateTime,
     ) -> Result<bool, ServiceError>;
 }
@@ -44,7 +49,7 @@ impl DefaultRateLimitPolicy {
     fn check_rate_limit(
         &self,
         myid: &Uuid,
-        pool: &web::Data<Pool>,
+        pool: &Pool,
         current_time: MyDateTime,
         limit: usize,
     ) -> Result<bool, ServiceError> {
@@ -93,7 +98,7 @@ impl RateLimitPolicy for DefaultRateLimitPolicy {
     fn check_rate_limit_updates(
         &self,
         myid: &Uuid,
-        pool: &web::Data<Pool>,
+        pool: &Pool,
         current_time: MyDateTime,
     ) -> Result<bool, ServiceError> {
         //TODO move into configuration
@@ -105,7 +110,7 @@ impl RateLimitPolicy for DefaultRateLimitPolicy {
     fn check_rate_limit_xp(
         &self,
         myid: &Uuid,
-        pool: &web::Data<Pool>,
+        pool: &Pool,
         current_time: MyDateTime,
     ) -> Result<bool, ServiceError> {
         //TODO move into configuration
@@ -122,7 +127,7 @@ impl RateLimitPolicy for TestingTrueRateLimitPolicy {
     fn check_rate_limit_updates(
         &self,
         _myid: &Uuid,
-        _pool: &web::Data<Pool>,
+        _pool: &Pool,
         _current_time: MyDateTime,
     ) -> Result<bool, ServiceError> {
         Ok(true)
@@ -131,7 +136,7 @@ impl RateLimitPolicy for TestingTrueRateLimitPolicy {
     fn check_rate_limit_xp(
         &self,
         _myid: &Uuid,
-        _pool: &web::Data<Pool>,
+        _pool: &Pool,
         _current_time: MyDateTime,
     ) -> Result<bool, ServiceError> {
         Ok(true)
@@ -145,7 +150,7 @@ impl RateLimitPolicy for TestingFalseRateLimitPolicy {
     fn check_rate_limit_updates(
         &self,
         _myid: &Uuid,
-        _pool: &web::Data<Pool>,
+        _pool: &Pool,
         _current_time: MyDateTime,
     ) -> Result<bool, ServiceError> {
         Ok(false)
@@ -154,7 +159,7 @@ impl RateLimitPolicy for TestingFalseRateLimitPolicy {
     fn check_rate_limit_xp(
         &self,
         _myid: &Uuid,
-        _pool: &web::Data<Pool>,
+        _pool: &Pool,
         _current_time: MyDateTime,
     ) -> Result<bool, ServiceError> {
         Ok(false)

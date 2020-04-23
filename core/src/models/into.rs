@@ -38,3 +38,16 @@ impl Into<UsageStatisticEntryDto> for UsageStatisticEntryDao {
         }
     }
 }
+
+impl Into<AnalyticDto> for AnalyticDao {
+    fn into(self) -> AnalyticDto {
+        AnalyticDto  {
+            id: self.id.clone(),
+            description: self.description.clone(),
+            tele_num: self.tele_num.clone(),
+            led: self.led,
+            created_at: self.created_at.clone(),
+
+        }
+    }
+}

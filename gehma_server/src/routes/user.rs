@@ -1,45 +1,41 @@
+use crate::ratelimits::RateLimitWrapper;
 use crate::Pool;
 use actix_web::{web, HttpResponse};
-use core::models::dto::{PostUserDto, UpdateUserDto};
 use core::errors::ServiceError;
-use crate::ratelimits::RateLimitWrapper;
+use core::models::dto::{PostUserDto, UpdateUserDto};
 
-use web_contrib::utils::{QueryParams, set_response_headers};
-use log::{info};
+use log::info;
+use web_contrib::utils::{set_response_headers, QueryParams};
 
+use crate::controllers::user::{
+    get_entry, update_token_handler, update_user_with_auth, user_signin,
+};
+use crate::persistence::user::PersistentUserDao;
+use chrono::Local;
 use web_contrib::auth::Auth;
 use web_contrib::push_notifications::NotifyService;
-use crate::controllers::user::{user_signin, get_entry, update_user_with_auth, update_token_handler};
-use chrono::{Local};
 
 pub async fn signin(
     _info: web::Path<()>,
     body: web::Json<PostUserDto>,
-    pool: web::Data<Pool>,
     query: web::Query<QueryParams>,
-    auth: web::Data<Auth>,
-    notify_service: web::Data<NotifyService>,
-    ratelimit_service: web::Data<RateLimitWrapper>,
+    user_dao: web::Data<&dyn PersistentUserDao>,
 ) -> Result<HttpResponse, ServiceError> {
     info!("routes/user/signin");
 
     let current_time = Local::now();
 
     let user = user_signin(
-            body.into_inner(),
-            pool,
-            &query.access_token,
-            auth,
-            notify_service,
-            ratelimit_service,
-            current_time,
-    ).map_err(|_err| {
-        ServiceError::InternalServerError
-    })?;
+        body.into_inner(),
+        &query.access_token,
+        user_dao,
+        current_time,
+    )
+    .map_err(|_err| ServiceError::InternalServerError)?;
 
     let mut res = HttpResponse::Ok()
-                .content_type("application/json")
-                .json(user);
+        .content_type("application/json")
+        .json(user);
 
     set_response_headers(&mut res);
 
@@ -48,17 +44,17 @@ pub async fn signin(
 
 pub async fn get(
     info: web::Path<String>,
-    pool: web::Data<Pool>,
     query: web::Query<QueryParams>,
-    auth: web::Data<Auth>,
+    user_dao: web::Data<&dyn PersistentUserDao>,
 ) -> Result<HttpResponse, ServiceError> {
     info!("routes/user/get");
 
-    let users = get_entry(&info.into_inner(), pool, &query.access_token, auth).map_err(|_err| ServiceError::InternalServerError)?;
+    let users = get_entry(&info.into_inner(), &query.access_token, user_dao)
+        .map_err(|_err| ServiceError::InternalServerError)?;
 
     let mut res = HttpResponse::Ok()
-                    .content_type("application/json")
-                    .json(users);
+        .content_type("application/json")
+        .json(users);
 
     set_response_headers(&mut res);
 
@@ -67,17 +63,18 @@ pub async fn get(
 
 pub async fn get_contacts(
     info: web::Path<String>,
-    pool: web::Data<Pool>,
     query: web::Query<QueryParams>,
-    auth: web::Data<Auth>,
+    user_dao: web::Data<&dyn PersistentUserDao>,
 ) -> Result<HttpResponse, ServiceError> {
     info!("routes/user/get_contacts");
 
-    let users = crate::controllers::user::get_contacts(&info.into_inner(), pool, &query.access_token, auth).map_err(|_err| ServiceError::InternalServerError)?;
+    let users =
+        crate::controllers::user::get_contacts(&info.into_inner(), user_dao, &query.access_token)
+            .map_err(|_err| ServiceError::InternalServerError)?;
 
     let mut res = HttpResponse::Ok()
-                    .content_type("application/json")
-                    .json(users);
+        .content_type("application/json")
+        .json(users);
 
     set_response_headers(&mut res);
 
@@ -123,30 +120,25 @@ pub fn upload_profile_picture(
 pub async fn update(
     info: web::Path<String>,
     data: web::Json<UpdateUserDto>,
-    pool: web::Data<Pool>,
     query: web::Query<QueryParams>,
-    auth: web::Data<Auth>,
-    notify_service: web::Data<NotifyService>,
-    ratelimit_service: web::Data<RateLimitWrapper>,
+    user_dao: web::Data<&dyn PersistentUserDao>,
 ) -> Result<HttpResponse, ServiceError> {
     info!("routes/user/update");
 
     let current_time = Local::now();
 
     let user = update_user_with_auth(
-            &info.into_inner(),
-            &data.into_inner(),
-            &pool,
-            &query.access_token,
-            auth,
-            &notify_service,
-            &ratelimit_service,
-            current_time,
-        ).map_err(|_err| ServiceError::InternalServerError)?;
+        &info.into_inner(),
+        &data.into_inner(),
+        &query.access_token,
+        user_dao,
+        current_time,
+    )
+    .map_err(|_err| ServiceError::InternalServerError)?;
 
     Ok(HttpResponse::Ok()
-            .content_type("application/json")
-            .json(&user))
+        .content_type("application/json")
+        .json(&user))
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -157,23 +149,20 @@ pub struct UpdateTokenPayload {
 pub async fn update_token(
     _info: web::Path<String>,
     body: web::Json<UpdateTokenPayload>,
-    pool: web::Data<Pool>,
     query: web::Query<QueryParams>,
-    auth: web::Data<Auth>,
+    user_dao: web::Data<&dyn PersistentUserDao>,
 ) -> Result<HttpResponse, ServiceError> {
     info!("routes/push_notification/update_token");
 
     let _ = update_token_handler(
-            _info.into_inner(),
-            body.into_inner(),
-            pool,
-            &query.access_token,
-            auth,
-        ).map_err(|_err| ServiceError::InternalServerError)?;
+        _info.into_inner(),
+        body.into_inner(),
+        &query.access_token,
+        user_dao,
+    )
+    .map_err(|_err| ServiceError::InternalServerError)?;
 
-    let mut res = HttpResponse::Ok()
-                .content_type("application/json")
-                .json(());
+    let mut res = HttpResponse::Ok().content_type("application/json").json(());
 
     set_response_headers(&mut res);
 
