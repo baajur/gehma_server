@@ -1,13 +1,13 @@
 use super::schema::*;
 use crate::errors::InternalError;
-//use crate::utils::phonenumber_to_international;
+use crate::utils::phonenumber_to_international;
 
 use data_encoding::HEXUPPER;
 use ring::digest;
 
-pub mod schauma;
+//pub mod schauma;
 
-pub use schauma::*;
+//pub use schauma::*;
 
 pub type HashedTeleNum = String;
 
@@ -101,7 +101,6 @@ pub struct Blacklist {
     pub hash_blocked: HashedTeleNum,
 }
 
-/*
 impl Blacklist {
     pub fn my_from(blocker: &PhoneNumber, blocked: &PhoneNumber) -> Self {
         Blacklist {
@@ -114,9 +113,7 @@ impl Blacklist {
         }
     }
 }
-*/
 
-/*
 #[derive(Debug)]
 pub struct PhoneNumber(phonenumber::PhoneNumber);
 
@@ -131,7 +128,6 @@ impl PhoneNumber {
         Ok(PhoneNumber(phonenumber_to_international(raw, cc)?))
     }
 }
-*/
 
 #[derive(Debug, Serialize, Deserialize, Queryable, Clone, Identifiable)]
 #[table_name = "analytics"]

@@ -1,6 +1,7 @@
 use core::errors::ServiceError;
 use log::{error, info};
 use reqwest::Client;
+use core::models::PhoneNumber;
 
 pub mod testing;
 pub mod twilio;

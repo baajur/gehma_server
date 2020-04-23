@@ -1,6 +1,5 @@
 use crate::errors::{InternalError};
 
-/*
 pub fn phonenumber_to_international(number: &str, country: &str) -> Result<phonenumber::PhoneNumber, InternalError> {
 
     let parsed_country = Some(country.parse().map_err(|_| InternalError::InvalidCountry(country.to_string()))?);
@@ -10,4 +9,3 @@ pub fn phonenumber_to_international(number: &str, country: &str) -> Result<phone
     Ok(number)
     //Ok(format!("{}", number.format().mode(Mode::International)).replace(" ", ""))
 }
-*/

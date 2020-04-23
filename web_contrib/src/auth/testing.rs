@@ -1,5 +1,6 @@
 use crate::auth::*;
 use core::errors::ServiceError;
+use core::models::PhoneNumber;
 
 #[derive(Debug, Clone)]
 pub struct TestingAuthConfiguration {
