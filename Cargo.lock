@@ -3004,7 +3004,6 @@ dependencies = [
  "actix-service 0.4.2",
  "actix-web 2.0.0",
  "actix-web-actors",
- "bytes 0.4.12",
  "chrono",
  "core",
  "data-encoding",
