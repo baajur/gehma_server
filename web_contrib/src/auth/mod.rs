@@ -1,5 +1,4 @@
 use core::errors::ServiceError;
-use core::models::PhoneNumber;
 use log::{error, info};
 use reqwest::Client;
 

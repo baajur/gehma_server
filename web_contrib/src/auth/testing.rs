@@ -1,5 +1,4 @@
 use crate::auth::*;
-use core::models::PhoneNumber;
 use core::errors::ServiceError;
 
 #[derive(Debug, Clone)]

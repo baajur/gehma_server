@@ -40,4 +40,4 @@ path = "migration_software/sha256_hasher/src/main.rs"
 
 [dev-dependencies]
 tempfile = "3"
-reqwest = "0.9"
+reqwest = "0.10"
