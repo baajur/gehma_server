@@ -5,21 +5,21 @@ use crate::Pool;
 use core::errors::ServiceError;
 
 use web_contrib::auth::Auth;
-use core::models::User;
+use core::models::dto::*;
 
-use crate::routes::contact_exists::{PayloadUser, ResponseUser};
+//use crate::routes::contact_exists::{PayloadUser, ResponseUser};
 
 pub(crate) fn get_entry(
     uid: &str,
     country_code: &str,
-    phone_numbers: &mut Vec<PayloadUser>,
+    phone_numbers: &mut Vec<PayloadUserDto>,
     pool: web::Data<Pool>,
     access_token: &str,
     _auth: web::Data<Auth>,
-) -> Result<Vec<ResponseUser>, ServiceError> {
+) -> Result<Vec<WrappedUserDto>, ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
 
-    let user: Result<User, ServiceError> =
+    let user: Result<UserDto, ServiceError> =
         get_user_by_id!(parsed, access_token, _auth.into_inner(), &pool);
 
     let users =

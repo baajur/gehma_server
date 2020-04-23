@@ -3,8 +3,8 @@ use actix_web::web;
 use chrono::prelude::*;
 use chrono::{Duration, Local};
 use core::errors::ServiceError;
-use core::models::User;
 use diesel::{prelude::*, PgConnection};
+use core::models::dao::*;
 use log::{debug, error, info};
 use uuid::Uuid;
 
@@ -50,7 +50,6 @@ impl DefaultRateLimitPolicy {
     ) -> Result<bool, ServiceError> {
         info!("ratelimits/mod/check_rate_limit");
 
-        use core::models::Analytic;
         use core::schema::analytics::dsl::{analytics, created_at, tele_num};
         use core::schema::users::dsl::{id, users};
 
@@ -58,7 +57,7 @@ impl DefaultRateLimitPolicy {
 
         users
             .filter(id.eq(myid))
-            .load::<User>(conn)
+            .load::<UserDao>(conn)
             .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
             .and_then(|res_users| {
                 Ok(res_users
@@ -78,7 +77,7 @@ impl DefaultRateLimitPolicy {
 
                 let count = analytics
                     .filter(tele_num.eq(user.tele_num).and(created_at.ge(threshold)))
-                    .load::<Analytic>(conn)
+                    .load::<AnalyticDao>(conn)
                     .map_err(|_db_error| {
                         error!("db error: {}", _db_error);
                         ServiceError::InternalServerError

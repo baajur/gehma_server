@@ -117,7 +117,7 @@ pub struct InsertAnalyticDao {
 }
 
 impl AnalyticDao {
-    pub fn my_from(user: &UserDao) -> InsertAnalyticDao {
+    pub fn my_from(user: &crate::models::dto::UserDto) -> InsertAnalyticDao {
         InsertAnalyticDao {
             tele_num: user.tele_num.clone(),
             led: user.led,
@@ -143,7 +143,7 @@ pub struct InsertUsageStatisticEntryDao {
 }
 
 impl UsageStatisticEntryDao {
-    pub fn my_from(user: &UserDao) -> InsertUsageStatisticEntryDao {
+    pub fn my_from(user: &crate::models::dto::UserDto) -> InsertUsageStatisticEntryDao {
         InsertUsageStatisticEntryDao {
             tele_num: user.tele_num.clone(),
             created_at: chrono::Local::now().naive_local(),

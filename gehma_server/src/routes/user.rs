@@ -1,6 +1,6 @@
 use crate::Pool;
 use actix_web::{web, HttpResponse};
-use core::models::DowngradedUser;
+use core::models::dto::{PostUserDto, UpdateUserDto};
 use core::errors::ServiceError;
 use crate::ratelimits::RateLimitWrapper;
 
@@ -12,23 +12,9 @@ use web_contrib::push_notifications::NotifyService;
 use crate::controllers::user::{user_signin, get_entry, update_user_with_auth, update_token_handler};
 use chrono::{Local};
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct PostUser {
-    pub tele_num: String,
-    pub country_code: String,
-    pub client_version: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct UpdateUser {
-    pub description: String,
-    pub led: bool,
-    pub client_version: String,
-}
-
 pub async fn signin(
     _info: web::Path<()>,
-    body: web::Json<PostUser>,
+    body: web::Json<PostUserDto>,
     pool: web::Data<Pool>,
     query: web::Query<QueryParams>,
     auth: web::Data<Auth>,
@@ -77,33 +63,6 @@ pub async fn get(
     set_response_headers(&mut res);
 
     Ok(res)
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ResponseContact {
-    pub user: DowngradedUser,
-    pub name: String,
-    pub blocked: bool,
-}
-
-impl ResponseContact {
-    #[allow(clippy::too_many_arguments)]
-    pub fn new(name: String, tele_num: String, led: bool, country_code: String, description: String, changed_at: chrono::NaiveDateTime, profile_picture: String, hash_tele_num: String, blocked: Option<String>, xp: i32) -> Self {
-        ResponseContact {
-            user: DowngradedUser {
-                tele_num,
-                led,
-                country_code,
-                description,
-                changed_at,
-                profile_picture,
-                hash_tele_num,
-                xp,
-            },
-            blocked: blocked.is_some(),
-            name,
-        }
-    }
 }
 
 pub async fn get_contacts(
@@ -163,7 +122,7 @@ pub fn upload_profile_picture(
 
 pub async fn update(
     info: web::Path<String>,
-    data: web::Json<UpdateUser>,
+    data: web::Json<UpdateUserDto>,
     pool: web::Data<Pool>,
     query: web::Query<QueryParams>,
     auth: web::Data<Auth>,

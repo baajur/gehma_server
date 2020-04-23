@@ -4,7 +4,9 @@ use uuid::Uuid;
 use web_contrib::auth::Auth;
 
 use core::errors::ServiceError;
-use core::models::{Blacklist, PhoneNumber, User};
+use core::models::dto::*;
+use core::models::dao::*;
+use core::models::PhoneNumber;
 
 use crate::Pool;
 
@@ -15,10 +17,10 @@ pub(crate) fn get_entry(
     pool: web::Data<Pool>,
     firebase_uid: &str,
     _auth: web::Data<Auth>,
-) -> Result<Vec<Blacklist>, ServiceError> {
+) -> Result<Vec<BlacklistDto>, ServiceError> {
     let blocker = Uuid::parse_str(blocker)?;
 
-    let user: Result<User, ServiceError> =
+    let user: Result<UserDto, ServiceError> =
         get_user_by_id!(blocker, &firebase_uid, _auth.into_inner(), &pool);
 
     user?;
@@ -34,12 +36,12 @@ pub(crate) fn create_entry(
     pool: web::Data<Pool>,
     firebase_uid: &str,
     _auth: web::Data<Auth>,
-) -> Result<Blacklist, ServiceError> {
+) -> Result<BlacklistDto, ServiceError> {
     use core::schema::users::dsl::{hash_tele_num, id, users};
 
     let blocker2 = Uuid::parse_str(blocker)?;
 
-    let user: Result<User, ServiceError> =
+    let user: Result<UserDto, ServiceError> =
         get_user_by_id!(blocker2, &firebase_uid, _auth.into_inner(), &pool);
 
     user?;
@@ -53,7 +55,7 @@ pub(crate) fn create_entry(
 
     let myusers = users
         .filter(id.eq(blocker2))
-        .load::<User>(conn)
+        .load::<UserDao>(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Cannot find user".into()))?;
 
     let user = myusers
@@ -63,7 +65,7 @@ pub(crate) fn create_entry(
 
     let contact = users
         .filter(hash_tele_num.eq(data.blocked.clone()))
-        .load::<User>(conn)
+        .load::<UserDao>(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Cannot find user".into()))?
         .first()
         .cloned()
@@ -74,7 +76,6 @@ pub(crate) fn create_entry(
     let tel = PhoneNumber::my_from(&user.tele_num, &data.country_code)?;
     let b = crate::queries::blacklist::create_query(&tel, &blocked, pool)?;
 
-    //dbg!(&b);
     Ok(b)
 }
 
@@ -89,18 +90,16 @@ pub(crate) fn delete_entry(
 
     let blocker2 = Uuid::parse_str(blocker)?;
 
-    let user: Result<User, ServiceError> =
+    let user: Result<UserDto, ServiceError> =
         get_user_by_id!(blocker2, &firebase_uid, _auth.into_inner(), &pool);
 
     user?;
-
-   // let blocked = PhoneNumber::my_from(&data.blocked, &data.country_code)?;
 
     let conn: &PgConnection = &pool.get().unwrap();
 
     let myusers = users
         .filter(id.eq(blocker2))
-        .load::<User>(conn)
+        .load::<UserDao>(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Cannot find user".into()))?;
 
     let user = myusers
@@ -112,7 +111,7 @@ pub(crate) fn delete_entry(
 
     let contact = users
         .filter(hash_tele_num.eq(data.blocked.clone()))
-        .load::<User>(conn)
+        .load::<UserDao>(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Cannot find user".into()))?
         .first()
         .cloned()

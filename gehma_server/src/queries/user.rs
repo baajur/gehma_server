@@ -1,27 +1,27 @@
 use crate::Pool;
 use actix_web::web;
 use core::errors::ServiceError;
-use core::models::{Analytic, PhoneNumber, UsageStatisticEntry, User};
+use core::models::PhoneNumber;
+use core::models::dao::*;
+use core::models::dto::*;
 use diesel::{prelude::*, PgConnection};
 use uuid::Uuid;
 use crate::ratelimits::RateLimitWrapper;
 use web_contrib::push_notifications::NotifyService;
 use chrono::{DateTime, Local};
 
-use crate::routes::user::{ResponseContact, UpdateUser};
+//use crate::routes::user::{ResponseContact, UpdateUser};
 
 use log::{error, info};
 
 const INCREASE_XP : i32 = 100;
-
-
 const PROFILE_WIDTH: u32 = 500;
 const PROFILE_HEIGHT: u32 = 500;
 
 pub(crate) fn get_entry_by_tel_query(
     tele: &PhoneNumber,
     pool: &web::Data<Pool>,
-) -> Result<User, ::core::errors::ServiceError> {
+) -> Result<UserDto, ::core::errors::ServiceError> {
     info!("queries/user/get_entry_by_tel_query");
 
     use core::schema::users::dsl::*;
@@ -32,7 +32,7 @@ pub(crate) fn get_entry_by_tel_query(
 
     let res = users
         .filter(tele_num.eq(tele))
-        .load::<User>(conn)
+        .load::<UserDao>(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
         .and_then(|result| {
             Ok(result)
@@ -42,12 +42,13 @@ pub(crate) fn get_entry_by_tel_query(
     res.first()
         .cloned()
         .ok_or_else(|| ServiceError::BadRequest("No user found".into()))
+        .map(|w| w.into())
 }
 
 pub(crate) fn get_contacts(
-    user: &User,
+    user: &UserDto,
     pool: &web::Data<Pool>,
-) -> Result<Vec<ResponseContact>, ::core::errors::ServiceError> {
+) -> Result<Vec<ContactDto>, ::core::errors::ServiceError> {
     info!("queries/user/get_contacts");
 
     use core::schema::blacklist::dsl::{blacklist, hash_blocked, hash_blocker};
@@ -69,6 +70,7 @@ pub(crate) fn get_contacts(
                     .and(hash_blocked.eq(&user.hash_tele_num)))*/,
         )
         .select((
+            id,
             name,
             tele_num,
             led,
@@ -79,27 +81,36 @@ pub(crate) fn get_contacts(
             hash_tele_num,
             hash_blocked.nullable(),
             xp, 
+            created_at,
+            client_version,
+            firebase_token.nullable(),
+            access_token,
         ))
         .distinct()
         .load::<(
-            String,
-            String,
-            bool,
-            String,
-            String,
+            Uuid, //id
+            String, //name
+            String, //tele_num
+            bool, //led
+            String, //cc
+            String, //description
             chrono::NaiveDateTime,
-            String,
-            String,
-            Option<String>,
+            String, //hash_tele
+            String, //hash_blocked
+            Option<String>, 
             i32, //XP
+            chrono::NaiveDateTime,//created_at
+            String, //client
+            Option<String>, //firebase
+            String, //access_token
         )>(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
         .and_then(|values| {
-            dbg!(&values);
             Ok(values
                 .into_iter()
                 .map(
                     |(
+                        _id,
                         _name,
                         _tele_num,
                         _led,
@@ -110,18 +121,31 @@ pub(crate) fn get_contacts(
                         _hash_tele_num,
                         _blocked,
                         _xp,
+                        _created_at,
+                        _client_version,
+                        _firebase_token,
+                        _access_token,
                     )| {
-                        ResponseContact::new(
+                        let user_d = UserDao {
+                            id: _id,
+                            tele_num: _tele_num,
+                            led: _led,
+                            created_at: _created_at,
+                            country_code: _country_code,
+                            description: _description,
+                            changed_at: _changed_at,
+                            client_version: _client_version,
+                            firebase_token: _firebase_token,
+                            profile_picture: _profile_picture,
+                            access_token: _access_token,
+                            hash_tele_num: _hash_tele_num,
+                            xp: _xp,
+                        };
+
+                        ContactDto::new(
                             _name,
-                            _tele_num,
-                            _led,
-                            _country_code,
-                            _description,
-                            _changed_at,
-                            _profile_picture,
-                            _hash_tele_num,
-                            _blocked,
-                            _xp,
+                            _blocked.is_some(),
+                            user_d.into()
                         )
                     },
                 )
@@ -131,12 +155,12 @@ pub(crate) fn get_contacts(
 
 pub(crate) fn analytics_user(
     pool: &web::Data<Pool>,
-    user: &User,
-) -> Result<Analytic, ::core::errors::ServiceError> {
+    user: &UserDto,
+) -> Result<AnalyticDao, ::core::errors::ServiceError> {
     info!("queries/user/analytics_user");
     use core::schema::analytics::dsl::analytics;
 
-    let ana = Analytic::my_from(user);
+    let ana = AnalyticDao::my_from(user);
     let conn: &PgConnection = &pool.get().unwrap();
 
     let w = diesel::insert_into(analytics)
@@ -156,52 +180,53 @@ pub(crate) fn create_query(
     version: &str,
     access_token: &str,
     pool: &web::Data<Pool>,
-) -> Result<User, ServiceError> {
+) -> Result<UserDto, ServiceError> {
     info!("queries/user/create_query");
     use core::schema::users::dsl::users;
 
-    let new_inv: User = User::my_from(&tel.to_string(), country_code, version, access_token);
+    let new_inv = UserDao::my_from(&tel.to_string(), country_code, version, access_token);
     let conn: &PgConnection = &pool.get().unwrap();
 
-    let ins = diesel::insert_into(users)
+    diesel::insert_into(users)
         .values(&new_inv)
-        .get_result(conn)?;
+        .get_result::<UserDao>(conn)
+        .map(|w| w.into())
+        .map_err(|_db_error| {
+            eprintln!("{}", _db_error);
+            ServiceError::BadRequest("Cannot insert user".into())
+        })
 
-    //dbg!(&ins);
-
-    Ok(ins)
 }
 
 pub(crate) fn analytics_usage_statistics(
     pool: &web::Data<Pool>,
-    user: &User,
-) -> Result<UsageStatisticEntry, ::core::errors::ServiceError> {
+    user: &UserDto,
+) -> Result<UsageStatisticEntryDto, ::core::errors::ServiceError> {
     info!("queries/user/analytics_usage_statistics");
     use core::schema::usage_statistics::dsl::usage_statistics;
 
-    let ana = UsageStatisticEntry::my_from(user);
+    let ana = UsageStatisticEntryDao::my_from(user);
     let conn: &PgConnection = &pool.get().unwrap();
 
-    let w = diesel::insert_into(usage_statistics)
+    diesel::insert_into(usage_statistics)
         .values(&ana)
-        .get_result(conn)
+        .get_result::<UsageStatisticEntryDao>(conn)
+        .map(|w| w.into())
         .map_err(|_db_error| {
             eprintln!("{}", _db_error);
             ServiceError::BadRequest("Could not log change".into())
-        })?;
-
-    Ok(w)
+        })
 }
 
 pub(crate) fn update_user_query(
     myid: Uuid,
-    user: &UpdateUser,
+    user: &UpdateUserDto,
     pool: &web::Data<Pool>,
     notify_service: &web::Data<NotifyService>,
     ratelimit_service: &web::Data<RateLimitWrapper>,
     // based on this time, the server checks whether the ratelimit was reached or not
     current_time: DateTime<Local>,
-) -> Result<User, ::core::errors::ServiceError> {
+) -> Result<UserDto, ::core::errors::ServiceError> {
     info!("queries/user/update_user_query");
     use core::schema::users::dsl::{changed_at, client_version, description, id, led, users, xp};
 
@@ -231,13 +256,14 @@ pub(crate) fn update_user_query(
 
     users
         .filter(id.eq(myid))
-        .load::<User>(conn)
+        .load::<UserDao>(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
         .and_then(|res_users| {
             Ok(res_users
                 .first()
                 .cloned()
                 .ok_or_else(|| ServiceError::BadRequest("No user found".into()))?)
+                .map(|w| w.into())
         })
         .and_then(|user| {
             if my_led {
@@ -261,7 +287,7 @@ pub(crate) fn update_user_query(
 }
 
 fn sending_push_notifications(
-    user: &User, //this is the sender
+    user: &UserDto, //this is the sender
     pool: &web::Data<Pool>,
     notify_service: &web::Data<NotifyService>,
 ) -> Result<(), ServiceError> {
@@ -314,7 +340,7 @@ pub(crate) fn get_query(
     myid: Uuid,
     my_access_token: &str,
     pool: &web::Data<Pool>,
-) -> Result<User, ServiceError> {
+) -> Result<UserDto, ServiceError> {
     info!("queries/user/get_query");
     use core::schema::users::dsl::{access_token, id, users};
 
@@ -322,12 +348,13 @@ pub(crate) fn get_query(
 
     users
         .filter(id.eq(myid).and(access_token.eq(my_access_token)))
-        .load::<User>(conn)
+        .load::<UserDao>(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
         .and_then(|w| {
             w.first()
                 .cloned()
                 .ok_or_else(|| ServiceError::BadRequest("No user found".into()))
+                .map(|w| w.into())
         })
 }
 
@@ -336,7 +363,7 @@ pub(crate) fn get_user_by_tele_num(
     phone_number: &PhoneNumber,
     my_access_token: &str,
     pool: &web::Data<Pool>,
-) -> Result<User, ServiceError> {
+) -> Result<UserDto, ServiceError> {
     info!("queries/user/get_query");
     use core::schema::users::dsl::{access_token, tele_num, users};
 
@@ -348,18 +375,19 @@ pub(crate) fn get_user_by_tele_num(
                 .eq(phone_number.to_string())
                 .and(access_token.eq(my_access_token)),
         )
-        .load::<User>(conn)
+        .load::<UserDao>(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
         .and_then(|w| {
             w.first()
                 .cloned()
                 .ok_or_else(|| ServiceError::BadRequest("No user found".into()))
+                .map(|w| w.into())
         })
 }
 
 pub(crate) fn update_profile_picture(
     pool: &web::Data<Pool>,
-    user: &User,
+    user: &UserDto,
 ) -> Result<(), ServiceError> {
     info!("queries/user/update_profile_picture");
     use core::errors::InternalError;

@@ -2,7 +2,8 @@ use web_contrib::auth::Auth;
 use crate::Pool;
 use actix_web::web;
 use core::errors::ServiceError;
-use core::models::{PhoneNumber, User};
+use core::models::PhoneNumber;
+use core::models::dto::*;
 use uuid::Uuid;
 
 use log::{info, error};
@@ -35,7 +36,7 @@ pub(crate) fn check_code(
     body: RequestCheckCode,
     pool: web::Data<Pool>,
     auth: web::Data<Auth>,
-) -> Result<User, ServiceError> {
+) -> Result<UserDto, ServiceError> {
     info!("controllers/auth/check_code");
 
     let parsed = PhoneNumber::my_from(&body.tele_num, &body.country_code)?;

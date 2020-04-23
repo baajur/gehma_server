@@ -1,7 +1,16 @@
 use super::HashedTeleNum;
+use uuid::Uuid;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WrappedUserDto {
+    pub hash_tele_num: HashedTeleNum,
+    pub name: String,
+    pub user: Option<UserDto>,
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct UserDto {
+    pub id: Uuid,
     pub tele_num: String,
     pub led: bool,
     pub country_code: String,
@@ -10,6 +19,34 @@ pub struct UserDto {
     pub profile_picture: String,
     pub hash_tele_num: String,
     pub xp: i32,
+    pub client_version: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PayloadNumbersDto {
+    pub numbers: Vec<PayloadUserDto>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PayloadUserDto {
+    pub name: String,
+    pub hash_tele_num: HashedTeleNum,
+}
+
+//TODO merge!
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PostUserDto {
+    pub tele_num: String,
+    pub country_code: String,
+    pub client_version: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UpdateUserDto {
+    pub description: String,
+    pub led: bool,
+    pub client_version: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -38,9 +75,17 @@ pub struct UsageStatisticEntryDto {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ContactDto {
-    pub from_id: uuid::Uuid,
-    pub target_tele_num: String,
-    pub created_at: chrono::NaiveDateTime,
+    pub user: UserDto,
     pub name: String,
-    pub target_hash_tele_num: HashedTeleNum,
+    pub blocked: bool,
+}
+
+impl ContactDto {
+    pub fn new(name: impl Into<String>, blocked: bool, user: UserDto) -> Self {
+        Self {
+            name: name.into(),
+            user,
+            blocked,
+        }
+    }
 }

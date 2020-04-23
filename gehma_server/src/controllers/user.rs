@@ -3,7 +3,8 @@ use crate::Pool;
 //use actix_web::{error::BlockingError, error::PayloadError, web};
 use actix_web::web;
 use core::errors::ServiceError;
-use core::models::{PhoneNumber, User};
+use core::models::PhoneNumber;
+use core::models::dto::*;
 use crate::ratelimits::RateLimitWrapper;
 use uuid::Uuid;
 use web_contrib::auth::Auth;
@@ -11,19 +12,19 @@ use web_contrib::push_notifications::NotifyService;
 use chrono::{DateTime, Local};
 
 use log::{error, info};
-//use std::io::Write;
 
-use crate::routes::user::{PostUser, ResponseContact, UpdateTokenPayload, UpdateUser};
+//use crate::routes::user::{ResponseContact, UpdateTokenPayload, UpdateUser};
+use crate::routes::user::{UpdateTokenPayload};
 
 pub(crate) fn user_signin(
-    body: PostUser,
+    body: PostUserDto,
     pool: web::Data<Pool>,
     access_token: &str,
     _auth: web::Data<Auth>,
     notify_service: web::Data<NotifyService>,
     ratelimit_service: web::Data<RateLimitWrapper>,
     current_time: DateTime<Local>,
-) -> Result<User, ServiceError> {
+) -> Result<UserDto, ServiceError> {
     info!("controllers/user/user_signin");
 
     if !crate::ALLOWED_CLIENT_VERSIONS.contains(&body.client_version.as_str()) {
@@ -42,7 +43,7 @@ pub(crate) fn user_signin(
     if user.client_version != body.client_version {
         update_user_without_auth(
             &user.id,
-            &UpdateUser {
+            &UpdateUserDto {
                 description: user.description.clone(),
                 led: user.led,
                 client_version: body.client_version.clone(),
@@ -65,7 +66,7 @@ pub(crate) fn get_entry(
     pool: web::Data<Pool>,
     access_token: &str,
     _auth: web::Data<Auth>,
-) -> Result<User, ServiceError> {
+) -> Result<UserDto, ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
 
     get_user_by_id!(parsed, &access_token, _auth.into_inner(), &pool)
@@ -76,10 +77,10 @@ pub(crate) fn get_contacts(
     pool: web::Data<Pool>,
     access_token: &str,
     _auth: web::Data<Auth>,
-) -> Result<Vec<ResponseContact>, ServiceError> {
+) -> Result<Vec<ContactDto>, ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
 
-    let user: Result<User, ServiceError> =
+    let user: Result<UserDto, ServiceError> =
         get_user_by_id!(parsed, &access_token, _auth.into_inner(), &pool);
 
     crate::queries::user::get_contacts(&user?, &pool)
@@ -94,7 +95,7 @@ pub(crate) fn update_token_handler(
 ) -> Result<(), ServiceError> {
     let parsed = Uuid::parse_str(&uid)?;
 
-    let user: Result<User, ServiceError> =
+    let user: Result<UserDto, ServiceError> =
         get_user_by_id!(parsed, access_token, _auth.into_inner(), &pool);
 
     user?;
@@ -105,17 +106,17 @@ pub(crate) fn update_token_handler(
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn update_user_with_auth(
     uid: &str,
-    user: &UpdateUser,
+    user: &UpdateUserDto,
     pool: &web::Data<Pool>,
     access_token: &str,
     _auth: web::Data<Auth>,
     notify_service: &web::Data<NotifyService>,
     ratelimit_service: &web::Data<RateLimitWrapper>,
     current_time: DateTime<Local>,
-) -> Result<User, ::core::errors::ServiceError> {
+) -> Result<UserDto, ::core::errors::ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
 
-    let muser: Result<User, ServiceError> =
+    let muser: Result<UserDto, ServiceError> =
         get_user_by_id!(parsed, &access_token, _auth.into_inner(), &pool);
 
     muser?;
@@ -132,12 +133,12 @@ pub(crate) fn update_user_with_auth(
 
 pub(crate) fn update_user_without_auth(
     uid: &Uuid,
-    user: &UpdateUser,
+    user: &UpdateUserDto,
     pool: &web::Data<Pool>,
     notify_service: &web::Data<NotifyService>,
     ratelimit_service: &web::Data<RateLimitWrapper>,
     current_time: DateTime<Local>,
-) -> Result<User, ::core::errors::ServiceError> {
+) -> Result<UserDto, ::core::errors::ServiceError> {
     let user = crate::queries::user::update_user_query(
         *uid,
         user,

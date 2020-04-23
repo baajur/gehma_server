@@ -3,10 +3,10 @@ use diesel::{prelude::*, PgConnection};
 use uuid::Uuid;
 
 use core::errors::ServiceError;
-use core::models::User;
+use core::models::dto::*;
+use core::models::dao::*;
 
-use crate::routes::contact_exists::{PayloadUser, ResponseUser};
-use core::models::Blacklist;
+//use crate::routes::contact_exists::{PayloadUser};
 
 use crate::Pool;
 
@@ -17,13 +17,12 @@ pub const MAX_ALLOWED_CONTACTS: usize = 10000;
 
 pub(crate) fn get_query(
     uid: Uuid,
-    _user: &User,
-    phone_numbers: &mut Vec<PayloadUser>,
+    _user: &UserDto,
+    phone_numbers: &mut Vec<PayloadUserDto>,
     _country_code: &str,
     pool: web::Data<Pool>,
-) -> Result<Vec<ResponseUser>, ServiceError> {
+) -> Result<Vec<WrappedUserDto>, ServiceError> {
     info!("queries/push_notification/get_query");
-    use core::models::Contact;
     use core::schema::blacklist::dsl::{blacklist, hash_blocked, hash_blocker};
     use core::schema::users::dsl::{changed_at, hash_tele_num, id, users};
 
@@ -37,9 +36,9 @@ pub(crate) fn get_query(
         return Err(ServiceError::BadRequest("Too many contacts".into()));
     }
 
-    let mut numbers: Vec<ResponseUser> = phone_numbers
+    let mut numbers: Vec<WrappedUserDto> = phone_numbers
         .iter_mut()
-        .map(|w| ResponseUser {
+        .map(|w| WrappedUserDto {
             hash_tele_num: w.hash_tele_num.clone(),
             name: w.name.clone(),
             user: None,
@@ -48,7 +47,7 @@ pub(crate) fn get_query(
 
     users
         .filter(id.eq(uid)) // 1. Get user
-        .load::<User>(conn)
+        .load::<UserDao>(conn)
         .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
         .and_then(|result| {
             if let Some(user) = result.first() {
@@ -59,7 +58,7 @@ pub(crate) fn get_query(
                             .eq(&user.hash_tele_num)
                             .or(hash_blocker.eq(&user.hash_tele_num)),
                     )
-                    .load::<Blacklist>(conn)
+                    .load::<BlacklistDao>(conn)
                     .map_err(|_db_error| ServiceError::BadRequest("Cannot find blacklists".into()))
                     .and_then(|lists| {
                         let people_who_blacklisted_user: Vec<_> = lists
@@ -83,7 +82,7 @@ pub(crate) fn get_query(
                                 ),
                             )
                             .order(changed_at.desc())
-                            .load::<User>(conn)
+                            .load::<UserDao>(conn)
                             .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
                             .and_then(|mut result| {
                                 //i are contacts
@@ -94,7 +93,7 @@ pub(crate) fn get_query(
                                         .collect();
 
                                     if let Some(mut res_user) = res.first_mut() {
-                                        res_user.user = Some(i.downgrade());
+                                        res_user.user = Some(i.clone().into());
                                     }
                                 }
 
@@ -119,7 +118,7 @@ pub(crate) fn get_query(
                                 Ok(numbers
                                     .into_iter()
                                     .filter(|w| w.user.is_some())
-                                    .collect::<Vec<ResponseUser>>())
+                                    .collect::<Vec<WrappedUserDto>>())
                             })
                             .and_then(|numbers| {
                                 use core::schema::contacts::dsl::{contacts, from_id};
@@ -127,7 +126,7 @@ pub(crate) fn get_query(
                                 let user_contacts: Vec<_> = numbers
                                     .iter()
                                     .map(|n| {
-                                        Contact::my_from(
+                                        ContactDao::my_from(
                                             n.name.clone(),
                                             &user,
                                             n.user.as_ref().unwrap().tele_num.clone(),

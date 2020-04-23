@@ -3,7 +3,9 @@ use diesel::{prelude::*, PgConnection};
 use uuid::Uuid;
 
 use core::errors::ServiceError;
-use core::models::{Blacklist, PhoneNumber, User};
+use core::models::PhoneNumber;
+use core::models::dao::*;
+use core::models::dto::*;
 
 use crate::Pool;
 
@@ -12,7 +14,7 @@ use log::{error, info};
 pub(crate) fn get_query(
     sblocker: Uuid,
     pool: web::Data<Pool>,
-) -> Result<Vec<Blacklist>, ServiceError> {
+) -> Result<Vec<BlacklistDto>, ServiceError> {
     info!("queries/blacklist/get_query");
     use core::schema::blacklist::dsl::{blacklist, hash_blocker};
     use core::schema::users::dsl::{id, users};
@@ -21,7 +23,7 @@ pub(crate) fn get_query(
 
     let user = users
         .filter(id.eq(sblocker))
-        .load::<User>(conn)
+        .load::<UserDao>(conn)
         .map_err(|_db_err| ServiceError::BadRequest("Invalid User".into()))?
         .first()
         .cloned()
@@ -29,7 +31,8 @@ pub(crate) fn get_query(
 
     blacklist
         .filter(hash_blocker.eq(user.hash_tele_num))
-        .load::<Blacklist>(conn)
+        .load::<BlacklistDao>(conn)
+        .map(|w| w.into_iter().map(|k| k.into()).collect())
         .map_err(|_db_err| ServiceError::BadRequest("Invalid User".into()))
 }
 
@@ -37,26 +40,24 @@ pub(crate) fn create_query(
     blocker: &PhoneNumber,
     blocked: &PhoneNumber,
     pool: web::Data<Pool>,
-) -> Result<Blacklist, ServiceError> {
+) -> Result<BlacklistDto, ServiceError> {
     info!("queries/blacklist/create_query");
     use core::schema::blacklist::dsl::blacklist;
 
     let conn: &PgConnection = &pool.get().unwrap();
-    let new_inv: Blacklist = Blacklist::my_from(blocker, blocked);
+    let new_inv: BlacklistDao = BlacklistDao::my_from(blocker, blocked);
 
     //println!("{:?}", new_inv);
 
-    let ins = diesel::insert_into(blacklist)
+    diesel::insert_into(blacklist)
         .values(&new_inv)
-        .get_result(conn)
+        .get_result::<BlacklistDao>(conn)
+        .map(|w| w.into())
         .map_err(|_db_error| {
             error!("{:?}", _db_error);
             ServiceError::BadRequest("Cannot insert into blacklist".into())
-        })?;
+        })
 
-    //dbg!(&ins);
-
-    Ok(ins)
 }
 
 pub(crate) fn delete_query(
