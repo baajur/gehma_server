@@ -20,6 +20,7 @@ pub(crate) mod controllers;
 pub(crate) mod queries;
 pub(crate) mod routes;
 pub(crate) mod ratelimits;
+pub(crate) mod persistence;
 
 //mod middleware;
 
