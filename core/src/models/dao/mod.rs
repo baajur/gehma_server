@@ -1,11 +1,10 @@
 use crate::schema::*;
 use crate::errors::InternalError;
 use crate::utils::phonenumber_to_international;
+use super::HashedTeleNum;
 
 use data_encoding::HEXUPPER;
 use ring::digest;
-
-pub type HashedTeleNum = String;
 
 #[derive(
     Debug,
@@ -37,21 +36,6 @@ pub struct UserDao {
     pub xp: i32,
 }
 
-/* We don't want to expose all user's data to everyone. That's why this struct
- * is a minimal version of `User` with only essential fields.
- * */
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct DowngradedUser {
-    pub tele_num: String,
-    pub led: bool,
-    pub country_code: String,
-    pub description: String,
-    pub changed_at: chrono::NaiveDateTime,
-    pub profile_picture: String,
-    pub hash_tele_num: String,
-    pub xp: i32,
-}
-
 impl UserDao {
     pub fn my_from(tele_num: &str, country_code: &str, version: &str, access_token: &str) -> Self {
         UserDao {
@@ -69,19 +53,6 @@ impl UserDao {
             xp: 0,
             hash_tele_num: 
                 HEXUPPER.encode(digest::digest(&digest::SHA256, tele_num.as_bytes()).as_ref()),
-        }
-    }
-
-    pub fn downgrade(&self) -> DowngradedUser {
-        DowngradedUser {
-            tele_num: self.tele_num.clone(),
-            led: self.led,
-            country_code: self.country_code.clone(),
-            description: self.description.clone(),
-            changed_at: self.changed_at,
-            profile_picture: self.profile_picture.clone(),
-            hash_tele_num: self.hash_tele_num.clone(),
-            xp: self.xp,
         }
     }
 }
@@ -110,6 +81,7 @@ impl BlacklistDao {
     }
 }
 
+//TODO extract
 #[derive(Debug)]
 pub struct PhoneNumber(phonenumber::PhoneNumber);
 
