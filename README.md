@@ -1,3 +1,8 @@
+# Gehma
+
+Die Gehma-App versucht das leidvolle Suchen von Freunden für Events zu verbessern. Denn motivierte Leute suchen nicht mehr, sondern finden. Ist nichts dabei was einem selbst gefällt, kann man auch selber Vorschläge machen. (TODO copy english)
+
+
 ## Testing
 
 Throttle connections:
