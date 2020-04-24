@@ -5,9 +5,9 @@ use web_contrib::auth::AuthenticatorWrapper;
 use web_contrib::push_notifications::testing::*;
 use web_contrib::push_notifications::NotificationWrapper;
 
-use crate::routes::contact_exists::ResponseUser;
+use core::models::dto::*;
+use core::models::dao::*;
 use actix_web::{test, web, App};
-use core::models::*;
 use diesel::pg::PgConnection;
 use std::env;
 

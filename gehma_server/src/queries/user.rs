@@ -9,9 +9,6 @@ use crate::ratelimits::RateLimitWrapper;
 use web_contrib::push_notifications::NotifyService;
 use chrono::{DateTime, Local};
 use crate::persistence::user::PersistentUserDao;
-
-//use crate::routes::user::{ResponseContact, UpdateUser};
-
 use log::{error, info};
 
 const INCREASE_XP : i32 = 100;

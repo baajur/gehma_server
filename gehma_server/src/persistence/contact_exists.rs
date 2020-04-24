@@ -1,10 +1,12 @@
 use core::errors::ServiceError;
 use core::models::dto::*;
 use uuid::Uuid;
+use mockall::*;
 
 type IResult<K> = Result<K, ServiceError>;
 
 //TODO rename
+#[automock]
 pub trait PersistentContactExistsDao {
     fn get(
         &self,

@@ -3,9 +3,11 @@ use core::errors::ServiceError;
 use core::models::dto::*;
 use core::models::PhoneNumber;
 use uuid::Uuid;
+use mockall::*;
 
 type IResult<K> = Result<K, ServiceError>;
 
+#[automock]
 pub trait PersistentUserDao {
     fn get_by_tele_num(
         &self,
