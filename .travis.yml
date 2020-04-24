@@ -4,7 +4,6 @@ rust:
 before_script:
   - rustup component add clippy 
   - cargo install cargo-audit
-  - cd gehma_server
 script:
   - cargo build --verbose --all
     #  - cd gehma_server && cargo test --verbose --all
