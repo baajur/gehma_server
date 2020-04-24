@@ -1,11 +1,7 @@
 use actix_web::web;
 use uuid::Uuid;
-
-use crate::Pool;
 use core::errors::ServiceError;
-
 use core::models::dto::*;
-use web_contrib::auth::Auth;
 
 //use crate::routes::contact_exists::{PayloadUser, ResponseUser};
 

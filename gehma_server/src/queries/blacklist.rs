@@ -1,4 +1,3 @@
-use actix_web::web;
 use diesel::{prelude::*, PgConnection};
 use uuid::Uuid;
 

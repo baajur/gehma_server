@@ -1,5 +1,3 @@
-use crate::ratelimits::RateLimitWrapper;
-use crate::Pool;
 use actix_web::{web, HttpResponse};
 use core::errors::ServiceError;
 use core::models::dto::{PostUserDto, UpdateUserDto};
@@ -12,8 +10,6 @@ use crate::controllers::user::{
 };
 use crate::persistence::user::PersistentUserDao;
 use chrono::Local;
-use web_contrib::auth::Auth;
-use web_contrib::push_notifications::NotifyService;
 
 pub async fn signin(
     _info: web::Path<()>,

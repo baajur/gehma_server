@@ -9,15 +9,6 @@ use web_contrib::auth::Auth;
 use log::{error, info};
 
 use crate::persistence::user::PersistentUserDao;
-use core::models::dto::*;
-
-/*
-#[derive(Debug, Serialize)]
-pub struct ResponseCheckCode {
-    valid: bool,
-    access_token: String,
-}
-*/
 
 pub(crate) fn request(
     body: RequestCodeDto,
@@ -35,7 +26,7 @@ pub(crate) fn request(
 
 pub(crate) fn check_code(
     body: RequestCheckCodeDto,
-    pool: web::Data<Pool>,
+    _pool: web::Data<Pool>,
     auth: web::Data<Auth>,
     user_dao: web::Data<&dyn PersistentUserDao>,
 ) -> Result<UserDto, ServiceError> {

@@ -17,9 +17,9 @@ pub struct PostData {
 
 pub async fn get_all(
     info: web::Path<String>,
-    pool: web::Data<Pool>,
+    _pool: web::Data<Pool>,
     query: web::Query<QueryParams>,
-    auth: web::Data<Auth>,
+    _auth: web::Data<Auth>,
     user_dao: web::Data<&dyn PersistentUserDao>,
     blacklist_dao: web::Data<&dyn PersistentBlacklistDao>,
 ) -> Result<HttpResponse, ServiceError> {
@@ -44,7 +44,7 @@ pub async fn add(
     data: web::Json<PostData>,
     query: web::Query<QueryParams>,
     pool: web::Data<Pool>,
-    auth: web::Data<Auth>,
+    _auth: web::Data<Auth>,
     user_dao: web::Data<&dyn PersistentUserDao>,
     blacklist_dao: web::Data<&dyn PersistentBlacklistDao>,
 ) -> Result<HttpResponse, ServiceError> {
@@ -71,7 +71,7 @@ pub async fn delete(
     data: web::Json<PostData>,
     pool: web::Data<Pool>,
     query: web::Query<QueryParams>,
-    auth: web::Data<Auth>,
+    _auth: web::Data<Auth>,
     user_dao: web::Data<&dyn PersistentUserDao>,
     blacklist_dao: web::Data<&dyn PersistentBlacklistDao>,
 ) -> Result<HttpResponse, ServiceError> {

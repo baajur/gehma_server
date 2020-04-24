@@ -1,5 +1,4 @@
 use crate::Pool;
-use actix_web::web;
 use core::errors::ServiceError;
 use core::models::PhoneNumber;
 use core::models::dao::*;

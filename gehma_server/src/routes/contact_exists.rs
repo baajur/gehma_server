@@ -15,7 +15,7 @@ use log::info;
 pub async fn exists(
     info: web::Path<(String, String)>,
     mut payload: web::Json<PayloadNumbersDto>,
-    pool: web::Data<Pool>,
+    _pool: web::Data<Pool>,
     query: web::Query<QueryParams>,
     user_dao: web::Data<&dyn PersistentUserDao>,
     contact_exists_dao: web::Data<&dyn PersistentContactExistsDao>,
