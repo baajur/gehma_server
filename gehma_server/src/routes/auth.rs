@@ -16,14 +16,14 @@ use crate::persistence::user::PersistentUserDao;
 pub async fn request_code(
     _info: web::Path<()>,
     body: web::Json<RequestCodeDto>,
-    pool: web::Data<Pool>,
+    //pool: web::Data<Pool>,
     auth: web::Data<Auth>,
 ) -> Result<HttpResponse, ServiceError> {
     info!("controllers/auth/request_code");
 
     let _ = request(
             body.into_inner(),
-            pool,
+            //pool,
             auth,
         ).map_err(|_err| ServiceError::InternalServerError)?;
 
@@ -38,15 +38,15 @@ pub async fn request_code(
 pub async fn check(
     _info: web::Path<()>,
     body: web::Json<RequestCheckCodeDto>,
-    pool: web::Data<Pool>,
+    //pool: web::Data<Pool>,
     auth: web::Data<Auth>,
-    user_dao: web::Data<&dyn PersistentUserDao>,
+    user_dao: web::Data<Box<dyn PersistentUserDao>>,
 ) -> Result<HttpResponse, ServiceError> {
     info!("controllers/auth/check");
 
     let res = check_code(
             body.into_inner(),
-            pool,
+            //pool,
             auth,
             user_dao
         ).map_err(|_err| ServiceError::InternalServerError)?;

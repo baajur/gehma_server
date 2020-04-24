@@ -17,8 +17,8 @@ pub async fn exists(
     mut payload: web::Json<PayloadNumbersDto>,
     _pool: web::Data<Pool>,
     query: web::Query<QueryParams>,
-    user_dao: web::Data<&dyn PersistentUserDao>,
-    contact_exists_dao: web::Data<&dyn PersistentContactExistsDao>,
+    user_dao: web::Data<Box<dyn PersistentUserDao>>,
+    contact_exists_dao: web::Data<Box<dyn PersistentContactExistsDao>>,
 ) -> Result<HttpResponse, ServiceError> {
     info!("controllers/contact_exists/exists");
 

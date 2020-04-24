@@ -1,6 +1,8 @@
 use super::HashedTeleNum;
 use uuid::Uuid;
 
+//FIXME merge WrappedUserDto with UserDto
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WrappedUserDto {
     pub hash_tele_num: HashedTeleNum,
@@ -9,6 +11,7 @@ pub struct WrappedUserDto {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+//FIXME `created_at` missing
 pub struct UserDto {
     pub id: Uuid,
     pub tele_num: String,
@@ -20,6 +23,17 @@ pub struct UserDto {
     pub hash_tele_num: String,
     pub xp: i32,
     pub client_version: String,
+}
+
+impl UserDto {
+    pub fn apply_update(mut self, user: &UpdateUserDto, time: chrono::NaiveDateTime) -> Self {
+        self.led = user.led;
+        self.description = user.description.clone();
+        self.client_version = user.client_version.clone();
+        self.changed_at = time;
+
+        self
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]

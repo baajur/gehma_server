@@ -13,8 +13,8 @@ pub(crate) fn get_entry(
     country_code: &str,
     phone_numbers: &mut Vec<PayloadUserDto>,
     access_token: &str,
-    user_dao: web::Data<&dyn PersistentUserDao>,
-    contact_exists_dao: web::Data<&dyn PersistentContactExistsDao>,
+    user_dao: web::Data<Box<dyn PersistentUserDao>>,
+    contact_exists_dao: web::Data<Box<dyn PersistentContactExistsDao>>,
 ) -> Result<Vec<WrappedUserDto>, ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
 

@@ -2,7 +2,7 @@ use crate::controllers::blacklist::{create_entry, delete_entry, get_entry};
 use crate::Pool;
 use actix_web::{web, HttpResponse};
 use core::errors::ServiceError;
-use log::info;
+use log::{info, error};
 use web_contrib::auth::Auth;
 use web_contrib::utils::{set_response_headers, QueryParams};
 
@@ -11,7 +11,7 @@ use crate::persistence::user::PersistentUserDao;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PostData {
-    pub blocked: String, //TODO rename `hash_blocked` #45
+    pub hash_blocked: String,
     pub country_code: String,
 }
 
@@ -20,8 +20,8 @@ pub async fn get_all(
     _pool: web::Data<Pool>,
     query: web::Query<QueryParams>,
     _auth: web::Data<Auth>,
-    user_dao: web::Data<&dyn PersistentUserDao>,
-    blacklist_dao: web::Data<&dyn PersistentBlacklistDao>,
+    user_dao: web::Data<Box<dyn PersistentUserDao>>,
+    blacklist_dao: web::Data<Box<dyn PersistentBlacklistDao>>,
 ) -> Result<HttpResponse, ServiceError> {
     info!("controllers/blacklist/get_all");
 
@@ -43,12 +43,11 @@ pub async fn add(
     info: web::Path<String>,
     data: web::Json<PostData>,
     query: web::Query<QueryParams>,
-    pool: web::Data<Pool>,
     _auth: web::Data<Auth>,
-    user_dao: web::Data<&dyn PersistentUserDao>,
-    blacklist_dao: web::Data<&dyn PersistentBlacklistDao>,
+    user_dao: web::Data<Box<dyn PersistentUserDao>>,
+    blacklist_dao: web::Data<Box<dyn PersistentBlacklistDao>>,
 ) -> Result<HttpResponse, ServiceError> {
-    info!("controllers/blacklist/add");
+    info!("routes/blacklist/add");
 
     create_entry(
         &info.into_inner(),
@@ -56,9 +55,11 @@ pub async fn add(
         &query.access_token,
         user_dao,
         blacklist_dao,
-        pool,
     )
-    .map_err(|_err| ServiceError::InternalServerError)?;
+    .map_err(|err| {
+        error!("{}", err);
+        ServiceError::InternalServerError
+    })?;
 
     let mut res = HttpResponse::Ok().content_type("application/json").finish();
     set_response_headers(&mut res);
@@ -69,11 +70,10 @@ pub async fn add(
 pub async fn delete(
     info: web::Path<String>,
     data: web::Json<PostData>,
-    pool: web::Data<Pool>,
     query: web::Query<QueryParams>,
     _auth: web::Data<Auth>,
-    user_dao: web::Data<&dyn PersistentUserDao>,
-    blacklist_dao: web::Data<&dyn PersistentBlacklistDao>,
+    user_dao: web::Data<Box<dyn PersistentUserDao>>,
+    blacklist_dao: web::Data<Box<dyn PersistentBlacklistDao>>,
 ) -> Result<HttpResponse, ServiceError> {
     info!("controllers/blacklist/delete");
 
@@ -83,9 +83,12 @@ pub async fn delete(
         &query.access_token,
         user_dao,
         blacklist_dao,
-        pool,
     )
-    .map_err(|_err| ServiceError::InternalServerError)?;
+    .map_err(|err| {
+        error!("{}", err);
+        ServiceError::InternalServerError
+    })?;
+
 
     let mut res = HttpResponse::Ok().content_type("application/json").finish();
     set_response_headers(&mut res);

@@ -12,7 +12,6 @@ use crate::persistence::user::PersistentUserDao;
 
 pub(crate) fn request(
     body: RequestCodeDto,
-    _pool: web::Data<Pool>,
     auth: web::Data<Auth>,
 ) -> Result<(), ServiceError> {
     info!("controllers/auth/request_code");
@@ -26,9 +25,8 @@ pub(crate) fn request(
 
 pub(crate) fn check_code(
     body: RequestCheckCodeDto,
-    _pool: web::Data<Pool>,
     auth: web::Data<Auth>,
-    user_dao: web::Data<&dyn PersistentUserDao>,
+    user_dao: web::Data<Box<dyn PersistentUserDao>>,
 ) -> Result<UserDto, ServiceError> {
     info!("controllers/auth/check_code");
 

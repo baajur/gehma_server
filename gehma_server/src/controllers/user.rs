@@ -14,7 +14,7 @@ use crate::routes::user::UpdateTokenPayload;
 pub(crate) fn user_signin(
     body: PostUserDto,
     access_token: &str,
-    user_dao: web::Data<&dyn PersistentUserDao>,
+    user_dao: web::Data<Box<dyn PersistentUserDao>>,
     current_time: DateTime<Local>,
 ) -> Result<UserDto, ServiceError> {
     info!("controllers/user/user_signin");
@@ -56,7 +56,7 @@ pub(crate) fn user_signin(
 pub(crate) fn get_entry(
     uid: &str,
     access_token: &str,
-    user_dao: web::Data<&dyn PersistentUserDao>,
+    user_dao: web::Data<Box<dyn PersistentUserDao>>,
 ) -> Result<UserDto, ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
 
@@ -65,7 +65,7 @@ pub(crate) fn get_entry(
 
 pub(crate) fn get_contacts(
     uid: &str,
-    user_dao: web::Data<&dyn PersistentUserDao>,
+    user_dao: web::Data<Box<dyn PersistentUserDao>>,
     access_token: &str,
 ) -> Result<Vec<ContactDto>, ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
@@ -79,7 +79,7 @@ pub(crate) fn update_token_handler(
     uid: String,
     payload: UpdateTokenPayload,
     access_token: &str,
-    user_dao: web::Data<&dyn PersistentUserDao>,
+    user_dao: web::Data<Box<dyn PersistentUserDao>>,
 ) -> Result<(), ServiceError> {
     let parsed = Uuid::parse_str(&uid)?;
 
@@ -95,7 +95,7 @@ pub(crate) fn update_user_with_auth(
     uid: &str,
     user: &UpdateUserDto,
     access_token: &str,
-    user_dao: web::Data<&dyn PersistentUserDao>,
+    user_dao: web::Data<Box<dyn PersistentUserDao>>,
     current_time: DateTime<Local>,
 ) -> Result<UserDto, ::core::errors::ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
@@ -110,7 +110,7 @@ pub(crate) fn update_user_with_auth(
 pub(crate) fn update_user_without_auth(
     uid: &Uuid,
     user: &UpdateUserDto,
-    user_dao: &web::Data<&dyn PersistentUserDao>,
+    user_dao: &web::Data<Box<dyn PersistentUserDao>>,
     current_time: DateTime<Local>,
 ) -> Result<UserDto, ::core::errors::ServiceError> {
     let user = user_dao.get_ref().update_user(uid, user, current_time)?;

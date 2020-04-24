@@ -14,7 +14,16 @@ pub trait PersistentUserDao {
         tele: &PhoneNumber,
         my_access_token: String,
     ) -> IResult<UserDto>;
+
+    /// Get user by hash_tele_num without access_token
+    fn get_by_hash_tele_num_unsafe(
+        &self,
+        hash_tele_num: &String,
+    ) -> IResult<UserDto>;
+
     fn get_by_id(&self, id: &Uuid, my_access_token: String) -> IResult<UserDto>;
+    fn get_by_id_unsafe(&self, id: &Uuid) -> IResult<UserDto>;
+
     fn get_contacts(&self, user: &UserDto) -> IResult<Vec<ContactDto>>;
     fn create_analytics_for_user(&self, user: &UserDto) -> IResult<AnalyticDto>;
     fn create(

@@ -15,7 +15,7 @@ pub async fn signin(
     _info: web::Path<()>,
     body: web::Json<PostUserDto>,
     query: web::Query<QueryParams>,
-    user_dao: web::Data<&dyn PersistentUserDao>,
+    user_dao: web::Data<Box<PersistentUserDao>>,
 ) -> Result<HttpResponse, ServiceError> {
     info!("routes/user/signin");
 
@@ -41,7 +41,7 @@ pub async fn signin(
 pub async fn get(
     info: web::Path<String>,
     query: web::Query<QueryParams>,
-    user_dao: web::Data<&dyn PersistentUserDao>,
+    user_dao: web::Data<Box<dyn PersistentUserDao>>,
 ) -> Result<HttpResponse, ServiceError> {
     info!("routes/user/get");
 
@@ -60,7 +60,7 @@ pub async fn get(
 pub async fn get_contacts(
     info: web::Path<String>,
     query: web::Query<QueryParams>,
-    user_dao: web::Data<&dyn PersistentUserDao>,
+    user_dao: web::Data<Box<dyn PersistentUserDao>>,
 ) -> Result<HttpResponse, ServiceError> {
     info!("routes/user/get_contacts");
 
@@ -117,7 +117,7 @@ pub async fn update(
     info: web::Path<String>,
     data: web::Json<UpdateUserDto>,
     query: web::Query<QueryParams>,
-    user_dao: web::Data<&dyn PersistentUserDao>,
+    user_dao: web::Data<Box<dyn PersistentUserDao>>,
 ) -> Result<HttpResponse, ServiceError> {
     info!("routes/user/update");
 
@@ -146,7 +146,7 @@ pub async fn update_token(
     _info: web::Path<String>,
     body: web::Json<UpdateTokenPayload>,
     query: web::Query<QueryParams>,
-    user_dao: web::Data<&dyn PersistentUserDao>,
+    user_dao: web::Data<Box<dyn PersistentUserDao>>,
 ) -> Result<HttpResponse, ServiceError> {
     info!("routes/push_notification/update_token");
 
