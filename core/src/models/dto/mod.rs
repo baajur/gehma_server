@@ -89,3 +89,17 @@ impl ContactDto {
         }
     }
 }
+
+#[derive(Debug, Deserialize)]
+pub struct RequestCodeDto {
+    pub tele_num: String,
+    pub country_code: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct RequestCheckCodeDto {
+    pub tele_num: String,
+    pub code: String,
+    pub country_code: String,
+    pub client_version: String,
+}

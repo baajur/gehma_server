@@ -21,9 +21,9 @@ const PROFILE_HEIGHT: u32 = 500;
 
 #[derive(Clone)]
 pub struct PgUserDao {
-    pool: Pool,
-    notify_service: NotifyService,
-    ratelimit_service: RateLimitWrapper,
+    pub pool: Pool,
+    pub notify_service: NotifyService,
+    pub ratelimit_service: RateLimitWrapper,
 }
 
 impl PersistentUserDao for PgUserDao {

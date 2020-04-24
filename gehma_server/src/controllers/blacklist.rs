@@ -1,7 +1,6 @@
 use actix_web::web;
 use diesel::{prelude::*, PgConnection};
 use uuid::Uuid;
-use web_contrib::auth::Auth;
 
 use core::errors::ServiceError;
 use core::models::dto::*;
@@ -11,21 +10,23 @@ use core::models::PhoneNumber;
 use crate::Pool;
 
 use crate::routes::blacklist::PostData;
+use crate::persistence::user::PersistentUserDao;
+use crate::persistence::blacklist::PersistentBlacklistDao;
 
 pub(crate) fn get_entry(
     blocker: &str,
-    pool: web::Data<Pool>,
-    firebase_uid: &str,
-    _auth: web::Data<Auth>,
+    access_token: &str,
+    user_dao: web::Data<&dyn PersistentUserDao>,
+    blacklist_dao: web::Data<&dyn PersistentBlacklistDao>,
 ) -> Result<Vec<BlacklistDto>, ServiceError> {
     let blocker = Uuid::parse_str(blocker)?;
 
     let user: Result<UserDto, ServiceError> =
-        get_user_by_id!(blocker, &firebase_uid, _auth.into_inner(), &pool);
+        get_user_by_id!(user_dao, &blocker, access_token.to_string());
 
     user?;
 
-    let bl = crate::queries::blacklist::get_query(blocker, pool)?;
+    let bl = blacklist_dao.get_ref().get(blocker)?;
 
     Ok(bl)
 }
@@ -33,24 +34,21 @@ pub(crate) fn get_entry(
 pub(crate) fn create_entry(
     blocker: &str,
     data: &PostData,
+    access_token: &str,
+    user_dao: web::Data<&dyn PersistentUserDao>,
+    blacklist_dao: web::Data<&dyn PersistentBlacklistDao>,
     pool: web::Data<Pool>,
-    firebase_uid: &str,
-    _auth: web::Data<Auth>,
 ) -> Result<BlacklistDto, ServiceError> {
     use core::schema::users::dsl::{hash_tele_num, id, users};
 
     let blocker2 = Uuid::parse_str(blocker)?;
 
     let user: Result<UserDto, ServiceError> =
-        get_user_by_id!(blocker2, &firebase_uid, _auth.into_inner(), &pool);
+        get_user_by_id!(user_dao, &blocker2, access_token.to_string());
 
     user?;
 
-    //let blocked = PhoneNumber::my_from(&data.blocked, &data.country_code)?;
-
-    //dbg!(&blocked);
-    //dbg!(&blocker);
-
+    //TODO refactor to dao
     let conn: &PgConnection = &pool.get().unwrap();
 
     let myusers = users
@@ -74,7 +72,7 @@ pub(crate) fn create_entry(
     let blocked = PhoneNumber::my_from(&contact.tele_num, &contact.country_code)?;
 
     let tel = PhoneNumber::my_from(&user.tele_num, &data.country_code)?;
-    let b = crate::queries::blacklist::create_query(&tel, &blocked, pool)?;
+    let b = blacklist_dao.create(&tel, &blocked)?;
 
     Ok(b)
 }
@@ -82,19 +80,21 @@ pub(crate) fn create_entry(
 pub(crate) fn delete_entry(
     blocker: &str,
     data: &PostData,
+    access_token: &str,
+    user_dao: web::Data<&dyn PersistentUserDao>,
+    blacklist_dao: web::Data<&dyn PersistentBlacklistDao>,
     pool: web::Data<Pool>,
-    firebase_uid: &str,
-    _auth: web::Data<Auth>,
 ) -> Result<(), ServiceError> {
     use core::schema::users::dsl::{id, users, hash_tele_num};
 
     let blocker2 = Uuid::parse_str(blocker)?;
 
     let user: Result<UserDto, ServiceError> =
-        get_user_by_id!(blocker2, &firebase_uid, _auth.into_inner(), &pool);
+        get_user_by_id!(user_dao, &blocker2, access_token.to_string());
 
     user?;
 
+    //TODO refactor to dao
     let conn: &PgConnection = &pool.get().unwrap();
 
     let myusers = users
@@ -119,5 +119,5 @@ pub(crate) fn delete_entry(
 
     let blocked = PhoneNumber::my_from(&contact.tele_num, &contact.country_code)?;
 
-    crate::queries::blacklist::delete_query(&tel, &blocked, pool)
+    blacklist_dao.get_ref().delete(&tel, &blocked)
 }

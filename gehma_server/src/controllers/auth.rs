@@ -1,14 +1,15 @@
-use web_contrib::auth::Auth;
 use crate::Pool;
 use actix_web::web;
 use core::errors::ServiceError;
-use core::models::PhoneNumber;
 use core::models::dto::*;
+use core::models::PhoneNumber;
 use uuid::Uuid;
+use web_contrib::auth::Auth;
 
-use log::{info, error};
+use log::{error, info};
 
-use crate::routes::auth::{RequestCheckCode, RequestCode};
+use crate::persistence::user::PersistentUserDao;
+use core::models::dto::*;
 
 /*
 #[derive(Debug, Serialize)]
@@ -19,7 +20,7 @@ pub struct ResponseCheckCode {
 */
 
 pub(crate) fn request(
-    body: RequestCode,
+    body: RequestCodeDto,
     _pool: web::Data<Pool>,
     auth: web::Data<Auth>,
 ) -> Result<(), ServiceError> {
@@ -33,9 +34,10 @@ pub(crate) fn request(
 }
 
 pub(crate) fn check_code(
-    body: RequestCheckCode,
+    body: RequestCheckCodeDto,
     pool: web::Data<Pool>,
     auth: web::Data<Auth>,
+    user_dao: web::Data<&dyn PersistentUserDao>,
 ) -> Result<UserDto, ServiceError> {
     info!("controllers/auth/check_code");
 
@@ -46,17 +48,12 @@ pub(crate) fn check_code(
     if res {
         let token = Uuid::new_v4().simple().to_string();
 
-        match crate::queries::user::create_query(
-            &parsed,
-            &body.country_code,
-            &body.client_version,
-            &token,
-            &pool,
-        ) {
+        match user_dao
+            .get_ref()
+            .create(&parsed, &body.country_code, &body.client_version, &token)
+        {
             Ok(user) => Ok(user),
-            Err(ServiceError::AlreadyExists(_)) => {
-                crate::queries::user::get_entry_by_tel_query(&parsed, &pool)
-            }
+            //Err(ServiceError::AlreadyExists(_)) => user_dao.get_ref().get_by_tele_num(&parsed),
             Err(e) => {
                 error!("{}", e);
                 Err(ServiceError::InternalServerError)

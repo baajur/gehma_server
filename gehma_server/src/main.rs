@@ -15,7 +15,10 @@ use log::error;
 use std::path::PathBuf;
 use web_contrib::auth::AuthenticatorWrapper;
 use web_contrib::push_notifications::NotificationWrapper;
-    use queries::user::PgUserDao;
+
+use queries::blacklist::PgBlacklistDao;
+use queries::contact_exists::PgContactExistsDao;
+use queries::user::PgUserDao;
 
 pub(crate) mod controllers;
 pub(crate) mod persistence;
@@ -89,17 +92,26 @@ fn get_ratelimits() -> ratelimits::RateLimitWrapper {
 }
 
 #[allow(dead_code)]
-fn get_daos(
+fn get_user_dao(
     pool: Pool,
     ratelimit: ratelimits::RateLimitWrapper,
     not: NotificationWrapper,
 ) -> PgUserDao {
-
     PgUserDao {
-        pool,
+        pool: pool.clone(),
         ratelimit_service: ratelimit,
         notify_service: not,
     }
+}
+
+#[allow(dead_code)]
+fn get_blacklist_dao(pool: Pool) -> PgBlacklistDao {
+    PgBlacklistDao { pool: pool.clone() }
+}
+
+#[allow(dead_code)]
+fn get_contactexists_dao(pool: Pool) -> PgContactExistsDao {
+    PgContactExistsDao { pool: pool.clone() }
 }
 
 #[allow(dead_code)]
@@ -137,16 +149,17 @@ pub(crate) async fn main() -> std::io::Result<()> {
     let connection: &PgConnection = &pool.get().unwrap();
     run_pending_migrations(connection).expect("cannot run pending migrations");
 
-    let pers_user_dao = get_daos(pool.clone(), get_ratelimits(), get_firebase_notification_service());
-
-    let server = HttpServer::new(move || {
-        App::new()
+    let server =
+        HttpServer::new(move || {
+            App::new()
             .data(pool.clone())
             //.data(get_auth())
             .data(set_testing_auth())
             .data(get_firebase_notification_service())
             .data(get_ratelimits())
-            .data(pers_user_dao)
+            .data(get_user_dao(pool.clone(), get_ratelimits(), get_firebase_notification_service()))
+            .data(get_blacklist_dao(pool.clone()))
+            .data(get_contactexists_dao(pool.clone()))
             .wrap(
                 Cors::new()
                     .allowed_origin("http://localhost:3000")
@@ -212,8 +225,8 @@ pub(crate) async fn main() -> std::io::Result<()> {
                     )
                     .default_service(web::route().to(HttpResponse::NotFound)),
             )
-    })
-    .keep_alive(None);
+        })
+        .keep_alive(None);
 
     let listener = server.bind(format!("{}:{}", addr, port));
 

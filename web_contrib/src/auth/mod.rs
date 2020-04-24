@@ -42,9 +42,9 @@ macro_rules! get_user_by_tele_num {
 
 #[macro_export]
 macro_rules! get_user_by_id {
-    ( $dao:ident, $expr:expr, $access_token:expr ) => {{
+    ( $dao:ident, $id:expr, $access_token:expr ) => {{
         $dao.get_ref()
-            .get_by_id($tele_num, $access_token)
+            .get_by_id($id, $access_token)
             .map_err(|w| {
                 log::error!("{:?}", w);
                 ServiceError::Unauthorized

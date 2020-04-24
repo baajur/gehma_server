@@ -48,7 +48,7 @@ pub(crate) fn user_signin(
                 led: user.led,
                 client_version: body.client_version.clone(),
             },
-            user_dao,
+            &user_dao,
             current_time,
         )?;
     }
@@ -66,7 +66,7 @@ pub(crate) fn get_entry(
 ) -> Result<UserDto, ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
 
-    get_user_by_id!(user_dao, parsed, &access_token)
+    get_user_by_id!(user_dao, &parsed, access_token.to_string())
 }
 
 pub(crate) fn get_contacts(
@@ -76,7 +76,7 @@ pub(crate) fn get_contacts(
 ) -> Result<Vec<ContactDto>, ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
 
-    let user: Result<UserDto, ServiceError> = get_user_by_id!(user_dao, parsed, &access_token);
+    let user: Result<UserDto, ServiceError> = get_user_by_id!(user_dao, &parsed, access_token.to_owned());
 
     user_dao.get_ref().get_contacts(&user?)
 }
@@ -89,7 +89,7 @@ pub(crate) fn update_token_handler(
 ) -> Result<(), ServiceError> {
     let parsed = Uuid::parse_str(&uid)?;
 
-    let user: Result<UserDto, ServiceError> = get_user_by_id!(user_dao, parsed, access_token);
+    let user: Result<UserDto, ServiceError> = get_user_by_id!(user_dao, &parsed, access_token.to_owned());
 
     user?;
 
@@ -106,17 +106,17 @@ pub(crate) fn update_user_with_auth(
 ) -> Result<UserDto, ::core::errors::ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
 
-    let muser: Result<UserDto, ServiceError> = get_user_by_id!(user_dao, parsed, &access_token);
+    let muser: Result<UserDto, ServiceError> = get_user_by_id!(user_dao, &parsed, access_token.to_owned());
 
     muser?;
 
-    update_user_without_auth(&parsed, user, user_dao, current_time)
+    update_user_without_auth(&parsed, user, &user_dao, current_time)
 }
 
 pub(crate) fn update_user_without_auth(
     uid: &Uuid,
     user: &UpdateUserDto,
-    user_dao: web::Data<&dyn PersistentUserDao>,
+    user_dao: &web::Data<&dyn PersistentUserDao>,
     current_time: DateTime<Local>,
 ) -> Result<UserDto, ::core::errors::ServiceError> {
     let user = user_dao.get_ref().update_user(uid, user, current_time)?;

@@ -10,23 +10,12 @@ use web_contrib::utils::set_response_headers;
 
 use core::errors::ServiceError;
 
-#[derive(Debug, Deserialize)]
-pub struct RequestCode {
-    pub tele_num: String,
-    pub country_code: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct RequestCheckCode {
-    pub tele_num: String,
-    pub code: String,
-    pub country_code: String,
-    pub client_version: String,
-}
+use core::models::dto::*;
+use crate::persistence::user::PersistentUserDao;
 
 pub async fn request_code(
     _info: web::Path<()>,
-    body: web::Json<RequestCode>,
+    body: web::Json<RequestCodeDto>,
     pool: web::Data<Pool>,
     auth: web::Data<Auth>,
 ) -> Result<HttpResponse, ServiceError> {
@@ -48,16 +37,18 @@ pub async fn request_code(
 
 pub async fn check(
     _info: web::Path<()>,
-    body: web::Json<RequestCheckCode>,
+    body: web::Json<RequestCheckCodeDto>,
     pool: web::Data<Pool>,
     auth: web::Data<Auth>,
+    user_dao: web::Data<&dyn PersistentUserDao>,
 ) -> Result<HttpResponse, ServiceError> {
     info!("controllers/auth/check");
 
     let res = check_code(
             body.into_inner(),
             pool,
-            auth
+            auth,
+            user_dao
         ).map_err(|_err| ServiceError::InternalServerError)?;
 
     let mut res = HttpResponse::Ok()
