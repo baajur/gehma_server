@@ -11,8 +11,6 @@ use crate::Pool;
 use crate::persistence::blacklist::PersistentBlacklistDao;
 use log::{error, info};
 
-type HashedTeleNum = String;
-
 #[derive(Clone)]
 pub struct PgBlacklistDao {
     pub pool: Pool,

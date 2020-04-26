@@ -4,7 +4,7 @@ use crate::models::dto::*;
 impl Into<UserDto> for UserDao {
     fn into(self) -> UserDto {
         UserDto {
-            id: self.id.clone(),
+            id: self.id,
             tele_num: self.tele_num.clone(),
             led: self.led,
             country_code: self.country_code.clone(),
@@ -13,7 +13,7 @@ impl Into<UserDto> for UserDao {
             profile_picture: self.profile_picture.clone(),
             hash_tele_num: self.hash_tele_num.clone(),
             xp: self.xp,
-            client_version: self.client_version.clone(),
+            client_version: self.client_version,
         }
     }
 }
@@ -21,7 +21,7 @@ impl Into<UserDto> for UserDao {
 impl Into<BlacklistDto> for BlacklistDao {
     fn into(self) -> BlacklistDto {
         BlacklistDto {
-            id: self.id.clone(),
+            id: self.id,
             created_at: self.created_at.clone(),
             hash_blocker: self.hash_blocker.clone(),
             hash_blocked: self.hash_blocked.clone(),
@@ -32,9 +32,9 @@ impl Into<BlacklistDto> for BlacklistDao {
 impl Into<UsageStatisticEntryDto> for UsageStatisticEntryDao {
     fn into(self) -> UsageStatisticEntryDto {
         UsageStatisticEntryDto  {
-            id: self.id.clone(),
+            id: self.id,
             tele_num: self.tele_num.clone(),
-            created_at: self.created_at.clone(),
+            created_at: self.created_at,
         }
     }
 }
@@ -42,11 +42,11 @@ impl Into<UsageStatisticEntryDto> for UsageStatisticEntryDao {
 impl Into<AnalyticDto> for AnalyticDao {
     fn into(self) -> AnalyticDto {
         AnalyticDto  {
-            id: self.id.clone(),
+            id: self.id,
             description: self.description.clone(),
             tele_num: self.tele_num.clone(),
             led: self.led,
-            created_at: self.created_at.clone(),
+            created_at: self.created_at,
 
         }
     }

@@ -32,8 +32,10 @@ fn set_ratelimits() -> RateLimitWrapper {
     RateLimitWrapper::new(Box::new(DefaultRateLimitPolicy))
 }
 
-fn hash(value: impl Into<String>) -> String {
-    HEXUPPER.encode(digest::digest(&digest::SHA256, value.into().as_bytes()).as_ref())
+fn hash(value: impl Into<String>) -> HashedTeleNum {
+    HashedTeleNum(
+        HEXUPPER.encode(digest::digest(&digest::SHA256, value.into().as_bytes()).as_ref()),
+    )
 }
 
 macro_rules! init_server {
@@ -199,7 +201,7 @@ async fn test_get_user() {
     assert_eq!(user.xp, 0);
     assert_eq!(
         user.hash_tele_num,
-        HEXUPPER.encode(digest::digest(&digest::SHA256, user.tele_num.as_bytes()).as_ref())
+        hash(user.tele_num)
     );
 }
 
@@ -328,7 +330,7 @@ async fn test_create_blacklist() {
                 description: "".to_string(),
                 changed_at: chrono::Utc::now().naive_local(),
                 profile_picture: "".to_string(),
-                hash_tele_num: hash_tele_num.to_string(),
+                hash_tele_num: hash_tele_num.clone(),
                 xp: 0,
                 client_version: super::ALLOWED_CLIENT_VERSIONS[0].to_string(),
             })
@@ -355,7 +357,7 @@ async fn test_create_blacklist() {
             "ACCESS"
         ))
         .set_json(&crate::routes::blacklist::PostData {
-            hash_blocked: hash("+4365012345678"),
+            hash_blocked: hash("+4365012345678").to_string(),
             country_code: "AT".to_string(),
         })
         .to_request();
@@ -421,8 +423,8 @@ async fn test_remove_blacklist() {
         .expect_delete()
         .times(1)
         .returning(|_blocker, _blocked| {
-            assert_eq!(_blocker.to_string(), hash("+4366412345678".to_string()));
-            assert_eq!(_blocked.to_string(), hash("+4365012345678".to_string()));
+            assert_eq!(*_blocker, hash("+4366412345678".to_string()));
+            assert_eq!(*_blocked, hash("+4365012345678".to_string()));
 
             Ok(())
         });
@@ -436,7 +438,7 @@ async fn test_remove_blacklist() {
             "ACCESS"
         ))
         .set_json(&crate::routes::blacklist::PostData {
-            hash_blocked: hash("+4365012345678"),
+            hash_blocked: hash("+4365012345678").to_string(),
             country_code: "AT".to_string(),
         })
         .to_request();

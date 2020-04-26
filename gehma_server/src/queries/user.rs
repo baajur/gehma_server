@@ -69,9 +69,9 @@ impl PersistentUserDao for PgUserDao {
                 String, //cc
                 String, //description
                 chrono::NaiveDateTime,
-                String, //hash_tele
-                String, //hash_blocked
-                Option<String>,
+                String, //profile pic
+                HashedTeleNum, //hash_blocked
+                Option<HashedTeleNum>,
                 i32,                   //XP
                 chrono::NaiveDateTime, //created_at
                 String,                //client
@@ -329,7 +329,7 @@ impl PersistentUserDao for PgUserDao {
             })
     }
 
-    fn get_by_hash_tele_num_unsafe(&self, user_hash_tele_num: &String) -> Result<UserDto, ServiceError> {
+    fn get_by_hash_tele_num_unsafe(&self, user_hash_tele_num: &HashedTeleNum) -> Result<UserDto, ServiceError> {
         info!("queries/user/get_query");
         use core::schema::users::dsl::{hash_tele_num, users};
 

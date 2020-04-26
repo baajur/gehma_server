@@ -1,7 +1,7 @@
-use crate::schema::*;
 use crate::errors::InternalError;
+use crate::models::dto::*;
+use crate::schema::*;
 use crate::utils::phonenumber_to_international;
-use super::HashedTeleNum;
 
 use data_encoding::HEXUPPER;
 use ring::digest;
@@ -32,8 +32,14 @@ pub struct UserDao {
     pub firebase_token: Option<String>,
     pub profile_picture: String,
     pub access_token: String,
-    pub hash_tele_num: String,
+    pub hash_tele_num: HashedTeleNum,
     pub xp: i32,
+}
+
+macro_rules! hash {
+    ($col:expr) => {
+        HashedTeleNum(HEXUPPER.encode(digest::digest(&digest::SHA256, $col.as_bytes()).as_ref()))
+    };
 }
 
 impl UserDao {
@@ -51,8 +57,7 @@ impl UserDao {
             profile_picture: "".to_string(),
             access_token: access_token.to_string(),
             xp: 0,
-            hash_tele_num: 
-                HEXUPPER.encode(digest::digest(&digest::SHA256, tele_num.as_bytes()).as_ref()),
+            hash_tele_num: hash!(tele_num),
         }
     }
 }
@@ -73,10 +78,8 @@ impl BlacklistDao {
         BlacklistDao {
             id: uuid::Uuid::new_v4(),
             created_at: chrono::Local::now().naive_local(),
-            hash_blocker: HEXUPPER
-                .encode(digest::digest(&digest::SHA256, blocker.to_string().as_bytes()).as_ref()),
-            hash_blocked: HEXUPPER
-                .encode(digest::digest(&digest::SHA256, blocked.to_string().as_bytes()).as_ref()),
+            hash_blocker: hash!(blocker.to_string()),
+            hash_blocked: hash!(blocked.to_string()),
         }
     }
 }
@@ -86,14 +89,26 @@ impl BlacklistDao {
 pub struct PhoneNumber(phonenumber::PhoneNumber);
 
 impl PhoneNumber {
+    /*
     pub fn to_string(&self) -> String {
         use phonenumber::Mode;
 
         format!("{}", self.0.format().mode(Mode::International)).replace(" ", "")
     }
+    */
 
     pub fn my_from(raw: &str, cc: &str) -> Result<Self, InternalError> {
         Ok(PhoneNumber(phonenumber_to_international(raw, cc)?))
+    }
+}
+
+use std::fmt;
+impl fmt::Display for PhoneNumber {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        use phonenumber::Mode;
+        fmt.write_str(&format!("{}", self.0.format().mode(Mode::International)).replace(" ", ""))
+            .expect("fmt failed");
+        Ok(())
     }
 }
 
@@ -182,8 +197,7 @@ impl ContactDao {
             target_tele_num: target_tele_num.clone(),
             created_at: chrono::Local::now().naive_local(),
             name,
-            target_hash_tele_num: HEXUPPER
-                .encode(digest::digest(&digest::SHA256, target_tele_num.as_bytes()).as_ref()),
+            target_hash_tele_num: hash!(target_tele_num),
         }
     }
 }

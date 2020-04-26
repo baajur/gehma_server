@@ -21,7 +21,7 @@ impl AuthenticatorWrapper {
 }
 
 pub trait Authenticator: Send + Sync {
-    fn check_code(&self, tele_num: &PhoneNumber, user_token: &String)
+    fn check_code(&self, tele_num: &PhoneNumber, user_token: &str)
         -> Result<bool, ServiceError>;
 
     fn request_code(&self, tele_num: &PhoneNumber) -> Result<(), ServiceError>;

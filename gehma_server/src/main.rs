@@ -106,12 +106,12 @@ fn get_user_dao(
 
 #[allow(dead_code)]
 fn get_blacklist_dao(pool: Pool) -> PgBlacklistDao {
-    PgBlacklistDao { pool: pool.clone() }
+    PgBlacklistDao { pool }
 }
 
 #[allow(dead_code)]
 fn get_contactexists_dao(pool: Pool) -> PgContactExistsDao {
-    PgContactExistsDao { pool: pool.clone() }
+    PgContactExistsDao { pool }
 }
 
 #[allow(dead_code)]

@@ -6,7 +6,6 @@ use futures::Future;
 use log::{error};
 use serde::Deserialize;
 use serde_json::json;
-use tokio;
 
 use futures::stream::Stream;
 use reqwest::header::{AUTHORIZATION, CONTENT_TYPE};

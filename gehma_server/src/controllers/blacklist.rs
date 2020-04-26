@@ -43,7 +43,7 @@ pub(crate) fn create_entry(
 
     let contact = user_dao
         .get_ref()
-        .get_by_hash_tele_num_unsafe(&data.hash_blocked)?;
+        .get_by_hash_tele_num_unsafe(&HashedTeleNum(data.hash_blocked.clone()))?;
 
     let blocked = PhoneNumber::my_from(&contact.tele_num, &contact.country_code)?;
 
@@ -66,7 +66,8 @@ pub(crate) fn delete_entry(
     let user: Result<UserDto, ServiceError> =
         get_user_by_id!(user_dao, &blocker2, access_token.to_string());
 
-    blacklist_dao
-        .get_ref()
-        .delete(&user?.hash_tele_num, &data.hash_blocked)
+    blacklist_dao.get_ref().delete(
+        &user?.hash_tele_num,
+        &HashedTeleNum(data.hash_blocked.clone()),
+    )
 }

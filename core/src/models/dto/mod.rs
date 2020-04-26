@@ -1,5 +1,41 @@
-use super::HashedTeleNum;
+use diesel::backend::Backend;
+use diesel::deserialize;
+use diesel::serialize::{self, Output, ToSql};
+use diesel::types::FromSql;
+use std::io::Write;
 use uuid::Uuid;
+
+#[derive(Debug, Clone, Serialize, Deserialize, AsExpression, FromSqlRow, PartialEq, Eq)]
+#[sql_type = "diesel::sql_types::Text"]
+pub struct HashedTeleNum(pub String);
+
+impl<DB> ToSql<diesel::sql_types::Text, DB> for HashedTeleNum
+where
+    DB: Backend,
+    String: ToSql<diesel::sql_types::Text, DB>,
+{
+    fn to_sql<W: Write>(&self, out: &mut Output<W, DB>) -> serialize::Result {
+        <String as ToSql<diesel::sql_types::Text, DB>>::to_sql(&self.0, out)
+    }
+}
+
+impl<DB> FromSql<diesel::sql_types::Text, DB> for HashedTeleNum
+where
+    DB: Backend,
+    String: FromSql<diesel::sql_types::Text, DB>,
+{
+    fn from_sql(bytes: Option<&DB::RawValue>) -> deserialize::Result<Self> {
+        <String as FromSql<diesel::sql_types::Text, DB>>::from_sql(bytes).map(HashedTeleNum)
+    }
+}
+
+use std::fmt;
+impl fmt::Display for HashedTeleNum {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt.write_str(&self.0).expect("fmt failed");
+        Ok(())
+    }
+}
 
 //FIXME merge WrappedUserDto with UserDto
 
@@ -20,7 +56,7 @@ pub struct UserDto {
     pub description: String,
     pub changed_at: chrono::NaiveDateTime,
     pub profile_picture: String,
-    pub hash_tele_num: String,
+    pub hash_tele_num: HashedTeleNum,
     pub xp: i32,
     pub client_version: String,
 }

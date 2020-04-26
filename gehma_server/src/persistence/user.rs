@@ -18,7 +18,7 @@ pub trait PersistentUserDao {
     /// Get user by hash_tele_num without access_token
     fn get_by_hash_tele_num_unsafe(
         &self,
-        hash_tele_num: &String,
+        hash_tele_num: &HashedTeleNum,
     ) -> IResult<UserDto>;
 
     fn get_by_id(&self, id: &Uuid, my_access_token: String) -> IResult<UserDto>;

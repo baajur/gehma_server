@@ -87,7 +87,7 @@ impl PersistentContactExistsDao for PgContactExistsDao {
                                         numbers
                                             .iter()
                                             .map(|w| w.hash_tele_num.clone())
-                                            .collect::<Vec<String>>(),
+                                            .collect::<Vec<HashedTeleNum>>(),
                                     ),
                                 )
                                 .order(changed_at.desc())

@@ -27,7 +27,7 @@ impl Authenticator for TestingAuthentificator {
     fn check_code(
         &self,
         _tele_num: &PhoneNumber,
-        _user_token: &String,
+        _user_token: &str,
     ) -> Result<bool, ServiceError> {
         info!("auth/testing");
 
@@ -43,7 +43,7 @@ impl Authenticator for TestingAuthentificatorAlwaysFalse {
     fn check_code(
         &self,
         _tele_num: &PhoneNumber,
-        _user_token: &String,
+        _user_token: &str,
     ) -> Result<bool, ServiceError> {
         info!("auth/testing");
 

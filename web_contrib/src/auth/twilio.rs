@@ -83,7 +83,7 @@ impl Authenticator for TwilioAuthenticator {
     fn check_code(
         &self,
         tele_num: &PhoneNumber,
-        user_token: &String,
+        user_token: &str,
     ) -> Result<bool, ServiceError> {
         info!("auth/authenticate");
 
