@@ -470,15 +470,14 @@ async fn test_contacts() {
                 })
             });
 
-
     contacts_dao_mock
         .expect_create()
         .times(1)
-        .returning(|_uid, user, phone_number| Ok(()));
+        .returning(|_uid, _user, _phone_number| Ok(()));
 
     blacklist_dao_mock 
         .expect_get()
-        .times(2)
+        .times(3)
         .returning(|_| Ok(vec![]));
 
     contacts_dao_mock
@@ -491,9 +490,9 @@ async fn test_contacts() {
                 user: UserDto {
                     id: Uuid::new_v4(),
                     tele_num: "+4365012345678".to_string(),
-                    led: false,
+                    led: true,
                     country_code: "AT".to_string(),
-                    description: "".to_string(),
+                    description: "test".to_string(),
                     changed_at: chrono::Utc::now().naive_local(),
                     profile_picture: "".to_string(),
                     hash_tele_num: hash("+4365012345678".to_string()),
@@ -534,21 +533,224 @@ async fn test_contacts() {
         ))
         .to_request();
     
-    let resp = test::call_service(&mut app, req).await;
-    println!("{:?}", resp.response().error());
+    //let resp = test::call_service(&mut app, req).await;
+    //assert!(resp.status().is_success());
 
-    //let users: Vec<ContactDto> = test::read_response_json(&mut app, req).await;
-    //assert_eq!(users.len(), 1);
-    /*
-    assert_eq!(users.get(0).unwrap().hash_tele_num, hash("+4365012345678"));
-    assert_eq!(users.get(0).unwrap().name, "Test".to_string());
-    assert_eq!(
-        users.get(0).unwrap().user.as_ref().unwrap().tele_num,
-        "+4365012345678".to_string()
-    );
-    assert_eq!(
-        users.get(0).unwrap().user.as_ref().unwrap().country_code,
-        "AT".to_string()
-    );
-    */
+    let users: Vec<ContactDto> = test::read_response_json(&mut app, req).await;
+
+    assert!(users.len() > 0);
+    assert_eq!(true, users.get(0).unwrap().user.led);
+    assert_eq!("test", &users.get(0).unwrap().user.description);
+}
+
+#[actix_rt::test]
+async fn test_contacts_with_blacklist_1() {
+    let mut user_dao_mock = MockPersistentUserDao::new();
+    let mut blacklist_dao_mock = MockPersistentBlacklistDao::new();
+    let mut contacts_dao_mock = MockPersistentContactsDao::new();
+
+    user_dao_mock 
+            .expect_get_by_id()
+            .times(2)
+            .returning(|id, _access_token| {
+                Ok(UserDto {
+                    id: *id,
+                    tele_num: "+4366412345678".to_string(),
+                    led: false,
+                    country_code: "AT".to_string(),
+                    description: "".to_string(),
+                    changed_at: chrono::Utc::now().naive_local(),
+                    profile_picture: "".to_string(),
+                    hash_tele_num: hash("+4366412345678".to_string()),
+                    xp: 0,
+                    client_version: super::ALLOWED_CLIENT_VERSIONS[0].to_string(),
+                })
+            });
+
+    contacts_dao_mock
+        .expect_create()
+        .times(1)
+        .returning(|_uid, _user, _phone_number| Ok(()));
+
+    blacklist_dao_mock 
+        .expect_get()
+        .times(2)
+        .returning(|_| Ok(vec![
+            BlacklistDto {
+                id: Uuid::new_v4(),
+                created_at: chrono::Utc::now().naive_local(),
+                hash_blocker: hash("+4366412345678".to_string()),
+                hash_blocked: hash("+4365012345678".to_string()),
+
+            }
+        ]));
+
+    contacts_dao_mock
+        .expect_get_contacts()
+        .times(1)
+        .returning(|_user| {
+            Ok(vec![ContactDto {
+                blocked: false,
+                name: "Test".to_string(),
+                user: UserDto {
+                    id: Uuid::new_v4(),
+                    tele_num: "+4365012345678".to_string(),
+                    led: true,
+                    country_code: "AT".to_string(),
+                    description: "doing something".to_string(),
+                    changed_at: chrono::Utc::now().naive_local(),
+                    profile_picture: "".to_string(),
+                    hash_tele_num: hash("+4365012345678".to_string()),
+                    xp: 0,
+                    client_version: super::ALLOWED_CLIENT_VERSIONS[0].to_string(),
+                },
+            }])
+        });
+
+    let mut app = init_server!(user_dao_mock, blacklist_dao_mock, contacts_dao_mock).await;
+
+    let req = test::TestRequest::post()
+        .uri(&format!(
+            "/api/contacts/{}/{}?access_token={}",
+            Uuid::new_v4(),
+            "AT",
+            "ACCESS"
+        ))
+        .set_json(&PayloadNumbersDto {
+            numbers: vec![
+                PayloadUserDto {
+                    name: "Test".to_string(),
+                    hash_tele_num: hash("+4366412345678")
+                }
+            ]
+        })
+
+        .to_request();
+
+    let resp = test::call_service(&mut app, req).await;
+    assert!(resp.status().is_success());
+
+    let req = test::TestRequest::get()
+        .uri(&format!(
+            "/api/contacts/{}?access_token={}",
+            Uuid::new_v4(),
+            "ACCESS"
+        ))
+        .to_request();
+
+    let users: Vec<ContactDto> = test::read_response_json(&mut app, req).await;
+
+    assert_eq!(1, users.len());
+    assert_eq!(false, users.get(0).unwrap().user.led);
+    assert_eq!("", &users.get(0).unwrap().user.description);
+
+    
+    //let resp = test::call_service(&mut app, req).await;
+    //assert!(resp.status().is_success());
+}
+
+#[actix_rt::test]
+async fn test_contacts_with_blacklist_2() {
+    let mut user_dao_mock = MockPersistentUserDao::new();
+    let mut blacklist_dao_mock = MockPersistentBlacklistDao::new();
+    let mut contacts_dao_mock = MockPersistentContactsDao::new();
+
+    user_dao_mock 
+            .expect_get_by_id()
+            .times(2)
+            .returning(|id, _access_token| {
+                Ok(UserDto {
+                    id: *id,
+                    tele_num: "+4366412345678".to_string(),
+                    led: false,
+                    country_code: "AT".to_string(),
+                    description: "".to_string(),
+                    changed_at: chrono::Utc::now().naive_local(),
+                    profile_picture: "".to_string(),
+                    hash_tele_num: hash("+4366412345678".to_string()),
+                    xp: 0,
+                    client_version: super::ALLOWED_CLIENT_VERSIONS[0].to_string(),
+                })
+            });
+
+    contacts_dao_mock
+        .expect_create()
+        .times(1)
+        .returning(|_uid, _user, _phone_number| Ok(()));
+
+    blacklist_dao_mock 
+        .expect_get()
+        .times(3)
+        .returning(|_| Ok(vec![
+            BlacklistDto {
+                id: Uuid::new_v4(),
+                created_at: chrono::Utc::now().naive_local(),
+                hash_blocked: hash("+4366412345678".to_string()), //reversed
+                hash_blocker: hash("+4365012345678".to_string()),
+
+            }
+        ]));
+
+    contacts_dao_mock
+        .expect_get_contacts()
+        .times(1)
+        .returning(|_user| {
+            Ok(vec![ContactDto {
+                blocked: false,
+                name: "Test".to_string(),
+                user: UserDto {
+                    id: Uuid::new_v4(),
+                    tele_num: "+4365012345678".to_string(),
+                    led: true,
+                    country_code: "AT".to_string(),
+                    description: "doing something".to_string(),
+                    changed_at: chrono::Utc::now().naive_local(),
+                    profile_picture: "".to_string(),
+                    hash_tele_num: hash("+4365012345678".to_string()),
+                    xp: 0,
+                    client_version: super::ALLOWED_CLIENT_VERSIONS[0].to_string(),
+                },
+            }])
+        });
+
+    let mut app = init_server!(user_dao_mock, blacklist_dao_mock, contacts_dao_mock).await;
+
+    let req = test::TestRequest::post()
+        .uri(&format!(
+            "/api/contacts/{}/{}?access_token={}",
+            Uuid::new_v4(),
+            "AT",
+            "ACCESS"
+        ))
+        .set_json(&PayloadNumbersDto {
+            numbers: vec![
+                PayloadUserDto {
+                    name: "Test".to_string(),
+                    hash_tele_num: hash("+4366412345678")
+                }
+            ]
+        })
+
+        .to_request();
+
+    let resp = test::call_service(&mut app, req).await;
+    assert!(resp.status().is_success());
+
+    let req = test::TestRequest::get()
+        .uri(&format!(
+            "/api/contacts/{}?access_token={}",
+            Uuid::new_v4(),
+            "ACCESS"
+        ))
+        .to_request();
+
+    let users: Vec<ContactDto> = test::read_response_json(&mut app, req).await;
+
+    assert_eq!(1, users.len());
+    assert_eq!(false, users.get(0).unwrap().user.led);
+    assert_eq!("", &users.get(0).unwrap().user.description);
+
+    
+    //let resp = test::call_service(&mut app, req).await;
+    //assert!(resp.status().is_success());
 }

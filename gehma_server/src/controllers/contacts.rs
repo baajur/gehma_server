@@ -52,6 +52,8 @@ pub(crate) fn get_contacts(
 
     let user: Result<UserDto, ServiceError> =
         get_user_by_id!(user_dao, &parsed, access_token.to_owned());
+    
+    let user = user?;
 
     let blacklists: Vec<_> = blacklist_dao
         .get_ref()
@@ -60,7 +62,7 @@ pub(crate) fn get_contacts(
         .map(|w| w.hash_blocked)
         .collect();
 
-    let mut contacts = contact_dao.get_ref().get_contacts(&user?)?;
+    let mut contacts = contact_dao.get_ref().get_contacts(&user)?;
 
     contacts
         .iter_mut()
@@ -70,6 +72,23 @@ pub(crate) fn get_contacts(
             w.user.led = false;
             w.user.description = "".to_string();
         });
+
+    //TODO make parallel?
+    for mut contact in contacts.iter_mut().filter(|w| !w.blocked) {
+        let other_blacklists: Vec<_> = blacklist_dao
+            .get_ref()
+            .get(contact.user.id)?
+            .into_iter()
+            .map(|w| w.hash_blocked)
+            .filter(|w| w == &user.hash_tele_num) //someone blocked me
+            .collect();
+
+        if other_blacklists.len() > 0 {
+            contact.blocked = false; // I cannot if someone blocked me
+            contact.user.led = false;
+            contact.user.description = "".to_string();
+        }
+    }
 
     Ok(contacts)
 }
