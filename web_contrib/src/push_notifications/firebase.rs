@@ -77,7 +77,7 @@ impl NotificationService for FirebaseNotificationService {
                 })
             })
             .for_each(move |res| {
-                if res.success != 1 {
+                if res.success != 1 { //FIXME report
                     error!("SOME NOTIFICATIONS FAILED");
                 }
 

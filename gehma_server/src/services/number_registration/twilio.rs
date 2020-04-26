@@ -1,7 +1,12 @@
-use crate::auth::*;
+use super::NumberRegistrationServiceTrait;
 use chrono::prelude::*;
 use core::models::PhoneNumber;
 use serde::{Serialize, Deserialize};
+use log::{error, info};
+use core::errors::ServiceError;
+
+use reqwest::Client;
+
 
 //FIXME drop Debug
 #[derive(Debug, Clone)]
@@ -79,7 +84,7 @@ pub struct TwilioAuthenticator {
     pub config: TwilioConfiguration,
 }
 
-impl Authenticator for TwilioAuthenticator {
+impl NumberRegistrationServiceTrait for TwilioAuthenticator {
     fn check_code(
         &self,
         tele_num: &PhoneNumber,

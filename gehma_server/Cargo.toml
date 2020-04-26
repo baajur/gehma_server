@@ -32,7 +32,7 @@ futures = "0.3"
 r2d2 = "0.8.7"
 uuid = { version = "0.6", features = ["serde", "v4"] }
 openssl = { version = "0.10", features = ["vendored"] }
-reqwest = "0.10.4"
+reqwest = "0.9"
 tokio = "0.1.22"
 diesel_migrations= "1.4.0"
 mockall = "0.7"

@@ -2,7 +2,6 @@ use crate::controllers::blacklist::{create_entry, delete_entry, get_entry};
 use actix_web::{web, HttpResponse};
 use core::errors::ServiceError;
 use log::{info, error};
-use web_contrib::auth::Auth;
 use web_contrib::utils::{set_response_headers, QueryParams};
 
 use crate::persistence::blacklist::PersistentBlacklistDao;
@@ -67,7 +66,6 @@ pub async fn delete(
     info: web::Path<String>,
     data: web::Json<PostData>,
     query: web::Query<QueryParams>,
-    _auth: web::Data<Auth>,
     user_dao: web::Data<Box<dyn PersistentUserDao>>,
     blacklist_dao: web::Data<Box<dyn PersistentBlacklistDao>>,
 ) -> Result<HttpResponse, ServiceError> {

@@ -1,6 +1,7 @@
-use crate::auth::*;
+use super::NumberRegistrationServiceTrait;
 use core::errors::ServiceError;
 use core::models::PhoneNumber;
+use log::{info};
 
 #[derive(Debug, Clone)]
 pub struct TestingAuthConfiguration {
@@ -19,7 +20,7 @@ pub struct TestingAuthentificatorAlwaysFalse {
     pub config: TestingAuthConfiguration,
 }
 
-impl Authenticator for TestingAuthentificator {
+impl NumberRegistrationServiceTrait for TestingAuthentificator {
     fn request_code(&self, _tele_num: &PhoneNumber) -> Result<(), ServiceError> {
         Ok(())
     }
@@ -35,7 +36,7 @@ impl Authenticator for TestingAuthentificator {
     }
 }
 
-impl Authenticator for TestingAuthentificatorAlwaysFalse {
+impl NumberRegistrationServiceTrait for TestingAuthentificatorAlwaysFalse {
     fn request_code(&self, _tele_num: &PhoneNumber) -> Result<(), ServiceError> {
         Ok(())
     }

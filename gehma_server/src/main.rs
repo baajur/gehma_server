@@ -1,8 +1,10 @@
 #[macro_use]
 extern crate serde_derive;
-#[macro_use]
 extern crate web_contrib;
 
+use crate::services::number_registration::testing::*;
+use crate::services::number_registration::twilio::*;
+use crate::services::number_registration::NumberRegistrationService;
 use actix_cors::Cors;
 use actix_files::NamedFile;
 use actix_web::http::header;
@@ -13,7 +15,6 @@ use diesel::r2d2::{self, ConnectionManager};
 use diesel_migrations::run_pending_migrations;
 use log::error;
 use std::path::PathBuf;
-use web_contrib::auth::AuthenticatorWrapper;
 use web_contrib::push_notifications::NotificationWrapper;
 
 use queries::blacklist::PgBlacklistDao;
@@ -23,8 +24,9 @@ use queries::user::PgUserDao;
 pub(crate) mod controllers;
 pub(crate) mod persistence;
 pub(crate) mod queries;
-pub(crate) mod ratelimits;
+pub(crate) mod ratelimits; //move to services
 pub(crate) mod routes;
+pub(crate) mod services;
 
 //mod middleware;
 
@@ -38,10 +40,7 @@ pub const ALLOWED_PROFILE_PICTURE_SIZE: usize = 10_000; //in Kilobytes
 pub type Pool = r2d2::Pool<ConnectionManager<PgConnection>>;
 
 #[allow(dead_code)]
-fn get_auth() -> web_contrib::auth::AuthenticatorWrapper {
-    use web_contrib::auth::twilio::TwilioAuthenticator;
-    use web_contrib::auth::twilio::TwilioConfiguration;
-
+fn get_auth() -> NumberRegistrationService {
     let project_id = std::env::var("TWILIO_PROJECT_ID").expect("no PROJECT_ID");
     let auth_token = std::env::var("TWILIO_AUTH_TOKEN").expect("no AUTH_TOKEN");
     let sid = std::env::var("TWILIO_ACCOUNT_ID").expect("no ACCOUNT_ID");
@@ -52,31 +51,27 @@ fn get_auth() -> web_contrib::auth::AuthenticatorWrapper {
         auth_token,
     };
 
-    web_contrib::auth::AuthenticatorWrapper::new(Box::new(TwilioAuthenticator { config }))
+    Box::new(TwilioAuthenticator { config })
 }
 
 #[allow(dead_code)]
-fn set_testing_auth() -> AuthenticatorWrapper {
-    use web_contrib::auth::testing::*;
-
+fn set_testing_auth() -> NumberRegistrationService {
     let config = TestingAuthConfiguration {
         id: "test".to_string(),
         auth_token: "test".to_string(),
     };
 
-    AuthenticatorWrapper::new(Box::new(TestingAuthentificator { config }))
+    Box::new(TestingAuthentificator { config })
 }
 
 #[allow(dead_code)]
-fn set_testing_auth_false() -> AuthenticatorWrapper {
-    use web_contrib::auth::testing::*;
-
+fn set_testing_auth_false() -> NumberRegistrationService {
     let config = TestingAuthConfiguration {
         id: "test".to_string(),
         auth_token: "test".to_string(),
     };
 
-    AuthenticatorWrapper::new(Box::new(TestingAuthentificatorAlwaysFalse { config }))
+    Box::new(TestingAuthentificatorAlwaysFalse { config })
 }
 
 #[allow(dead_code)]
@@ -149,15 +144,18 @@ pub(crate) async fn main() -> std::io::Result<()> {
     let connection: &PgConnection = &pool.get().unwrap();
     run_pending_migrations(connection).expect("cannot run pending migrations");
 
-    let server =
-        HttpServer::new(move || {
-            App::new()
+    let server = HttpServer::new(move || {
+        App::new()
             .data(pool.clone())
             //.data(get_auth())
             .data(set_testing_auth())
             .data(get_firebase_notification_service())
             .data(get_ratelimits())
-            .data(get_user_dao(pool.clone(), get_ratelimits(), get_firebase_notification_service()))
+            .data(get_user_dao(
+                pool.clone(),
+                get_ratelimits(),
+                get_firebase_notification_service(),
+            ))
             .data(get_blacklist_dao(pool.clone()))
             .data(get_contacts_dao(pool.clone()))
             .wrap(
@@ -218,15 +216,16 @@ pub(crate) async fn main() -> std::io::Result<()> {
                     )
                     .service(
                         web::resource("/auth/request_code")
-                            .route(web::post().to(routes::auth::request_code)),
+                            .route(web::post().to(routes::number_registration::request_code)),
                     )
                     .service(
-                        web::resource("/auth/check").route(web::post().to(routes::auth::check)),
+                        web::resource("/auth/check")
+                            .route(web::post().to(routes::number_registration::check)),
                     )
                     .default_service(web::route().to(HttpResponse::NotFound)),
             )
-        })
-        .keep_alive(None);
+    })
+    .keep_alive(None);
 
     let listener = server.bind(format!("{}:{}", addr, port));
 

@@ -1,9 +1,8 @@
 use actix_web::{web, HttpResponse};
-use web_contrib::auth::Auth;
 
 use log::{info};
 
-use crate::controllers::auth::{request, check_code};
+use crate::controllers::number_registration::{request, check_code};
 
 use web_contrib::utils::set_response_headers;
 
@@ -11,19 +10,19 @@ use core::errors::ServiceError;
 
 use core::models::dto::*;
 use crate::persistence::user::PersistentUserDao;
+use crate::services::number_registration::NumberRegistrationService;
 
 pub async fn request_code(
     _info: web::Path<()>,
     body: web::Json<RequestCodeDto>,
     //pool: web::Data<Pool>,
-    auth: web::Data<Auth>,
+    number_registration_service: web::Data<NumberRegistrationService>,
 ) -> Result<HttpResponse, ServiceError> {
     info!("controllers/auth/request_code");
 
     let _ = request(
             body.into_inner(),
-            //pool,
-            auth,
+            number_registration_service,
         ).map_err(|_err| ServiceError::InternalServerError)?;
 
     let mut res = HttpResponse::Ok()
@@ -38,16 +37,15 @@ pub async fn check(
     _info: web::Path<()>,
     body: web::Json<RequestCheckCodeDto>,
     //pool: web::Data<Pool>,
-    auth: web::Data<Auth>,
+    number_registration_service: web::Data<NumberRegistrationService>,
     user_dao: web::Data<Box<dyn PersistentUserDao>>,
 ) -> Result<HttpResponse, ServiceError> {
     info!("controllers/auth/check");
 
     let res = check_code(
             body.into_inner(),
-            //pool,
-            auth,
-            user_dao
+            user_dao,
+            number_registration_service,
         ).map_err(|_err| ServiceError::InternalServerError)?;
 
     let mut res = HttpResponse::Ok()

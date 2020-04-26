@@ -1,4 +1,4 @@
-pub mod auth;
+//pub mod auth;
 pub mod push_notifications;
 pub mod utils;
 

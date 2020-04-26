@@ -7,6 +7,8 @@ use crate::persistence::blacklist::PersistentBlacklistDao;
 use crate::persistence::contacts::PersistentContactsDao;
 use crate::persistence::user::PersistentUserDao;
 
+use crate::get_user_by_id;
+
 pub(crate) fn create(
     uid: &str,
     _country_code: &str,

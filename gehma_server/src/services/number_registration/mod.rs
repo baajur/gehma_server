@@ -1,13 +1,10 @@
 use core::errors::ServiceError;
 use core::models::PhoneNumber;
-use log::{error, info};
-use reqwest::Client;
 
 pub mod testing;
 pub mod twilio;
 
-pub type Auth = AuthenticatorWrapper;
-
+/*
 /// The actix's routes cannot handle `web::Data<impl Authenticator + 'static>`.
 /// That's why I use a wrapper struct to make it easier to guess the type
 pub struct AuthenticatorWrapper {
@@ -19,8 +16,11 @@ impl AuthenticatorWrapper {
         AuthenticatorWrapper { authenticator: a }
     }
 }
+*/
 
-pub trait Authenticator: Send + Sync {
+pub type NumberRegistrationService = Box<dyn NumberRegistrationServiceTrait>;
+
+pub trait NumberRegistrationServiceTrait : Send + Sync {
     fn check_code(&self, tele_num: &PhoneNumber, user_token: &str)
         -> Result<bool, ServiceError>;
 

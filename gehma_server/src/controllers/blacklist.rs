@@ -10,6 +10,8 @@ use crate::persistence::user::PersistentUserDao;
 use crate::routes::blacklist::PostData;
 use log::debug;
 
+use crate::{get_user_by_id};
+
 pub(crate) fn get_entry(
     blocker: &str,
     access_token: &str,

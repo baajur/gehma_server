@@ -47,11 +47,11 @@ macro_rules! init_server {
                 .data(Box::new($contact_exists_dao) as Box<dyn PersistentContactsDao>)
                 .route(
                     "/api/auth/request_code",
-                    web::post().to(crate::routes::auth::request_code),
+                    web::post().to(crate::routes::number_registration::request_code),
                 )
                 .route(
                     "/api/auth/check",
-                    web::post().to(crate::routes::auth::check),
+                    web::post().to(crate::routes::number_registration::check),
                 )
                 .route("/api/user/{uid}", web::get().to(crate::routes::user::get))
                 .route(
