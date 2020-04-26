@@ -11,6 +11,8 @@ use crate::Pool;
 use crate::persistence::blacklist::PersistentBlacklistDao;
 use log::{error, info};
 
+type HashedTeleNum = String;
+
 #[derive(Clone)]
 pub struct PgBlacklistDao {
     pub pool: Pool,
@@ -62,24 +64,15 @@ impl PersistentBlacklistDao for PgBlacklistDao {
             })
     }
 
-    fn delete(&self, sblocker: &PhoneNumber, sblocked: &PhoneNumber) -> Result<(), ServiceError> {
+    fn delete(&self, sblocker: &HashedTeleNum, sblocked: &HashedTeleNum) -> Result<(), ServiceError> {
         info!("queries/blacklist/delete_query");
         use core::schema::blacklist::dsl::{blacklist, hash_blocked, hash_blocker};
-        use data_encoding::HEXUPPER;
-        use ring::digest;
 
         let conn: &PgConnection = &self.pool.get().unwrap();
 
-        let b1 = HEXUPPER
-            .encode(digest::digest(&digest::SHA256, sblocker.to_string().as_bytes()).as_ref());
-
-        let b2 = HEXUPPER
-            .encode(digest::digest(&digest::SHA256, sblocked.to_string().as_bytes()).as_ref());
-
-        //FIXME #34
         let target = blacklist
-            .filter(hash_blocker.eq(b1))
-            .filter(hash_blocked.eq(b2));
+            .filter(hash_blocker.eq(sblocker))
+            .filter(hash_blocked.eq(sblocked));
 
         diesel::delete(target)
             .execute(conn)

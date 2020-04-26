@@ -2,20 +2,12 @@ use super::*;
 use web_contrib::auth::testing::*;
 use web_contrib::auth::AuthenticatorWrapper;
 
-use web_contrib::push_notifications::testing::*;
-use web_contrib::push_notifications::NotificationWrapper;
-
 use actix_web::{test, web, App};
-use core::models::dao::*;
 use core::models::dto::*;
-use diesel::pg::PgConnection;
-use std::env;
-
-use diesel_migrations::run_pending_migrations;
+//use diesel_migrations::run_pending_migrations;
 use serde_json::json;
 
 use data_encoding::HEXUPPER;
-use mockall::predicate::*;
 use ring::digest;
 
 use crate::persistence::blacklist::{MockPersistentBlacklistDao, PersistentBlacklistDao};
@@ -24,8 +16,6 @@ use crate::persistence::contact_exists::{
 };
 use crate::persistence::user::{MockPersistentUserDao, PersistentUserDao};
 use crate::ratelimits::{DefaultRateLimitPolicy, RateLimitWrapper};
-
-use actix_service::Service;
 
 use uuid::Uuid;
 
@@ -36,12 +26,6 @@ fn set_testing_auth() -> AuthenticatorWrapper {
     };
 
     AuthenticatorWrapper::new(Box::new(TestingAuthentificator { config: config }))
-}
-
-fn set_notification_service() -> NotificationWrapper {
-    let config = TestingNotificationService;
-
-    NotificationWrapper::new(Box::new(config))
 }
 
 fn set_ratelimits() -> RateLimitWrapper {
@@ -84,9 +68,39 @@ macro_rules! init_server {
                 )
                 .route(
                     "/api/user/{uid}/blacklist",
+                    web::get().to(crate::routes::blacklist::get_all),
+                )
+                .route(
+                    "/api/user/{uid}/blacklist",
                     web::put().to(crate::routes::blacklist::delete),
+                )
+                .route(
+                    "/api/exists/{uid}/{country_code}",
+                    web::post().to(crate::routes::contact_exists::exists),
                 ),
         )
+    };
+}
+
+macro_rules! setup_login_account {
+    ($user_dao:ident) => {
+        $user_dao //login
+            .expect_get_by_id()
+            .times(1)
+            .returning(|id, _access_token| {
+                Ok(UserDto {
+                    id: *id,
+                    tele_num: "+4366412345678".to_string(),
+                    led: false,
+                    country_code: "AT".to_string(),
+                    description: "".to_string(),
+                    changed_at: chrono::Utc::now().naive_local(),
+                    profile_picture: "".to_string(),
+                    hash_tele_num: hash("+4366412345678".to_string()),
+                    xp: 0,
+                    client_version: super::ALLOWED_CLIENT_VERSIONS[0].to_string(),
+                })
+            });
     };
 }
 
@@ -97,7 +111,7 @@ async fn test_create_user() {
     let contact_exists_dao_mock = MockPersistentContactExistsDao::new();
 
     user_dao_mock.expect_create().returning(
-        |tele_num, country_code, client_version, access_token| {
+        |tele_num, country_code, client_version, _access_token| {
             Ok(UserDto {
                 id: Uuid::new_v4(),
                 tele_num: tele_num.to_string(),
@@ -164,54 +178,21 @@ async fn test_get_user() {
     let blacklist_dao_mock = MockPersistentBlacklistDao::new();
     let contact_exists_dao_mock = MockPersistentContactExistsDao::new();
 
-    let TELE = "+4366412345678".to_string();
-
-    let id = Uuid::new_v4();
-
-    let user = UserDto {
-        id: id,
-        tele_num: TELE.clone(),
-        led: false,
-        country_code: "AT".to_string(),
-        description: "".to_string(),
-        changed_at: chrono::Utc::now().naive_local(),
-        profile_picture: "".to_string(),
-        hash_tele_num: hash(TELE.clone()),
-        xp: 0,
-        client_version: super::ALLOWED_CLIENT_VERSIONS[0].to_string(),
-    };
-
-    user_dao_mock
-        .expect_get_by_id()
-        .times(1)
-        .returning(|id, _access_token| {
-            Ok(UserDto {
-                id: *id,
-                tele_num: "+4366412345678".to_string(),
-                led: false,
-                country_code: "AT".to_string(),
-                description: "".to_string(),
-                changed_at: chrono::Utc::now().naive_local(),
-                profile_picture: "".to_string(),
-                hash_tele_num: hash("+4366412345678".to_string()),
-                xp: 0,
-                client_version: super::ALLOWED_CLIENT_VERSIONS[0].to_string(),
-            })
-        });
+    setup_login_account!(user_dao_mock);
 
     let mut app = init_server!(user_dao_mock, blacklist_dao_mock, contact_exists_dao_mock).await;
 
     let req = test::TestRequest::get()
         .uri(&format!(
             "/api/user/{}?access_token={}",
-            user.id,
+            Uuid::new_v4(),
             "TEST".to_string()
         ))
         .to_request();
 
     let user: UserDto = test::read_response_json(&mut app, req).await;
 
-    assert_eq!(user.tele_num, TELE);
+    assert_eq!(user.tele_num, "+4366412345678");
     assert_eq!(user.country_code, "AT".to_string());
     assert_eq!(user.led, false);
     assert_eq!(user.description, "".to_string());
@@ -226,29 +207,12 @@ async fn test_get_user() {
 /// This updates the description of an user.
 async fn test_update_user() {
     let id = Uuid::new_v4();
-    let TELE = "+4366412345678".to_string();
 
     let mut user_dao_mock = MockPersistentUserDao::new();
     let blacklist_dao_mock = MockPersistentBlacklistDao::new();
     let contact_exists_dao_mock = MockPersistentContactExistsDao::new();
 
-    user_dao_mock
-        .expect_get_by_id()
-        .times(1)
-        .returning(|id, _access_token| {
-            Ok(UserDto {
-                id: *id,
-                tele_num: "+4366412345678".to_string(),
-                led: false,
-                country_code: "AT".to_string(),
-                description: "".to_string(),
-                changed_at: chrono::Utc::now().naive_local(),
-                profile_picture: "".to_string(),
-                hash_tele_num: hash("+4366412345678".to_string()),
-                xp: 0,
-                client_version: super::ALLOWED_CLIENT_VERSIONS[0].to_string(),
-            })
-        });
+    setup_login_account!(user_dao_mock);
 
     user_dao_mock
         .expect_create_analytics_for_user()
@@ -267,7 +231,7 @@ async fn test_update_user() {
         .expect_update_user()
         .times(1)
         .returning(|id, user, current_time| {
-            let mut u = UserDto {
+            let u = UserDto {
                 id: *id,
                 tele_num: "+4366412345678".to_string(),
                 led: false,
@@ -315,28 +279,12 @@ async fn test_update_token_user() {
     let blacklist_dao_mock = MockPersistentBlacklistDao::new();
     let contact_exists_dao_mock = MockPersistentContactExistsDao::new();
 
-    user_dao_mock
-        .expect_get_by_id()
-        .times(1)
-        .returning(|id, _access_token| {
-            Ok(UserDto {
-                id: *id,
-                tele_num: "+4366412345678".to_string(),
-                led: false,
-                country_code: "AT".to_string(),
-                description: "".to_string(),
-                changed_at: chrono::Utc::now().naive_local(),
-                profile_picture: "".to_string(),
-                hash_tele_num: hash("+4366412345678".to_string()),
-                xp: 0,
-                client_version: super::ALLOWED_CLIENT_VERSIONS[0].to_string(),
-            })
-        });
+    setup_login_account!(user_dao_mock);
 
     user_dao_mock
         .expect_update_token()
         .times(1)
-        .returning(|id, token| Ok(()));
+        .returning(|_id, _token| Ok(()));
 
     let mut app = init_server!(user_dao_mock, blacklist_dao_mock, contact_exists_dao_mock).await;
 
@@ -366,47 +314,7 @@ async fn test_create_blacklist() {
 
     let id = Uuid::new_v4();
 
-    let tele_1 = "+4366412345678".to_string();
-    let tele_2 = "+4365012345678".to_string();
-
-    let phone_1 = PhoneNumber::my_from(&tele_1, "AT");
-    let phone_2 = PhoneNumber::my_from(&tele_2, "AT");
-
-    user_dao_mock
-        .expect_get_by_id()
-        .times(1)
-        .returning(|id, _access_token| {
-            Ok(UserDto {
-                id: *id,
-                tele_num: "+4366412345678".to_string(),
-                led: false,
-                country_code: "AT".to_string(),
-                description: "".to_string(),
-                changed_at: chrono::Utc::now().naive_local(),
-                profile_picture: "".to_string(),
-                hash_tele_num: hash("+4366412345678".to_string()),
-                xp: 0,
-                client_version: super::ALLOWED_CLIENT_VERSIONS[0].to_string(),
-            })
-        });
-
-    user_dao_mock
-        .expect_get_by_id_unsafe()
-        .times(1)
-        .returning(|id| {
-            Ok(UserDto {
-                id: *id,
-                tele_num: "+4365012345678".to_string(),
-                led: false,
-                country_code: "AT".to_string(),
-                description: "".to_string(),
-                changed_at: chrono::Utc::now().naive_local(),
-                profile_picture: "".to_string(),
-                hash_tele_num: hash("+4365012345678".to_string()),
-                xp: 0,
-                client_version: super::ALLOWED_CLIENT_VERSIONS[0].to_string(),
-            })
-        });
+    setup_login_account!(user_dao_mock);
 
     user_dao_mock
         .expect_get_by_hash_tele_num_unsafe()
@@ -458,295 +366,138 @@ async fn test_create_blacklist() {
     assert!(resp.status().is_success());
 }
 
-/*
-#[actix_rt::test]
-async fn test_update_xp() {
-    let mut app = test::init_service(
-        App::new()
-            .data(init_pool())
-            .data(set_testing_auth())
-            .data(set_notification_service())
-            .data(set_ratelimits())
-            .route(
-                "/api/user/{uid}",
-                web::put().to(crate::routes::user::update),
-            ),
-    ).await;
-
-    let user = create_user("+4366412345678").await;
-
-    let mut expected_xp = Vec::new();
-
-    for i in 0..3 {
-        expected_xp.push(100);
-
-        if i > 0 {
-            expected_xp[i] += expected_xp[i - 1];
-        }
-    }
-
-    for i in 0..3 {
-        let req = test::TestRequest::put()
-            .uri(&format!(
-                "/api/user/{}?access_token={}",
-                user.id, user.access_token
-            ))
-            .set_json(&crate::routes::user::UpdateUser {
-                description: "test".to_string(),
-                led: true,
-                client_version: super::ALLOWED_CLIENT_VERSIONS[0].to_string(),
-            })
-            .to_request();
-
-        /*
-        let mut resp = test::block_on(test::run_on(|| app.call(req))).unwrap();
-        println!("{:?}", resp);
-        println!("{:?}", resp.response().error().unwrap());
-        */
-
-        let user: User = test::read_response_json(&mut app, req).await;
-
-        assert_eq!(user.tele_num, "+4366412345678".to_string());
-        assert_eq!(user.country_code, "AT".to_string());
-        assert_eq!(user.led, true);
-        assert_eq!(user.xp, expected_xp[i]);
-        assert_eq!(user.description, "test".to_string());
-    }
-
-    cleanup(&user.tele_num, &init_pool().get().unwrap());
-}
-
-#[actix_rt::test]
-async fn test_update_user_xp_rate_limit() {
-    let mut app = test::init_service(
-        App::new()
-            .data(init_pool())
-            .data(set_testing_auth())
-            .data(set_notification_service())
-            .data(set_ratelimits())
-            .route(
-                "/api/user/{uid}",
-                web::put().to(crate::routes::user::update),
-            ),
-    ).await;
-
-    let user = create_user("+4366412345678").await;
-
-    for _i in 0..3 {
-        let req = test::TestRequest::put()
-            .uri(&format!(
-                "/api/user/{}?access_token={}",
-                user.id, user.access_token
-            ))
-            .set_json(&crate::routes::user::UpdateUser {
-                description: "test".to_string(),
-                led: true,
-                client_version: super::ALLOWED_CLIENT_VERSIONS[0].to_string(),
-            })
-            .to_request();
-
-        let user: User = test::read_response_json(&mut app, req).await;
-
-        assert_eq!(user.tele_num, "+4366412345678".to_string());
-        assert_eq!(user.country_code, "AT".to_string());
-        assert_eq!(user.led, true);
-        assert_eq!(user.description, "test".to_string());
-    }
-
-    let req = test::TestRequest::put()
-            .uri(&format!(
-                "/api/user/{}?access_token={}",
-                user.id, user.access_token
-            ))
-            .set_json(&crate::routes::user::UpdateUser {
-                description: "test".to_string(),
-                led: true,
-                client_version: super::ALLOWED_CLIENT_VERSIONS[0].to_string(),
-            })
-            .to_request();
-
-        let user: User = test::read_response_json(&mut app, req).await;
-
-        assert_eq!(user.tele_num, "+4366412345678".to_string());
-        assert_eq!(user.country_code, "AT".to_string());
-        assert_eq!(user.led, true);
-        assert_eq!(user.description, "test".to_string());
-        assert_eq!(user.xp, 300);
-
-    cleanup(&user.tele_num, &init_pool().get().unwrap());
-}
-
-#[actix_rt::test]
-async fn test_create_blacklist() {
-    let mut app = test::init_service(
-        App::new()
-            .data(init_pool())
-            .data(set_testing_auth())
-            .data(set_notification_service())
-            .data(set_ratelimits())
-            .route(
-                "/api/user/{uid}/blacklist",
-                web::post().to(crate::routes::blacklist::add),
-            ),
-    ).await;
-
-    let user = create_user("+4366412345678").await;
-    let user2 = create_user("+4365012345678").await;
-
-    let req = test::TestRequest::post()
-        .uri(&format!(
-            "/api/user/{}/blacklist?access_token={}",
-            user.id, user.access_token
-        ))
-        .set_json(&crate::routes::blacklist::PostData {
-            blocked: hash("+4365012345678"),
-            country_code: "AT".to_string(),
-        })
-        .to_request();
-
-    let resp = test::call_service(&mut app, req).await;
-    assert!(resp.status().is_success());
-
-    cleanup(&user.tele_num, &init_pool().get().unwrap());
-    cleanup(&user2.tele_num, &init_pool().get().unwrap());
-}
-
 #[actix_rt::test]
 async fn test_get_all_blacklist() {
-    let mut app = test::init_service(
-        App::new()
-            .data(init_pool())
-            .data(set_testing_auth())
-            .data(set_notification_service())
-            .data(set_ratelimits())
-            .route(
-                "/api/user/{uid}/blacklist",
-                web::post().to(crate::routes::blacklist::add),
-            )
-            .route(
-                "/api/user/{uid}/blacklist",
-                web::get().to(crate::routes::blacklist::get_all),
-            ),
-    ).await;
+    let mut user_dao_mock = MockPersistentUserDao::new();
+    let mut blacklist_dao_mock = MockPersistentBlacklistDao::new();
+    let contact_exists_dao_mock = MockPersistentContactExistsDao::new();
 
-    let user = create_user("+4366412345678").await;
-    let user2 = create_user("+4365012345678").await;
+    setup_login_account!(user_dao_mock);
 
-    let req = test::TestRequest::post()
-        .uri(&format!(
-            "/api/user/{}/blacklist?access_token={}",
-            user.id, user.access_token
-        ))
-        .set_json(&crate::routes::blacklist::PostData {
-            blocked: hash("+4365012345678"),
-            country_code: "AT".to_string(),
-        })
-        .to_request();
+    blacklist_dao_mock
+        .expect_get()
+        .times(1)
+        .returning(|_blocker| {
+            Ok(vec![BlacklistDto {
+                id: Uuid::new_v4(),
+                created_at: chrono::Utc::now().naive_local(),
+                hash_blocker: hash("+4366412345678".to_string()),
+                hash_blocked: hash("+4365012345678".to_string()),
+            }])
+        });
 
-    let resp = test::call_service(&mut app, req).await;
-    assert!(resp.status().is_success());
+    let mut app = init_server!(user_dao_mock, blacklist_dao_mock, contact_exists_dao_mock).await;
 
     let req = test::TestRequest::get()
         .uri(&format!(
             "/api/user/{}/blacklist?access_token={}",
-            user.id, user.access_token
+            Uuid::new_v4(),
+            "ACCESS"
         ))
         .to_request();
 
-    let blacklists: Vec<Blacklist> = test::read_response_json(&mut app, req).await;
+    let blacklists: Vec<BlacklistDto> = test::read_response_json(&mut app, req).await;
 
     assert_eq!(blacklists.len(), 1);
-    assert_eq!(blacklists.get(0).unwrap().hash_blocker, hash("+4366412345678"));
-    assert_eq!(blacklists.get(0).unwrap().hash_blocked, hash("+4365012345678"));
-
-    cleanup(&user.tele_num, &init_pool().get().unwrap());
-    cleanup(&user2.tele_num, &init_pool().get().unwrap());
+    assert_eq!(
+        blacklists.get(0).unwrap().hash_blocker,
+        hash("+4366412345678")
+    );
+    assert_eq!(
+        blacklists.get(0).unwrap().hash_blocked,
+        hash("+4365012345678")
+    );
 }
 
 #[actix_rt::test]
 async fn test_remove_blacklist() {
-    let mut app = test::init_service(
-        App::new()
-            .data(init_pool())
-            .data(set_testing_auth())
-            .data(set_notification_service())
-            .data(set_ratelimits())
-            .route(
-                "/api/user/{uid}/blacklist",
-                web::post().to(crate::routes::blacklist::add),
-            )
-            .route(
-                "/api/user/{uid}/blacklist",
-                web::put().to(crate::routes::blacklist::delete),
-            ),
-    ).await;
+    let mut user_dao_mock = MockPersistentUserDao::new();
+    let mut blacklist_dao_mock = MockPersistentBlacklistDao::new();
+    let contact_exists_dao_mock = MockPersistentContactExistsDao::new();
 
-    let user = create_user("+4366412345678").await;
-    let user2 = create_user("+4365012345678").await;
+    setup_login_account!(user_dao_mock);
 
-    let req = test::TestRequest::post()
-        .uri(&format!(
-            "/api/user/{}/blacklist?access_token={}",
-            user.id, user.access_token
-        ))
-        .set_json(&crate::routes::blacklist::PostData {
-            blocked: hash("+4365012345678"),
-            country_code: "AT".to_string(),
-        })
-        .to_request();
+    blacklist_dao_mock
+        .expect_delete()
+        .times(1)
+        .returning(|_blocker, _blocked| {
+            assert_eq!(_blocker.to_string(), hash("+4366412345678".to_string()));
+            assert_eq!(_blocked.to_string(), hash("+4365012345678".to_string()));
 
-    let resp = test::call_service(&mut app, req).await;
-    assert!(resp.status().is_success());
+            Ok(())
+        });
+
+    let mut app = init_server!(user_dao_mock, blacklist_dao_mock, contact_exists_dao_mock).await;
 
     let req = test::TestRequest::put()
         .uri(&format!(
             "/api/user/{}/blacklist?access_token={}",
-            user.id, user.access_token
+            Uuid::new_v4(),
+            "ACCESS"
         ))
         .set_json(&crate::routes::blacklist::PostData {
-            blocked: hash("+4365012345678"),
+            hash_blocked: hash("+4365012345678"),
             country_code: "AT".to_string(),
         })
         .to_request();
 
     let resp = test::call_service(&mut app, req).await;
     assert!(resp.status().is_success());
-
-    cleanup(&user.tele_num, &init_pool().get().unwrap());
-    cleanup(&user2.tele_num, &init_pool().get().unwrap());
 }
 
 #[actix_rt::test]
 async fn test_contacts() {
-    let mut app = test::init_service(
-        App::new()
-            .data(init_pool())
-            .data(set_testing_auth())
-            .data(set_notification_service())
-            .data(set_ratelimits())
-            .route(
-                "/api/exists/{uid}/{country_code}",
-                web::post().to(crate::routes::contact_exists::exists),
-            ),
-    ).await;
+    let mut user_dao_mock = MockPersistentUserDao::new();
+    let blacklist_dao_mock = MockPersistentBlacklistDao::new();
+    let mut contact_exists_dao_mock = MockPersistentContactExistsDao::new();
 
-    let user = create_user("+4366412345678").await;
-    let user2 = create_user("+4365012345678").await;
+    setup_login_account!(user_dao_mock);
+
+    contact_exists_dao_mock.expect_get().times(1).returning(
+        |_uid, user, phone_number, country_code| {
+            assert_eq!(
+                phone_number[0].hash_tele_num,
+                hash("+4365012345678".to_string())
+            );
+            assert_eq!(user.country_code, *country_code);
+
+            Ok(vec![WrappedUserDto {
+                hash_tele_num: hash("+4365012345678".to_string()),
+                name: "Test".to_string(),
+                user: Some(UserDto {
+                    id: Uuid::new_v4(),
+                    tele_num: "+4365012345678".to_string(),
+                    led: false,
+                    country_code: "AT".to_string(),
+                    description: "".to_string(),
+                    changed_at: chrono::Utc::now().naive_local(),
+                    profile_picture: "".to_string(),
+                    hash_tele_num: hash("+4365012345678".to_string()),
+                    xp: 0,
+                    client_version: super::ALLOWED_CLIENT_VERSIONS[0].to_string(),
+                }),
+            }])
+        },
+    );
+
+    let mut app = init_server!(user_dao_mock, blacklist_dao_mock, contact_exists_dao_mock).await;
 
     let req = test::TestRequest::post()
         .uri(&format!(
             "/api/exists/{}/{}?access_token={}",
-            user.id, "AT", user.access_token
+            Uuid::new_v4(),
+            "AT",
+            "ACCESS"
         ))
-        .set_json(&crate::routes::contact_exists::Payload {
-            numbers: vec![crate::routes::contact_exists::PayloadUser {
+        .set_json(&core::models::dto::PayloadNumbersDto {
+            numbers: vec![core::models::dto::PayloadUserDto {
                 name: "Test".to_string(),
                 hash_tele_num: hash("+4365012345678"),
             }],
         })
         .to_request();
 
-    let users: Vec<ResponseUser> = test::read_response_json(&mut app, req).await;
+    let users: Vec<WrappedUserDto> = test::read_response_json(&mut app, req).await;
 
     assert_eq!(users.len(), 1);
     assert_eq!(users.get(0).unwrap().hash_tele_num, hash("+4365012345678"));
@@ -759,155 +510,91 @@ async fn test_contacts() {
         users.get(0).unwrap().user.as_ref().unwrap().country_code,
         "AT".to_string()
     );
-
-    cleanup(&user.tele_num, &init_pool().get().unwrap());
-    cleanup(&user2.tele_num, &init_pool().get().unwrap());
 }
 
 #[actix_rt::test]
 async fn test_contacts2() {
-    let mut app = test::init_service(
-        App::new()
-            .data(init_pool())
-            .data(set_testing_auth())
-            .data(set_notification_service())
-            .data(set_ratelimits())
-            .route(
-                "/api/exists/{uid}/{country_code}",
-                web::post().to(crate::routes::contact_exists::exists),
-            ),
-    ).await;
+    let mut user_dao_mock = MockPersistentUserDao::new();
+    let blacklist_dao_mock = MockPersistentBlacklistDao::new();
+    let mut contact_exists_dao_mock = MockPersistentContactExistsDao::new();
 
-    let user = create_user("+4366412345678").await;
-    let user2 = create_user("+4365012345678").await;
+    setup_login_account!(user_dao_mock);
 
-    let req = test::TestRequest::post()
-        .uri(&format!(
-            "/api/exists/{}/{}?access_token={}",
-            user.id, "AT", user.access_token
-        ))
-        .set_json(&crate::routes::contact_exists::Payload {
-            numbers: vec![
-                crate::routes::contact_exists::PayloadUser {
-                    name: "Test".to_string(),
-                    hash_tele_num: hash("+4365012345678"),
+    contact_exists_dao_mock.expect_get().times(1).returning(
+        |_uid, _user, _phone_number, _country_code| {
+            Ok(vec![
+                WrappedUserDto {
+                    hash_tele_num: hash("+4366412345678".to_string()),
+                    name: "Test1".to_string(),
+                    user: Some(UserDto {
+                        id: Uuid::new_v4(),
+                        tele_num: "".to_string(),
+                        led: false,
+                        country_code: "AT".to_string(),
+                        description: "".to_string(),
+                        changed_at: chrono::Utc::now().naive_local(),
+                        profile_picture: "".to_string(),
+                        hash_tele_num: hash("+4366412345678".to_string()),
+                        xp: 0,
+                        client_version: super::ALLOWED_CLIENT_VERSIONS[0].to_string(),
+                    }),
                 },
-                crate::routes::contact_exists::PayloadUser {
-                    name: "Ich".to_string(),
-                    hash_tele_num: hash("+4366412345678"),
+                WrappedUserDto {
+                    hash_tele_num: hash("+4365012345678".to_string()),
+                    name: "Test2".to_string(),
+                    user: Some(UserDto {
+                        id: Uuid::new_v4(),
+                        tele_num: "+4365012345678".to_string(),
+                        led: false,
+                        country_code: "AT".to_string(),
+                        description: "".to_string(),
+                        changed_at: chrono::Utc::now().naive_local(),
+                        profile_picture: "".to_string(),
+                        hash_tele_num: hash("+4365012345678".to_string()),
+                        xp: 0,
+                        client_version: super::ALLOWED_CLIENT_VERSIONS[0].to_string(),
+                    }),
                 },
-            ],
-        })
-        .to_request();
-
-    let users: Vec<ResponseUser> = test::read_response_json(&mut app, req).await;
-
-    assert_eq!(users.len(), 2);
-    assert_eq!(users.get(0).unwrap().hash_tele_num, hash("+4365012345678"));
-    assert_eq!(users.get(0).unwrap().name, "Test".to_string());
-    assert_eq!(
-        users.get(0).unwrap().user.as_ref().unwrap().tele_num,
-        "+4365012345678".to_string()
-    );
-    assert_eq!(
-        users.get(0).unwrap().user.as_ref().unwrap().country_code,
-        "AT".to_string()
-    );
-    // User 2
-    assert_eq!(users.get(1).unwrap().hash_tele_num, hash("+4366412345678"));
-    assert_eq!(users.get(1).unwrap().name, "Ich".to_string());
-    assert_eq!(
-        users.get(1).unwrap().user.as_ref().unwrap().tele_num,
-        "+4366412345678".to_string()
-    );
-    assert_eq!(
-        users.get(1).unwrap().user.as_ref().unwrap().country_code,
-        "AT".to_string()
+                WrappedUserDto {
+                    hash_tele_num: hash("+43699012345678".to_string()),
+                    name: "Test3".to_string(),
+                    user: Some(UserDto {
+                        id: Uuid::new_v4(),
+                        tele_num: "".to_string(),
+                        led: false,
+                        country_code: "AT".to_string(),
+                        description: "".to_string(),
+                        changed_at: chrono::Utc::now().naive_local(),
+                        profile_picture: "".to_string(),
+                        hash_tele_num: hash("+43699012345678".to_string()),
+                        xp: 0,
+                        client_version: super::ALLOWED_CLIENT_VERSIONS[0].to_string(),
+                    }),
+                },
+            ])
+        },
     );
 
-    cleanup(&user.tele_num, &init_pool().get().unwrap());
-    cleanup(&user2.tele_num, &init_pool().get().unwrap());
-}
-
-#[actix_rt::test]
-async fn test_empty_contacts() {
-    let mut app = test::init_service(
-        App::new()
-            .data(init_pool())
-            .data(set_testing_auth())
-            .data(set_notification_service())
-            .data(set_ratelimits())
-            .route(
-                "/api/exists/{uid}/{country_code}",
-                web::post().to(crate::routes::contact_exists::exists),
-            ),
-    ).await;
-
-    let user = create_user("+4366412345678").await;
+    let mut app = init_server!(user_dao_mock, blacklist_dao_mock, contact_exists_dao_mock).await;
 
     let req = test::TestRequest::post()
         .uri(&format!(
             "/api/exists/{}/{}?access_token={}",
-            user.id, "AT", user.access_token
+            Uuid::new_v4(),
+            "AT",
+            "ACCESS"
         ))
-        .set_json(&crate::routes::contact_exists::Payload {
-            numbers: Vec::new(),
-        })
-        .to_request();
-
-    let users: Vec<ResponseUser> = test::read_response_json(&mut app, req).await;
-
-    assert_eq!(users.len(), 0);
-    cleanup(&user.tele_num, &init_pool().get().unwrap());
-}
-
-#[actix_rt::test]
-async fn test_blocking() {
-    let mut app = test::init_service(
-        App::new()
-            .data(init_pool())
-            .data(set_testing_auth())
-            .data(set_notification_service())
-            .data(set_ratelimits())
-            .route(
-                "/api/user/{uid}/blacklist_contacts",
-                web::get().to(crate::routes::user::get_contacts),
-            )
-            .route(
-                "/api/exists/{uid}/{country_code}",
-                web::post().to(crate::routes::contact_exists::exists),
-            )
-            .route(
-                "/api/user/{uid}/blacklist",
-                web::post().to(crate::routes::blacklist::add),
-            )
-            .route(
-                "/api/user/{uid}/blacklist",
-                web::put().to(crate::routes::blacklist::delete), //delete
-            )
-,
-    ).await;
-
-    let user = create_user("+4366412345678").await;
-    let user2 = create_user("+4365012345678").await;
-    let user3 = create_user("+43699012345678").await;
-
-    let req = test::TestRequest::post()
-        .uri(&format!(
-            "/api/exists/{}/{}?access_token={}",
-            user.id, "AT", user.access_token
-        ))
-        .set_json(&crate::routes::contact_exists::Payload {
+        .set_json(&PayloadNumbersDto {
             numbers: vec![
-                crate::routes::contact_exists::PayloadUser {
+                PayloadUserDto {
                     name: "Test1".to_string(),
                     hash_tele_num: hash("+4366412345678"),
                 },
-                crate::routes::contact_exists::PayloadUser {
+                PayloadUserDto {
                     name: "Test2".to_string(),
                     hash_tele_num: hash("+4365012345678"),
                 },
-                crate::routes::contact_exists::PayloadUser {
+                PayloadUserDto {
                     name: "Test3".to_string(),
                     hash_tele_num: hash("+43699012345678"),
                 },
@@ -915,100 +602,6 @@ async fn test_blocking() {
         })
         .to_request();
 
-    println!("Contact exists");
-    //let users: Vec<ResponseUser> = test::read_response_json(&mut app, req);
-    //assert_eq!(users.len(), 3);
-
-    let resp = test::call_service(&mut app, req).await;
-    assert!(resp.status().is_success());
-
-    //println!("{:?}", serde_json::to_string_pretty(resp.response().body()));
-    //println!("{:?}", resp.response().error().unwrap());
-
-
-    //Get contacts
-    let req = test::TestRequest::get()
-        .uri(&format!(
-            "/api/user/{}/blacklist_contacts?access_token={}",
-            user.id, user.access_token
-        )).to_request();
-
-    let users: Vec<crate::routes::user::ResponseContact> = test::read_response_json(&mut app, req).await;
-    println!("{:#?}", users);
+    let users: Vec<WrappedUserDto> = test::read_response_json(&mut app, req).await;
     assert_eq!(users.len(), 3);
-    assert!(!users.iter().fold(false, |acc, w| acc | w.blocked));
-
-    let req = test::TestRequest::post()
-        .uri(&format!(
-            "/api/user/{}/blacklist?access_token={}",
-            user.id, user.access_token
-        ))
-        .set_json(&crate::routes::blacklist::PostData {
-            blocked: hash("+4365012345678"),
-            country_code: "AT".to_string(),
-        })
-        .to_request();
-
-    let resp = test::call_service(&mut app, req).await;
-    assert!(resp.status().is_success());
-
-    //Get contacts again
-    let req = test::TestRequest::get()
-        .uri(&format!(
-            "/api/user/{}/blacklist_contacts?access_token={}",
-            user.id, user.access_token
-        )).to_request();
-
-    let users: Vec<crate::routes::user::ResponseContact> = test::read_response_json(&mut app, req).await;
-    assert_eq!(users.len(), 3);
-
-    let res_user = users.iter().filter(|w| w.user.tele_num == "+4365012345678" && w.blocked == true).collect::<Vec<_>>();
-    assert_eq!(res_user.len(), 1);
-
-    let res_user = users.iter().filter(|w| w.user.tele_num == "+4366412345678" && w.blocked == false).collect::<Vec<_>>();
-    assert_eq!(res_user.len(), 1);
-
-    let res_user = users.iter().filter(|w| w.user.tele_num == "+43699012345678" && w.blocked == false).collect::<Vec<_>>();
-    assert_eq!(res_user.len(), 1);
-
-    //Delete
-    let req = test::TestRequest::put()
-        .uri(&format!(
-            "/api/user/{}/blacklist?access_token={}",
-            user.id, user.access_token
-        ))
-        .set_json(&crate::routes::blacklist::PostData {
-            blocked: hash("+4365012345678"),
-            country_code: "AT".to_string(),
-        })
-        .to_request();
-
-    let resp = test::call_service(&mut app, req).await;
-    assert!(resp.status().is_success());
-
-    //Get contacts again again
-    let req = test::TestRequest::get()
-        .uri(&format!(
-            "/api/user/{}/blacklist_contacts?access_token={}",
-            user.id, user.access_token
-        )).to_request();
-
-    let users: Vec<crate::routes::user::ResponseContact> = test::read_response_json(&mut app, req).await;
-
-    assert_eq!(users.len(), 3);
-
-    let res_user = users.iter().filter(|w| w.user.tele_num == "+4365012345678" && w.blocked == false).collect::<Vec<_>>();
-    assert_eq!(res_user.len(), 1);
-
-    let res_user = users.iter().filter(|w| w.user.tele_num == "+4366412345678" && w.blocked == false).collect::<Vec<_>>();
-    assert_eq!(res_user.len(), 1);
-
-    let res_user = users.iter().filter(|w| w.user.tele_num == "+43699012345678" && w.blocked == false).collect::<Vec<_>>();
-    assert_eq!(res_user.len(), 1);
-
-
-    cleanup(&user.tele_num, &init_pool().get().unwrap());
-    cleanup(&user2.tele_num, &init_pool().get().unwrap());
-    cleanup(&user3.tele_num, &init_pool().get().unwrap());
 }
-*/

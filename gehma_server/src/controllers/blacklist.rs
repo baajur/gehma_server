@@ -1,13 +1,9 @@
 use actix_web::web;
-use diesel::{prelude::*, PgConnection};
 use uuid::Uuid;
 
 use core::errors::ServiceError;
-use core::models::dao::*;
 use core::models::dto::*;
 use core::models::PhoneNumber;
-
-use crate::Pool;
 
 use crate::persistence::blacklist::PersistentBlacklistDao;
 use crate::persistence::user::PersistentUserDao;
@@ -40,8 +36,6 @@ pub(crate) fn create_entry(
     blacklist_dao: web::Data<Box<dyn PersistentBlacklistDao>>,
 ) -> Result<BlacklistDto, ServiceError> {
     debug!("controllers/blacklist/create_entry");
-    use core::schema::users::dsl::{hash_tele_num, id, users};
-
     let blocker2 = Uuid::parse_str(blocker)?;
 
     let user: Result<UserDto, ServiceError> =
@@ -50,7 +44,7 @@ pub(crate) fn create_entry(
     let contact = user_dao
         .get_ref()
         .get_by_hash_tele_num_unsafe(&data.hash_blocked)?;
-    
+
     let blocked = PhoneNumber::my_from(&contact.tele_num, &contact.country_code)?;
 
     let tel = PhoneNumber::my_from(&user?.tele_num, &data.country_code)?;
@@ -67,20 +61,12 @@ pub(crate) fn delete_entry(
     user_dao: web::Data<Box<dyn PersistentUserDao>>,
     blacklist_dao: web::Data<Box<dyn PersistentBlacklistDao>>,
 ) -> Result<(), ServiceError> {
-    use core::schema::users::dsl::{hash_tele_num, id, users};
-
     let blocker2 = Uuid::parse_str(blocker)?;
 
     let user: Result<UserDto, ServiceError> =
         get_user_by_id!(user_dao, &blocker2, access_token.to_string());
 
-    let tel = PhoneNumber::my_from(&user?.tele_num, &data.country_code)?;
-
-    let contact = user_dao
+    blacklist_dao
         .get_ref()
-        .get_by_hash_tele_num_unsafe(&data.hash_blocked)?;
-
-    let blocked = PhoneNumber::my_from(&contact.tele_num, &contact.country_code)?;
-
-    blacklist_dao.get_ref().delete(&tel, &blocked)
+        .delete(&user?.hash_tele_num, &data.hash_blocked)
 }

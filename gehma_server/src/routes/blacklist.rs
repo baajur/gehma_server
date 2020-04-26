@@ -1,5 +1,4 @@
 use crate::controllers::blacklist::{create_entry, delete_entry, get_entry};
-use crate::Pool;
 use actix_web::{web, HttpResponse};
 use core::errors::ServiceError;
 use log::{info, error};
@@ -17,9 +16,7 @@ pub struct PostData {
 
 pub async fn get_all(
     info: web::Path<String>,
-    _pool: web::Data<Pool>,
     query: web::Query<QueryParams>,
-    _auth: web::Data<Auth>,
     user_dao: web::Data<Box<dyn PersistentUserDao>>,
     blacklist_dao: web::Data<Box<dyn PersistentBlacklistDao>>,
 ) -> Result<HttpResponse, ServiceError> {
@@ -43,7 +40,6 @@ pub async fn add(
     info: web::Path<String>,
     data: web::Json<PostData>,
     query: web::Query<QueryParams>,
-    _auth: web::Data<Auth>,
     user_dao: web::Data<Box<dyn PersistentUserDao>>,
     blacklist_dao: web::Data<Box<dyn PersistentBlacklistDao>>,
 ) -> Result<HttpResponse, ServiceError> {

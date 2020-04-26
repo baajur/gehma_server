@@ -1,4 +1,3 @@
-use crate::Pool;
 use actix_web::{web, HttpResponse};
 use web_contrib::auth::Auth;
 

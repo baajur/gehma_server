@@ -15,7 +15,7 @@ pub async fn signin(
     _info: web::Path<()>,
     body: web::Json<PostUserDto>,
     query: web::Query<QueryParams>,
-    user_dao: web::Data<Box<PersistentUserDao>>,
+    user_dao: web::Data<Box<dyn PersistentUserDao>>,
 ) -> Result<HttpResponse, ServiceError> {
     info!("routes/user/signin");
 

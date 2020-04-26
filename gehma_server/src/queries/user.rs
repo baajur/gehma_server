@@ -329,14 +329,14 @@ impl PersistentUserDao for PgUserDao {
             })
     }
 
-    fn get_by_hash_tele_num_unsafe(&self, hash_tele_num: &String) -> Result<UserDto, ServiceError> {
+    fn get_by_hash_tele_num_unsafe(&self, user_hash_tele_num: &String) -> Result<UserDto, ServiceError> {
         info!("queries/user/get_query");
         use core::schema::users::dsl::{hash_tele_num, users};
 
         let conn: &PgConnection = &self.pool.get().unwrap();
 
         users
-            .filter(hash_tele_num.eq(hash_tele_num))
+            .filter(hash_tele_num.eq(user_hash_tele_num))
             .load::<UserDao>(conn)
             .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
             .and_then(|w| {

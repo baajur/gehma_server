@@ -1,6 +1,5 @@
 use actix_web::{web, HttpResponse};
 
-use crate::Pool;
 use core::errors::ServiceError;
 use core::models::dto::PayloadNumbersDto;
 
@@ -15,7 +14,6 @@ use log::info;
 pub async fn exists(
     info: web::Path<(String, String)>,
     mut payload: web::Json<PayloadNumbersDto>,
-    _pool: web::Data<Pool>,
     query: web::Query<QueryParams>,
     user_dao: web::Data<Box<dyn PersistentUserDao>>,
     contact_exists_dao: web::Data<Box<dyn PersistentContactExistsDao>>,
