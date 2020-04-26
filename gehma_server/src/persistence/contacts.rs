@@ -5,14 +5,13 @@ use mockall::*;
 
 type IResult<K> = Result<K, ServiceError>;
 
-//TODO rename
 #[automock]
-pub trait PersistentContactExistsDao {
-    fn get(
+pub trait PersistentContactsDao {
+    fn create<'a>(
         &self,
         id: &Uuid,
         _user: &UserDto,
-        phone_numbers: &mut Vec<PayloadUserDto>,
-        _country_code: &str,
-    ) -> IResult<Vec<WrappedUserDto>>;
+        contacts: &'a Vec<&'a mut PayloadUserDto>,
+    ) -> IResult<()>;
+    fn get_contacts(&self, user: &UserDto) -> IResult<Vec<ContactDto>>;
 }

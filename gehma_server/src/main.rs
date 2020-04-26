@@ -17,7 +17,7 @@ use web_contrib::auth::AuthenticatorWrapper;
 use web_contrib::push_notifications::NotificationWrapper;
 
 use queries::blacklist::PgBlacklistDao;
-use queries::contact_exists::PgContactExistsDao;
+use queries::contacts::PgContactsDao;
 use queries::user::PgUserDao;
 
 pub(crate) mod controllers;
@@ -110,8 +110,8 @@ fn get_blacklist_dao(pool: Pool) -> PgBlacklistDao {
 }
 
 #[allow(dead_code)]
-fn get_contactexists_dao(pool: Pool) -> PgContactExistsDao {
-    PgContactExistsDao { pool }
+fn get_contacts_dao(pool: Pool) -> PgContactsDao {
+    PgContactsDao { pool }
 }
 
 #[allow(dead_code)]
@@ -159,7 +159,7 @@ pub(crate) async fn main() -> std::io::Result<()> {
             .data(get_ratelimits())
             .data(get_user_dao(pool.clone(), get_ratelimits(), get_firebase_notification_service()))
             .data(get_blacklist_dao(pool.clone()))
-            .data(get_contactexists_dao(pool.clone()))
+            .data(get_contacts_dao(pool.clone()))
             .wrap(
                 Cors::new()
                     .allowed_origin("http://localhost:3000")
@@ -209,12 +209,12 @@ pub(crate) async fn main() -> std::io::Result<()> {
                             .route(web::put().to(routes::user::update)), //token update
                     )
                     .service(
-                        web::resource("/user/{uid}/blacklist_contacts")
-                            .route(web::get().to(routes::user::get_contacts)),
+                        web::resource("/contacts/{uid}/{country_code}")
+                            .route(web::post().to(routes::contacts::create)),
                     )
                     .service(
-                        web::resource("/exists/{uid}/{country_code}")
-                            .route(web::post().to(routes::contact_exists::exists)),
+                        web::resource("/contacts/{uid}/contacts")
+                            .route(web::get().to(routes::contacts::get_contacts)),
                     )
                     .service(
                         web::resource("/auth/request_code")

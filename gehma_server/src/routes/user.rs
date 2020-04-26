@@ -57,26 +57,6 @@ pub async fn get(
     Ok(res)
 }
 
-pub async fn get_contacts(
-    info: web::Path<String>,
-    query: web::Query<QueryParams>,
-    user_dao: web::Data<Box<dyn PersistentUserDao>>,
-) -> Result<HttpResponse, ServiceError> {
-    info!("routes/user/get_contacts");
-
-    let users =
-        crate::controllers::user::get_contacts(&info.into_inner(), user_dao, &query.access_token)
-            .map_err(|_err| ServiceError::InternalServerError)?;
-
-    let mut res = HttpResponse::Ok()
-        .content_type("application/json")
-        .json(users);
-
-    set_response_headers(&mut res);
-
-    Ok(res)
-}
-
 /*
 pub fn upload_profile_picture(
     info: web::Path<String>,

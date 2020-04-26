@@ -63,18 +63,6 @@ pub(crate) fn get_entry(
     get_user_by_id!(user_dao, &parsed, access_token.to_string())
 }
 
-pub(crate) fn get_contacts(
-    uid: &str,
-    user_dao: web::Data<Box<dyn PersistentUserDao>>,
-    access_token: &str,
-) -> Result<Vec<ContactDto>, ServiceError> {
-    let parsed = Uuid::parse_str(uid)?;
-
-    let user: Result<UserDto, ServiceError> = get_user_by_id!(user_dao, &parsed, access_token.to_owned());
-
-    user_dao.get_ref().get_contacts(&user?)
-}
-
 pub(crate) fn update_token_handler(
     uid: String,
     payload: UpdateTokenPayload,

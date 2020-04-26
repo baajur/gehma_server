@@ -166,13 +166,12 @@ impl UsageStatisticEntryDao {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Queryable, Clone, Associations, QueryableByName)]
+#[derive(Debug, Serialize, Deserialize, Queryable, Clone, Associations, QueryableByName, Insertable)]
 #[table_name = "contacts"]
 #[belongs_to(UserDao, foreign_key = "from_id")]
 #[belongs_to(ContactDao, foreign_key = "target_hash_tele_num")]
 pub struct ContactDao {
     pub from_id: uuid::Uuid,
-    pub target_tele_num: String,
     pub created_at: chrono::NaiveDateTime,
     pub name: String,
     pub target_hash_tele_num: HashedTeleNum,
@@ -184,12 +183,12 @@ pub struct ContactDao {
 #[belongs_to(ContactDao, foreign_key = "target_hash_tele_num")]
 pub struct ContactInsertDao {
     pub from_id: uuid::Uuid,
-    pub target_tele_num: String,
-    pub created_at: chrono::NaiveDateTime,
+    //pub created_at: chrono::NaiveDateTime,
     pub name: String,
     pub target_hash_tele_num: HashedTeleNum,
 }
 
+/*
 impl ContactDao {
     pub fn my_from(name: String, user: &UserDao, target_tele_num: String) -> ContactInsertDao {
         ContactInsertDao {
@@ -201,3 +200,4 @@ impl ContactDao {
         }
     }
 }
+*/
