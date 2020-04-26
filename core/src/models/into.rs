@@ -22,9 +22,9 @@ impl Into<BlacklistDto> for BlacklistDao {
     fn into(self) -> BlacklistDto {
         BlacklistDto {
             id: self.id,
-            created_at: self.created_at.clone(),
+            created_at: self.created_at,
             hash_blocker: self.hash_blocker.clone(),
-            hash_blocked: self.hash_blocked.clone(),
+            hash_blocked: self.hash_blocked,
         }
     }
 }
