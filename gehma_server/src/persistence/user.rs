@@ -4,6 +4,8 @@ use core::models::dto::*;
 use core::models::PhoneNumber;
 use uuid::Uuid;
 use mockall::*;
+use actix_web::web;
+use crate::services::push_notifications::NotificationService;
 
 type IResult<K> = Result<K, ServiceError>;
 
@@ -40,6 +42,7 @@ pub trait PersistentUserDao {
         id: &Uuid,
         user: &UpdateUserDto,
         current_time: DateTime<Local>,
+        notification_service: web::Data<NotificationService>,
     ) -> IResult<UserDto>;
     fn update_profile_picture(&self, user: &UserDto) -> IResult<()>;
     fn update_token(&self, id: &Uuid, token: String) -> IResult<()>;

@@ -1,5 +1,6 @@
 use crate::persistence::user::PersistentUserDao;
-use crate::ratelimits::RateLimitWrapper;
+use crate::services::push_notifications::NotificationService;
+use actix_web::{web};
 use crate::Pool;
 use chrono::{DateTime, Local};
 use core::errors::ServiceError;
@@ -9,7 +10,6 @@ use core::models::PhoneNumber;
 use diesel::{prelude::*, PgConnection};
 use log::{error, info};
 use uuid::Uuid;
-use web_contrib::push_notifications::NotifyService;
 
 const INCREASE_XP: i32 = 100;
 const PROFILE_WIDTH: u32 = 500;
@@ -18,8 +18,6 @@ const PROFILE_HEIGHT: u32 = 500;
 #[derive(Clone)]
 pub struct PgUserDao {
     pub pool: Pool,
-    pub notify_service: NotifyService, //FIXME Drop this
-    pub ratelimit_service: RateLimitWrapper,
 }
 
 impl PersistentUserDao for PgUserDao {
@@ -90,19 +88,24 @@ impl PersistentUserDao for PgUserDao {
         &self,
         myid: &Uuid,
         user: &UpdateUserDto,
-        current_time: DateTime<Local>,
+        _current_time: DateTime<Local>,
+        notification_service: web::Data<NotificationService>,
     ) -> Result<UserDto, ::core::errors::ServiceError> {
         info!("queries/user/update_user_query");
         use core::schema::users::dsl::{
             changed_at, client_version, description, id, led, users, xp,
         };
 
+        //TODO move to controller
+        /*
         let xp_limit = self
             .ratelimit_service
             .inner
             .lock()
             .unwrap()
             .check_rate_limit_xp(myid, &self.pool, current_time)?;
+        */
+        let xp_limit = false; //FIXME remove
 
         let conn: &PgConnection = &self.pool.get().unwrap();
 
@@ -140,25 +143,25 @@ impl PersistentUserDao for PgUserDao {
             .and_then(|user| {
                 if my_led {
                     //Sending push notification
-                    if !self
+                    /*if !self
                         .ratelimit_service
                         .inner
                         .lock()
                         .unwrap()
                         .check_rate_limit_updates(&myid, &self.pool, current_time)?
-                    {
-                        sending_push_notifications(&user, &self.pool, &self.notify_service)
-                            .map_err(|err| {
-                                error!("{}", err);
-                                ServiceError::BadRequest(
-                                    "Cannot send push notifications".to_string(),
-                                )
-                            })?;
+                    {*/
+
+                    sending_push_notifications(&user, &self.pool, &notification_service).map_err(
+                        |err| {
+                            error!("{}", err);
+                            ServiceError::BadRequest("Cannot send push notifications".to_string())
+                        },
+                    )?;
 
                     //return Err(ServiceError::RateLimit("No push notification sent. Try again later".to_string()));
-                    } else {
+                    /*} else {
                         info!("Ratelimit reached, not sending push notification");
-                    }
+                    }*/
                 }
 
                 Ok(user)
@@ -229,7 +232,10 @@ impl PersistentUserDao for PgUserDao {
             })
     }
 
-    fn get_by_hash_tele_num_unsafe(&self, user_hash_tele_num: &HashedTeleNum) -> Result<UserDto, ServiceError> {
+    fn get_by_hash_tele_num_unsafe(
+        &self,
+        user_hash_tele_num: &HashedTeleNum,
+    ) -> Result<UserDto, ServiceError> {
         info!("queries/user/get_query");
         use core::schema::users::dsl::{hash_tele_num, users};
 
@@ -300,7 +306,7 @@ impl PersistentUserDao for PgUserDao {
 fn sending_push_notifications(
     user: &UserDto, //this is the sender
     pool: &Pool,
-    notify_service: &NotifyService,
+    notify_service: &NotificationService,
 ) -> Result<(), ServiceError> {
     info!("queries/user/sending_push_notifications");
     use diesel::sql_types::{Text, Uuid};
@@ -336,7 +342,7 @@ fn sending_push_notifications(
     .collect();
 
     //FIXME check
-    notify_service.clone().service.lock().unwrap().push(
+    notify_service.clone().push(
         my_contacts
             .into_iter()
             .map(|c| (c.name, c.firebase_token))

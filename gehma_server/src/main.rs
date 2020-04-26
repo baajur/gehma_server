@@ -5,6 +5,10 @@ extern crate web_contrib;
 use crate::services::number_registration::testing::*;
 use crate::services::number_registration::twilio::*;
 use crate::services::number_registration::NumberRegistrationService;
+use crate::services::push_notifications::firebase::*;
+use crate::services::push_notifications::testing::*;
+use crate::services::push_notifications::NotificationService;
+
 use actix_cors::Cors;
 use actix_files::NamedFile;
 use actix_web::http::header;
@@ -15,7 +19,6 @@ use diesel::r2d2::{self, ConnectionManager};
 use diesel_migrations::run_pending_migrations;
 use log::error;
 use std::path::PathBuf;
-use web_contrib::push_notifications::NotificationWrapper;
 
 use queries::blacklist::PgBlacklistDao;
 use queries::contacts::PgContactsDao;
@@ -75,10 +78,8 @@ fn set_testing_auth_false() -> NumberRegistrationService {
 }
 
 #[allow(dead_code)]
-fn set_testing_notification() -> NotificationWrapper {
-    use web_contrib::push_notifications::testing::*;
-
-    NotificationWrapper::new(Box::new(TestingNotificationService))
+fn set_testing_notification() -> NotificationService {
+    Box::new(TestingNotificationService)
 }
 
 #[allow(dead_code)]
@@ -87,16 +88,8 @@ fn get_ratelimits() -> ratelimits::RateLimitWrapper {
 }
 
 #[allow(dead_code)]
-fn get_user_dao(
-    pool: Pool,
-    ratelimit: ratelimits::RateLimitWrapper,
-    not: NotificationWrapper,
-) -> PgUserDao {
-    PgUserDao {
-        pool: pool.clone(),
-        ratelimit_service: ratelimit,
-        notify_service: not,
-    }
+fn get_user_dao(pool: Pool) -> PgUserDao {
+    PgUserDao { pool: pool.clone() }
 }
 
 #[allow(dead_code)]
@@ -110,19 +103,14 @@ fn get_contacts_dao(pool: Pool) -> PgContactsDao {
 }
 
 #[allow(dead_code)]
-fn get_firebase_notification_service() -> NotificationWrapper {
-    use web_contrib::push_notifications::firebase::FirebaseConfiguration;
-    use web_contrib::push_notifications::firebase::FirebaseNotificationService;
-
+fn get_firebase_notification_service() -> NotificationService {
     let api_token = std::env::var("FCM_TOKEN").expect("No FCM_TOKEN configured");
 
     let config = FirebaseConfiguration {
         fcm_token: api_token,
     };
 
-    web_contrib::push_notifications::NotificationWrapper::new(Box::new(
-        FirebaseNotificationService { config },
-    ))
+    Box::new(FirebaseNotificationService { config })
 }
 
 #[actix_rt::main]
@@ -151,11 +139,7 @@ pub(crate) async fn main() -> std::io::Result<()> {
             .data(set_testing_auth())
             .data(get_firebase_notification_service())
             .data(get_ratelimits())
-            .data(get_user_dao(
-                pool.clone(),
-                get_ratelimits(),
-                get_firebase_notification_service(),
-            ))
+            .data(get_user_dao(pool.clone()))
             .data(get_blacklist_dao(pool.clone()))
             .data(get_contacts_dao(pool.clone()))
             .wrap(

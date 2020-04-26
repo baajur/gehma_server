@@ -1,15 +1,15 @@
 use super::FirebaseToken;
-use crate::push_notifications::*;
+use crate::services::push_notifications::*;
 use core::errors::ServiceError;
 
-use futures::Future;
-use log::{error};
+use log::error;
 use serde::Deserialize;
 use serde_json::json;
 
 use futures::stream::Stream;
+use futures::Future;
 use reqwest::header::{AUTHORIZATION, CONTENT_TYPE};
-use reqwest::r#async::Client;
+use reqwest::Client;
 
 #[derive(Debug, Clone)]
 pub struct FirebaseConfiguration {
@@ -40,7 +40,7 @@ struct FirebaseResponse {
 }
 
 type Name = String;
-impl NotificationService for FirebaseNotificationService {
+impl NotificationServiceTrait for FirebaseNotificationService {
     fn push(&self, values: Vec<(Name, FirebaseToken)>) -> Result<(), ServiceError> {
         let client = Client::new();
         //let size : usize = values.len();
@@ -77,7 +77,8 @@ impl NotificationService for FirebaseNotificationService {
                 })
             })
             .for_each(move |res| {
-                if res.success != 1 { //FIXME report
+                if res.success != 1 {
+                    //FIXME report
                     error!("SOME NOTIFICATIONS FAILED");
                 }
 

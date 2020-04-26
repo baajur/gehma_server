@@ -3013,7 +3013,7 @@ dependencies = [
  "diesel_migrations",
  "dotenv",
  "env_logger",
- "futures 0.3.4",
+ "futures 0.1.29",
  "img_profile",
  "log",
  "mockall",

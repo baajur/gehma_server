@@ -7,6 +7,7 @@ use core::models::PhoneNumber;
 use uuid::Uuid;
 
 use log::{error, info};
+use crate::services::push_notifications::NotificationService;
 
 //use crate::routes::user::{ResponseContact, UpdateTokenPayload, UpdateUser};
 use crate::routes::user::UpdateTokenPayload;
@@ -17,6 +18,7 @@ pub(crate) fn user_signin(
     access_token: &str,
     user_dao: web::Data<Box<dyn PersistentUserDao>>,
     current_time: DateTime<Local>,
+    notification_service: web::Data<NotificationService>,
 ) -> Result<UserDto, ServiceError> {
     info!("controllers/user/user_signin");
 
@@ -45,6 +47,7 @@ pub(crate) fn user_signin(
             },
             &user_dao,
             current_time,
+            notification_service,
         )?;
     }
 
@@ -86,6 +89,7 @@ pub(crate) fn update_user_with_auth(
     access_token: &str,
     user_dao: web::Data<Box<dyn PersistentUserDao>>,
     current_time: DateTime<Local>,
+    notification_service: web::Data<NotificationService>,
 ) -> Result<UserDto, ::core::errors::ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
 
@@ -93,7 +97,7 @@ pub(crate) fn update_user_with_auth(
 
     muser?;
 
-    update_user_without_auth(&parsed, user, &user_dao, current_time)
+    update_user_without_auth(&parsed, user, &user_dao, current_time, notification_service)
 }
 
 pub(crate) fn update_user_without_auth(
@@ -101,8 +105,9 @@ pub(crate) fn update_user_without_auth(
     user: &UpdateUserDto,
     user_dao: &web::Data<Box<dyn PersistentUserDao>>,
     current_time: DateTime<Local>,
+    notification_service: web::Data<NotificationService>,
 ) -> Result<UserDto, ::core::errors::ServiceError> {
-    let user = user_dao.get_ref().update_user(uid, user, current_time)?;
+    let user = user_dao.get_ref().update_user(uid, user, current_time, notification_service)?;
 
     user_dao.get_ref().create_analytics_for_user(&user)?;
 

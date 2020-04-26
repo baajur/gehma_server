@@ -1,6 +1,10 @@
 use super::*;
-use web_contrib::auth::testing::*;
-use web_contrib::auth::AuthenticatorWrapper;
+use crate::services::number_registration::testing::*;
+use crate::services::number_registration::{
+    NumberRegistrationService, NumberRegistrationServiceTrait,
+};
+use crate::services::push_notifications::testing::TestingNotificationService;
+use crate::services::push_notifications::NotificationService;
 
 use actix_web::{test, web, App};
 use core::models::dto::*;
@@ -17,13 +21,17 @@ use crate::ratelimits::{DefaultRateLimitPolicy, RateLimitWrapper};
 
 use uuid::Uuid;
 
-fn set_testing_auth() -> AuthenticatorWrapper {
+fn set_testing_auth() -> NumberRegistrationService {
     let config = TestingAuthConfiguration {
         id: "test".to_string(),
         auth_token: "test".to_string(),
     };
 
-    AuthenticatorWrapper::new(Box::new(TestingAuthentificator { config: config }))
+    Box::new(TestingAuthentificator { config: config })
+}
+
+fn set_testing_notification_service() -> NotificationService {
+    Box::new(TestingNotificationService)
 }
 
 fn set_ratelimits() -> RateLimitWrapper {
@@ -40,7 +48,8 @@ macro_rules! init_server {
     ($user_dao:ident, $blacklist_dao:ident, $contact_exists_dao:ident) => {
         test::init_service(
             App::new()
-                .data(set_testing_auth())
+                .data(set_testing_auth() as Box<dyn NumberRegistrationServiceTrait>)
+                .data(set_testing_notification_service() as NotificationService)
                 .data(set_ratelimits())
                 .data(Box::new($user_dao) as Box<dyn PersistentUserDao>)
                 .data(Box::new($blacklist_dao) as Box<dyn PersistentBlacklistDao>)
@@ -228,10 +237,8 @@ async fn test_update_user() {
             })
         });
 
-    user_dao_mock
-        .expect_update_user()
-        .times(1)
-        .returning(|id, user, current_time| {
+    user_dao_mock.expect_update_user().times(1).returning(
+        |id, user, current_time, _notify_service| {
             let u = UserDto {
                 id: *id,
                 tele_num: "+4366412345678".to_string(),
@@ -246,7 +253,8 @@ async fn test_update_user() {
             };
 
             Ok(u.apply_update(user, current_time.naive_local()))
-        });
+        },
+    );
 
     let mut app = init_server!(user_dao_mock, blacklist_dao_mock, contacts_dao_mock).await;
 
@@ -452,30 +460,30 @@ async fn test_contacts() {
     let mut blacklist_dao_mock = MockPersistentBlacklistDao::new();
     let mut contacts_dao_mock = MockPersistentContactsDao::new();
 
-    user_dao_mock 
-            .expect_get_by_id()
-            .times(2)
-            .returning(|id, _access_token| {
-                Ok(UserDto {
-                    id: *id,
-                    tele_num: "+4366412345678".to_string(),
-                    led: false,
-                    country_code: "AT".to_string(),
-                    description: "".to_string(),
-                    changed_at: chrono::Utc::now().naive_local(),
-                    profile_picture: "".to_string(),
-                    hash_tele_num: hash("+4366412345678".to_string()),
-                    xp: 0,
-                    client_version: super::ALLOWED_CLIENT_VERSIONS[0].to_string(),
-                })
-            });
+    user_dao_mock
+        .expect_get_by_id()
+        .times(2)
+        .returning(|id, _access_token| {
+            Ok(UserDto {
+                id: *id,
+                tele_num: "+4366412345678".to_string(),
+                led: false,
+                country_code: "AT".to_string(),
+                description: "".to_string(),
+                changed_at: chrono::Utc::now().naive_local(),
+                profile_picture: "".to_string(),
+                hash_tele_num: hash("+4366412345678".to_string()),
+                xp: 0,
+                client_version: super::ALLOWED_CLIENT_VERSIONS[0].to_string(),
+            })
+        });
 
     contacts_dao_mock
         .expect_create()
         .times(1)
         .returning(|_uid, _user, _phone_number| Ok(()));
 
-    blacklist_dao_mock 
+    blacklist_dao_mock
         .expect_get()
         .times(3)
         .returning(|_| Ok(vec![]));
@@ -512,14 +520,11 @@ async fn test_contacts() {
             "ACCESS"
         ))
         .set_json(&PayloadNumbersDto {
-            numbers: vec![
-                PayloadUserDto {
-                    name: "Test".to_string(),
-                    hash_tele_num: hash("+4366412345678")
-                }
-            ]
+            numbers: vec![PayloadUserDto {
+                name: "Test".to_string(),
+                hash_tele_num: hash("+4366412345678"),
+            }],
         })
-
         .to_request();
 
     let resp = test::call_service(&mut app, req).await;
@@ -532,7 +537,7 @@ async fn test_contacts() {
             "ACCESS"
         ))
         .to_request();
-    
+
     //let resp = test::call_service(&mut app, req).await;
     //assert!(resp.status().is_success());
 
@@ -549,41 +554,37 @@ async fn test_contacts_with_blacklist_1() {
     let mut blacklist_dao_mock = MockPersistentBlacklistDao::new();
     let mut contacts_dao_mock = MockPersistentContactsDao::new();
 
-    user_dao_mock 
-            .expect_get_by_id()
-            .times(2)
-            .returning(|id, _access_token| {
-                Ok(UserDto {
-                    id: *id,
-                    tele_num: "+4366412345678".to_string(),
-                    led: false,
-                    country_code: "AT".to_string(),
-                    description: "".to_string(),
-                    changed_at: chrono::Utc::now().naive_local(),
-                    profile_picture: "".to_string(),
-                    hash_tele_num: hash("+4366412345678".to_string()),
-                    xp: 0,
-                    client_version: super::ALLOWED_CLIENT_VERSIONS[0].to_string(),
-                })
-            });
+    user_dao_mock
+        .expect_get_by_id()
+        .times(2)
+        .returning(|id, _access_token| {
+            Ok(UserDto {
+                id: *id,
+                tele_num: "+4366412345678".to_string(),
+                led: false,
+                country_code: "AT".to_string(),
+                description: "".to_string(),
+                changed_at: chrono::Utc::now().naive_local(),
+                profile_picture: "".to_string(),
+                hash_tele_num: hash("+4366412345678".to_string()),
+                xp: 0,
+                client_version: super::ALLOWED_CLIENT_VERSIONS[0].to_string(),
+            })
+        });
 
     contacts_dao_mock
         .expect_create()
         .times(1)
         .returning(|_uid, _user, _phone_number| Ok(()));
 
-    blacklist_dao_mock 
-        .expect_get()
-        .times(2)
-        .returning(|_| Ok(vec![
-            BlacklistDto {
-                id: Uuid::new_v4(),
-                created_at: chrono::Utc::now().naive_local(),
-                hash_blocker: hash("+4366412345678".to_string()),
-                hash_blocked: hash("+4365012345678".to_string()),
-
-            }
-        ]));
+    blacklist_dao_mock.expect_get().times(2).returning(|_| {
+        Ok(vec![BlacklistDto {
+            id: Uuid::new_v4(),
+            created_at: chrono::Utc::now().naive_local(),
+            hash_blocker: hash("+4366412345678".to_string()),
+            hash_blocked: hash("+4365012345678".to_string()),
+        }])
+    });
 
     contacts_dao_mock
         .expect_get_contacts()
@@ -617,14 +618,11 @@ async fn test_contacts_with_blacklist_1() {
             "ACCESS"
         ))
         .set_json(&PayloadNumbersDto {
-            numbers: vec![
-                PayloadUserDto {
-                    name: "Test".to_string(),
-                    hash_tele_num: hash("+4366412345678")
-                }
-            ]
+            numbers: vec![PayloadUserDto {
+                name: "Test".to_string(),
+                hash_tele_num: hash("+4366412345678"),
+            }],
         })
-
         .to_request();
 
     let resp = test::call_service(&mut app, req).await;
@@ -644,7 +642,6 @@ async fn test_contacts_with_blacklist_1() {
     assert_eq!(false, users.get(0).unwrap().user.led);
     assert_eq!("", &users.get(0).unwrap().user.description);
 
-    
     //let resp = test::call_service(&mut app, req).await;
     //assert!(resp.status().is_success());
 }
@@ -655,41 +652,37 @@ async fn test_contacts_with_blacklist_2() {
     let mut blacklist_dao_mock = MockPersistentBlacklistDao::new();
     let mut contacts_dao_mock = MockPersistentContactsDao::new();
 
-    user_dao_mock 
-            .expect_get_by_id()
-            .times(2)
-            .returning(|id, _access_token| {
-                Ok(UserDto {
-                    id: *id,
-                    tele_num: "+4366412345678".to_string(),
-                    led: false,
-                    country_code: "AT".to_string(),
-                    description: "".to_string(),
-                    changed_at: chrono::Utc::now().naive_local(),
-                    profile_picture: "".to_string(),
-                    hash_tele_num: hash("+4366412345678".to_string()),
-                    xp: 0,
-                    client_version: super::ALLOWED_CLIENT_VERSIONS[0].to_string(),
-                })
-            });
+    user_dao_mock
+        .expect_get_by_id()
+        .times(2)
+        .returning(|id, _access_token| {
+            Ok(UserDto {
+                id: *id,
+                tele_num: "+4366412345678".to_string(),
+                led: false,
+                country_code: "AT".to_string(),
+                description: "".to_string(),
+                changed_at: chrono::Utc::now().naive_local(),
+                profile_picture: "".to_string(),
+                hash_tele_num: hash("+4366412345678".to_string()),
+                xp: 0,
+                client_version: super::ALLOWED_CLIENT_VERSIONS[0].to_string(),
+            })
+        });
 
     contacts_dao_mock
         .expect_create()
         .times(1)
         .returning(|_uid, _user, _phone_number| Ok(()));
 
-    blacklist_dao_mock 
-        .expect_get()
-        .times(3)
-        .returning(|_| Ok(vec![
-            BlacklistDto {
-                id: Uuid::new_v4(),
-                created_at: chrono::Utc::now().naive_local(),
-                hash_blocked: hash("+4366412345678".to_string()), //reversed
-                hash_blocker: hash("+4365012345678".to_string()),
-
-            }
-        ]));
+    blacklist_dao_mock.expect_get().times(3).returning(|_| {
+        Ok(vec![BlacklistDto {
+            id: Uuid::new_v4(),
+            created_at: chrono::Utc::now().naive_local(),
+            hash_blocked: hash("+4366412345678".to_string()), //reversed
+            hash_blocker: hash("+4365012345678".to_string()),
+        }])
+    });
 
     contacts_dao_mock
         .expect_get_contacts()
@@ -723,14 +716,11 @@ async fn test_contacts_with_blacklist_2() {
             "ACCESS"
         ))
         .set_json(&PayloadNumbersDto {
-            numbers: vec![
-                PayloadUserDto {
-                    name: "Test".to_string(),
-                    hash_tele_num: hash("+4366412345678")
-                }
-            ]
+            numbers: vec![PayloadUserDto {
+                name: "Test".to_string(),
+                hash_tele_num: hash("+4366412345678"),
+            }],
         })
-
         .to_request();
 
     let resp = test::call_service(&mut app, req).await;
@@ -750,7 +740,6 @@ async fn test_contacts_with_blacklist_2() {
     assert_eq!(false, users.get(0).unwrap().user.led);
     assert_eq!("", &users.get(0).unwrap().user.description);
 
-    
     //let resp = test::call_service(&mut app, req).await;
     //assert!(resp.status().is_success());
 }

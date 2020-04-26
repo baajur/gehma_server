@@ -2,6 +2,7 @@ use actix_web::{web, HttpResponse};
 use core::errors::ServiceError;
 use core::models::dto::{PostUserDto, UpdateUserDto};
 
+use crate::services::push_notifications::{NotificationService};
 use log::info;
 use web_contrib::utils::{set_response_headers, QueryParams};
 
@@ -16,6 +17,7 @@ pub async fn signin(
     body: web::Json<PostUserDto>,
     query: web::Query<QueryParams>,
     user_dao: web::Data<Box<dyn PersistentUserDao>>,
+    notification_service: web::Data<NotificationService>,
 ) -> Result<HttpResponse, ServiceError> {
     info!("routes/user/signin");
 
@@ -26,6 +28,7 @@ pub async fn signin(
         &query.access_token,
         user_dao,
         current_time,
+        notification_service,
     )
     .map_err(|_err| ServiceError::InternalServerError)?;
 
@@ -98,6 +101,7 @@ pub async fn update(
     data: web::Json<UpdateUserDto>,
     query: web::Query<QueryParams>,
     user_dao: web::Data<Box<dyn PersistentUserDao>>,
+    notification_service: web::Data<NotificationService>,
 ) -> Result<HttpResponse, ServiceError> {
     info!("routes/user/update");
 
@@ -109,6 +113,7 @@ pub async fn update(
         &query.access_token,
         user_dao,
         current_time,
+        notification_service,
     )
     .map_err(|_err| ServiceError::InternalServerError)?;
 
