@@ -184,7 +184,7 @@ pub(crate) async fn main() -> std::io::Result<()> {
                             .route(web::post().to(routes::contacts::create)),
                     )
                     .service(
-                        web::resource("/contacts/{uid}/contacts")
+                        web::resource("/contacts/{uid}")
                             .route(web::get().to(routes::contacts::get_contacts)),
                     )
                     .service(
