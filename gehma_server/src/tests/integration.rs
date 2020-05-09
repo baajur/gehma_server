@@ -136,6 +136,54 @@ fn cleanup(pool: &Pool) {
         .unwrap();
 }
 
+async fn create_user() -> UserDto {
+    let pool = get_pool();
+    let mut app = init_server_integration_test!(&pool).await;
+
+    let tele_num = "+4366412345678";
+    let country_code = "AT";
+    let client_version = super::ALLOWED_CLIENT_VERSIONS[0].to_string();
+    let code = "123";
+
+    let req = test::TestRequest::post()
+        .uri("/api/auth/request_code")
+        .set_json(&json! ({
+            "tele_num": tele_num,
+            "country_code": country_code,
+            "client_version": client_version,
+        }))
+        .to_request();
+
+    let resp = test::call_service(&mut app, req).await;
+    assert!(resp.status().is_success());
+
+    eprintln!("Request_code called");
+
+    let req = test::TestRequest::post()
+        .uri("/api/auth/check")
+        .set_json(&json!({
+            "tele_num": tele_num,
+            "country_code": country_code,
+            "client_version": client_version,
+            "code": code
+        }))
+        .to_request();
+
+    let user: UserDto = test::read_response_json(&mut app, req).await;
+
+    eprintln!("auth/check called");
+
+    /*
+    let resp = test::call_service(&mut app, req).await;
+
+    if !resp.status().is_success() {
+        eprintln!("{:?}", resp.response().error().unwrap());
+    }
+    */
+
+    user
+}
+
 #[actix_rt::test]
 async fn test_create_user() {
     let pool = get_pool();
@@ -189,4 +237,43 @@ async fn test_create_user() {
 
     cleanup(&pool);
     assert_eq!(user.tele_num, tele_num.to_string());
+}
+
+#[actix_rt::test]
+async fn test_get_user() {
+    env_logger::init();
+
+    let pool = get_pool();
+
+    cleanup(&pool);
+
+    let cmp_user = create_user().await;
+
+    let mut app = init_server_integration_test!(&pool).await;
+
+    let req = test::TestRequest::get()
+        .uri(&format!(
+            "/api/user/{}?access_token={}",
+            cmp_user.id.to_string(),
+            cmp_user.access_token.expect("no access token")
+        ))
+        .to_request();
+
+    let user: UserDto = test::read_response_json(&mut app, req).await;
+
+    /*let resp = test::call_service(&mut app, req).await;
+
+    if !resp.status().is_success() {
+        println!("{:?}", resp.response().error().unwrap());
+    }*/
+
+    cleanup(&pool);
+
+    assert_eq!(user.tele_num, cmp_user.tele_num);
+    assert_eq!(user.country_code, cmp_user.country_code);
+    assert_eq!(user.led, cmp_user.led);
+    assert_eq!(user.description, cmp_user.description);
+    assert_eq!(user.xp, cmp_user.xp);
+    assert_eq!(user.hash_tele_num, cmp_user.hash_tele_num);
+    assert!(user.access_token.is_none());
 }

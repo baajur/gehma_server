@@ -21,6 +21,24 @@ use crate::ratelimits::{DefaultRateLimitPolicy, RateLimitWrapper};
 
 use uuid::Uuid;
 
+use lazy_static::lazy_static;
+
+lazy_static! {
+    static ref USER: UserDto = UserDto {
+        id: Uuid::new_v4(),
+        tele_num: "+4366412345678".to_string(),
+        led: false,
+        country_code: "AT".to_string(),
+        description: "".to_string(),
+        changed_at: chrono::Utc::now().naive_local(),
+        profile_picture: "".to_string(),
+        hash_tele_num: hash("+4366412345678".to_string()),
+        xp: 0,
+        client_version: super::ALLOWED_CLIENT_VERSIONS[0].to_string(),
+        access_token: None,
+    };
+}
+
 fn set_testing_auth() -> NumberRegistrationService {
     let config = TestingAuthConfiguration {
         id: "test".to_string(),
@@ -100,20 +118,7 @@ macro_rules! setup_login_account {
         $user_dao //login
             .expect_get_by_id()
             .times(1)
-            .returning(|id, _access_token| {
-                Ok(UserDto {
-                    id: *id,
-                    tele_num: "+4366412345678".to_string(),
-                    led: false,
-                    country_code: "AT".to_string(),
-                    description: "".to_string(),
-                    changed_at: chrono::Utc::now().naive_local(),
-                    profile_picture: "".to_string(),
-                    hash_tele_num: hash("+4366412345678".to_string()),
-                    xp: 0,
-                    client_version: super::ALLOWED_CLIENT_VERSIONS[0].to_string(),
-                })
-            });
+            .returning(|id, _access_token| Ok(USER.clone()));
     };
 }
 
@@ -136,6 +141,7 @@ async fn test_create_user() {
                 hash_tele_num: hash(tele_num.to_string()),
                 xp: 0,
                 client_version: client_version.to_string(),
+                access_token: None,
             })
         },
     );
@@ -239,19 +245,7 @@ async fn test_update_user() {
 
     user_dao_mock.expect_update_user().times(1).returning(
         |id, user, current_time, _notify_service| {
-            let u = UserDto {
-                id: *id,
-                tele_num: "+4366412345678".to_string(),
-                led: false,
-                country_code: "AT".to_string(),
-                description: "".to_string(),
-                changed_at: chrono::Utc::now().naive_local(),
-                profile_picture: "".to_string(),
-                hash_tele_num: hash("+4366412345678".to_string()),
-                xp: 100,
-                client_version: super::ALLOWED_CLIENT_VERSIONS[0].to_string(),
-            };
-
+            let u = USER.clone();
             Ok(u.apply_update(user, current_time.naive_local()))
         },
     );
@@ -328,20 +322,7 @@ async fn test_create_blacklist() {
     user_dao_mock
         .expect_get_by_hash_tele_num_unsafe()
         .times(1)
-        .returning(|hash_tele_num| {
-            Ok(UserDto {
-                id: Uuid::new_v4(),
-                tele_num: "+4365012345678".to_string(),
-                led: false,
-                country_code: "AT".to_string(),
-                description: "".to_string(),
-                changed_at: chrono::Utc::now().naive_local(),
-                profile_picture: "".to_string(),
-                hash_tele_num: hash_tele_num.clone(),
-                xp: 0,
-                client_version: super::ALLOWED_CLIENT_VERSIONS[0].to_string(),
-            })
-        });
+        .returning(|hash_tele_num| Ok(USER.clone()));
 
     blacklist_dao_mock
         .expect_create()
@@ -463,20 +444,7 @@ async fn test_contacts() {
     user_dao_mock
         .expect_get_by_id()
         .times(2)
-        .returning(|id, _access_token| {
-            Ok(UserDto {
-                id: *id,
-                tele_num: "+4366412345678".to_string(),
-                led: false,
-                country_code: "AT".to_string(),
-                description: "".to_string(),
-                changed_at: chrono::Utc::now().naive_local(),
-                profile_picture: "".to_string(),
-                hash_tele_num: hash("+4366412345678".to_string()),
-                xp: 0,
-                client_version: super::ALLOWED_CLIENT_VERSIONS[0].to_string(),
-            })
-        });
+        .returning(|id, _access_token| Ok(USER.clone()));
 
     contacts_dao_mock
         .expect_create()
@@ -495,18 +463,7 @@ async fn test_contacts() {
             Ok(vec![ContactDto {
                 blocked: false,
                 name: "Test".to_string(),
-                user: UserDto {
-                    id: Uuid::new_v4(),
-                    tele_num: "+4365012345678".to_string(),
-                    led: true,
-                    country_code: "AT".to_string(),
-                    description: "test".to_string(),
-                    changed_at: chrono::Utc::now().naive_local(),
-                    profile_picture: "".to_string(),
-                    hash_tele_num: hash("+4365012345678".to_string()),
-                    xp: 0,
-                    client_version: super::ALLOWED_CLIENT_VERSIONS[0].to_string(),
-                },
+                user: USER.clone(),
             }])
         });
 
@@ -557,20 +514,7 @@ async fn test_contacts_with_blacklist_1() {
     user_dao_mock
         .expect_get_by_id()
         .times(2)
-        .returning(|id, _access_token| {
-            Ok(UserDto {
-                id: *id,
-                tele_num: "+4366412345678".to_string(),
-                led: false,
-                country_code: "AT".to_string(),
-                description: "".to_string(),
-                changed_at: chrono::Utc::now().naive_local(),
-                profile_picture: "".to_string(),
-                hash_tele_num: hash("+4366412345678".to_string()),
-                xp: 0,
-                client_version: super::ALLOWED_CLIENT_VERSIONS[0].to_string(),
-            })
-        });
+        .returning(|id, _access_token| Ok(USER.clone()));
 
     contacts_dao_mock
         .expect_create()
@@ -604,6 +548,7 @@ async fn test_contacts_with_blacklist_1() {
                     hash_tele_num: hash("+4365012345678".to_string()),
                     xp: 0,
                     client_version: super::ALLOWED_CLIENT_VERSIONS[0].to_string(),
+                    access_token: None,
                 },
             }])
         });
@@ -655,20 +600,7 @@ async fn test_contacts_with_blacklist_2() {
     user_dao_mock
         .expect_get_by_id()
         .times(2)
-        .returning(|id, _access_token| {
-            Ok(UserDto {
-                id: *id,
-                tele_num: "+4366412345678".to_string(),
-                led: false,
-                country_code: "AT".to_string(),
-                description: "".to_string(),
-                changed_at: chrono::Utc::now().naive_local(),
-                profile_picture: "".to_string(),
-                hash_tele_num: hash("+4366412345678".to_string()),
-                xp: 0,
-                client_version: super::ALLOWED_CLIENT_VERSIONS[0].to_string(),
-            })
-        });
+        .returning(|id, _access_token| Ok(USER.clone()));
 
     contacts_dao_mock
         .expect_create()
@@ -702,6 +634,7 @@ async fn test_contacts_with_blacklist_2() {
                     hash_tele_num: hash("+4365012345678".to_string()),
                     xp: 0,
                     client_version: super::ALLOWED_CLIENT_VERSIONS[0].to_string(),
+                    access_token: None,
                 },
             }])
         });

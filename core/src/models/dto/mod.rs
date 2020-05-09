@@ -59,6 +59,8 @@ pub struct UserDto {
     pub hash_tele_num: HashedTeleNum,
     pub xp: i32,
     pub client_version: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub access_token: Option<String>,
 }
 
 impl UserDto {

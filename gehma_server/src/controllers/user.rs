@@ -6,12 +6,12 @@ use core::models::dto::*;
 use core::models::PhoneNumber;
 use uuid::Uuid;
 
-use log::{error, info};
 use crate::services::push_notifications::NotificationService;
+use log::{error, info};
 
 //use crate::routes::user::{ResponseContact, UpdateTokenPayload, UpdateUser};
+use crate::get_user_by_id;
 use crate::routes::user::UpdateTokenPayload;
-use crate::{get_user_by_id};
 
 pub(crate) fn user_signin(
     body: PostUserDto,
@@ -35,7 +35,9 @@ pub(crate) fn user_signin(
 
     //let user = get_user_by_tele_num!(&tele, &access_token, _auth.into_inner(), &pool)?;
 
-    let user = user_dao.get_ref().get_by_tele_num(&tele, access_token.to_owned())?;
+    let user = user_dao
+        .get_ref()
+        .get_by_tele_num(&tele, access_token.to_owned())?;
 
     if user.client_version != body.client_version {
         update_user_without_auth(
@@ -64,7 +66,15 @@ pub(crate) fn get_entry(
 ) -> Result<UserDto, ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
 
-    get_user_by_id!(user_dao, &parsed, access_token.to_string())
+    let user = get_user_by_id!(user_dao, &parsed, access_token.to_string());
+
+    let mut u = user?;
+
+    // Do not display access token on normal GET
+    // It will be only sent on `request_code`
+    u.access_token = None;
+
+    Ok(u)
 }
 
 pub(crate) fn update_token_handler(
@@ -75,7 +85,8 @@ pub(crate) fn update_token_handler(
 ) -> Result<(), ServiceError> {
     let parsed = Uuid::parse_str(&uid)?;
 
-    let user: Result<UserDto, ServiceError> = get_user_by_id!(user_dao, &parsed, access_token.to_owned());
+    let user: Result<UserDto, ServiceError> =
+        get_user_by_id!(user_dao, &parsed, access_token.to_owned());
 
     user?;
 
@@ -93,7 +104,8 @@ pub(crate) fn update_user_with_auth(
 ) -> Result<UserDto, ::core::errors::ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
 
-    let muser: Result<UserDto, ServiceError> = get_user_by_id!(user_dao, &parsed, access_token.to_owned());
+    let muser: Result<UserDto, ServiceError> =
+        get_user_by_id!(user_dao, &parsed, access_token.to_owned());
 
     muser?;
 
@@ -107,7 +119,9 @@ pub(crate) fn update_user_without_auth(
     current_time: DateTime<Local>,
     notification_service: web::Data<NotificationService>,
 ) -> Result<UserDto, ::core::errors::ServiceError> {
-    let user = user_dao.get_ref().update_user(uid, user, current_time, notification_service)?;
+    let user = user_dao
+        .get_ref()
+        .update_user(uid, user, current_time, notification_service)?;
 
     user_dao.get_ref().create_analytics_for_user(&user)?;
 

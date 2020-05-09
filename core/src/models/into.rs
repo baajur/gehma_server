@@ -14,6 +14,7 @@ impl Into<UserDto> for UserDao {
             hash_tele_num: self.hash_tele_num.clone(),
             xp: self.xp,
             client_version: self.client_version,
+            access_token: Some(self.access_token),
         }
     }
 }

@@ -31,6 +31,8 @@ pub trait NumberRegistrationServiceTrait : Send + Sync {
 #[macro_export]
 macro_rules! get_user_by_tele_num {
     ( $dao:ident, $tele_num:expr, $access_token:expr ) => {{
+        use log::info;
+        info!("services/number_registration/get_user_by_tele_num");
         $dao.get_ref()
             .get_by_tele_num($tele_num, $access_token)
             .map_err(|w| {
@@ -43,6 +45,8 @@ macro_rules! get_user_by_tele_num {
 #[macro_export]
 macro_rules! get_user_by_id {
     ( $dao:ident, $id:expr, $access_token:expr ) => {{
+        use log::info;
+        info!("services/number_registration/get_user_by_id");
         $dao.get_ref()
             .get_by_id($id, $access_token)
             .map_err(|w| {

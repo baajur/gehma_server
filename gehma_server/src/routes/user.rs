@@ -2,7 +2,7 @@ use actix_web::{web, HttpResponse};
 use core::errors::ServiceError;
 use core::models::dto::{PostUserDto, UpdateUserDto};
 
-use crate::services::push_notifications::{NotificationService};
+use crate::services::push_notifications::NotificationService;
 use log::info;
 use web_contrib::utils::{set_response_headers, QueryParams};
 

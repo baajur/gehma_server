@@ -3015,6 +3015,7 @@ dependencies = [
  "env_logger",
  "futures 0.1.29",
  "img_profile",
+ "lazy_static",
  "log",
  "mockall",
  "openssl",
