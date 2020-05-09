@@ -129,6 +129,15 @@ macro_rules! init_server_integration_test {
     }};
 }
 
+macro_rules! print_err {
+    ($resp:ident) => {{
+        let resp = test::call_service(&mut app, req).await;
+        if !$resp.status().is_success() {
+            eprintln!("{:?}", $resp.response().error().unwrap());
+        }
+    }};
+}
+
 fn cleanup(pool: &Pool) {
     use diesel::sql_query;
     sql_query("DELETE FROM users;")
@@ -142,7 +151,6 @@ fn cleanup(pool: &Pool) {
     sql_query("DELETE FROM analytics;")
         .execute(&pool.get().unwrap())
         .unwrap();
-
 }
 
 async fn create_user() -> UserDto {
@@ -251,6 +259,13 @@ macro_rules! get_user {
             ))
             .to_request();
 
+        /*
+        let resp = test::call_service(&mut $app, req).await;
+
+        if !resp.status().is_success() {
+            eprintln!("{:?}", resp.response().error().unwrap());
+        }*/
+
         let user: UserDto = test::read_response_json(&mut $app, req).await;
 
         user
@@ -351,11 +366,14 @@ async fn test_get_user() {
 
 #[actix_rt::test]
 async fn test_update_token_user() {
+    //env_logger::init();
     let pool = get_pool();
 
     cleanup(&pool);
 
+    eprintln!("User creating");
     let cmp_user = create_user().await;
+    eprintln!("User created");
 
     let mut app = init_server_integration_test!(&pool).await;
 
@@ -374,6 +392,9 @@ async fn test_update_token_user() {
     assert!(resp.status().is_success());
 
     let updated_user = get_user!(app, cmp_user);
+
+    cleanup(&pool);
+    assert_eq!("test".to_string(), updated_user.firebase_token.unwrap());
 }
 
 #[actix_rt::test]
@@ -400,5 +421,67 @@ async fn test_create_blacklist() {
         .to_request();
 
     let resp = test::call_service(&mut app, req).await;
+
+    cleanup(&pool);
+
     assert!(resp.status().is_success());
+}
+
+#[actix_rt::test]
+async fn test_get_all_blacklists() {
+    let pool = get_pool();
+
+    cleanup(&pool);
+
+    let cmp_user = create_user().await;
+    let cmp_user2 = create_user2().await;
+
+    let mut app = init_server_integration_test!(&pool).await;
+
+    // Creating blacklist
+    let req = test::TestRequest::post()
+        .uri(&format!(
+            "/api/user/{}/blacklist?access_token={}",
+            cmp_user.id.to_string(),
+            cmp_user.access_token.clone().unwrap()
+        ))
+        .set_json(&crate::routes::blacklist::PostData {
+            hash_blocked: hash("+4365012345678").to_string(),
+            country_code: "AT".to_string(),
+        })
+        .to_request();
+
+    let resp = test::call_service(&mut app, req).await;
+    assert!(resp.status().is_success());
+
+    // Get
+
+    let req = test::TestRequest::get()
+        .uri(&format!(
+            "/api/user/{}/blacklist?access_token={}",
+            cmp_user.id,
+            cmp_user.access_token.unwrap()
+        ))
+        .to_request();
+
+    /*
+    let resp = test::call_service(&mut app, req).await;
+
+    if !resp.status().is_success() {
+        println!("{:?}", resp.response().error().unwrap());
+    }*/
+
+    let blacklists: Vec<BlacklistDto> = test::read_response_json(&mut app, req).await;
+
+    cleanup(&pool);
+
+    assert_eq!(blacklists.len(), 1);
+    assert_eq!(
+        blacklists.get(0).unwrap().hash_blocker,
+        hash("+4366412345678")
+    );
+    assert_eq!(
+        blacklists.get(0).unwrap().hash_blocked,
+        hash("+4365012345678")
+    );
 }

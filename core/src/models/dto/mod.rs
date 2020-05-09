@@ -61,6 +61,7 @@ pub struct UserDto {
     pub client_version: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub access_token: Option<String>,
+    pub firebase_token: Option<String>,
 }
 
 impl UserDto {

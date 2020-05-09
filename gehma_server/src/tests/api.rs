@@ -36,6 +36,7 @@ lazy_static! {
         xp: 0,
         client_version: super::ALLOWED_CLIENT_VERSIONS[0].to_string(),
         access_token: None,
+        firebase_token: None,
     };
 }
 
@@ -142,6 +143,7 @@ async fn test_create_user() {
                 xp: 0,
                 client_version: client_version.to_string(),
                 access_token: None,
+                firebase_token: None,
             })
         },
     );
@@ -549,6 +551,7 @@ async fn test_contacts_with_blacklist_1() {
                     xp: 0,
                     client_version: super::ALLOWED_CLIENT_VERSIONS[0].to_string(),
                     access_token: None,
+                    firebase_token: None,
                 },
             }])
         });
@@ -635,6 +638,7 @@ async fn test_contacts_with_blacklist_2() {
                     xp: 0,
                     client_version: super::ALLOWED_CLIENT_VERSIONS[0].to_string(),
                     access_token: None,
+                    firebase_token: None,
                 },
             }])
         });

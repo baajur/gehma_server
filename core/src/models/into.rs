@@ -15,6 +15,7 @@ impl Into<UserDto> for UserDao {
             xp: self.xp,
             client_version: self.client_version,
             access_token: Some(self.access_token),
+            firebase_token: self.firebase_token,
         }
     }
 }
