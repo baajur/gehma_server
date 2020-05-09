@@ -20,9 +20,6 @@ use diesel_migrations::run_pending_migrations;
 use log::error;
 use std::path::PathBuf;
 
-use queries::blacklist::PgBlacklistDao;
-use queries::contacts::PgContactsDao;
-use queries::user::PgUserDao;
 
 pub(crate) mod controllers;
 pub(crate) mod persistence;
@@ -31,7 +28,11 @@ pub(crate) mod ratelimits; //move to services
 pub(crate) mod routes;
 pub(crate) mod services;
 
+pub(crate) mod dao_factory;
+
 //mod middleware;
+
+use dao_factory::*;
 
 #[cfg(test)]
 mod tests;
@@ -87,20 +88,6 @@ fn get_ratelimits() -> ratelimits::RateLimitWrapper {
     ratelimits::RateLimitWrapper::new(Box::new(ratelimits::DefaultRateLimitPolicy))
 }
 
-#[allow(dead_code)]
-fn get_user_dao(pool: Pool) -> PgUserDao {
-    PgUserDao { pool: pool.clone() }
-}
-
-#[allow(dead_code)]
-fn get_blacklist_dao(pool: Pool) -> PgBlacklistDao {
-    PgBlacklistDao { pool }
-}
-
-#[allow(dead_code)]
-fn get_contacts_dao(pool: Pool) -> PgContactsDao {
-    PgContactsDao { pool }
-}
 
 #[allow(dead_code)]
 fn get_firebase_notification_service() -> NotificationService {
@@ -133,15 +120,17 @@ pub(crate) async fn main() -> std::io::Result<()> {
     run_pending_migrations(connection).expect("cannot run pending migrations");
 
     let server = HttpServer::new(move || {
+        let dao_factory = DaoFactory::new(pool.clone());
+
         App::new()
             .data(pool.clone())
             //.data(get_auth())
             .data(set_testing_auth())
             .data(get_firebase_notification_service())
             .data(get_ratelimits())
-            .data(get_user_dao(pool.clone()))
-            .data(get_blacklist_dao(pool.clone()))
-            .data(get_contacts_dao(pool.clone()))
+            .data(dao_factory.get_user_dao())
+            .data(dao_factory.get_contacts_dao())
+            .data(dao_factory.get_blacklist_dao())
             .wrap(
                 Cors::new()
                     .allowed_origin("http://localhost:3000")

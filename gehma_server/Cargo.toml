@@ -37,5 +37,8 @@ tokio = "0.1.22"
 diesel_migrations= "1.4.0"
 mockall = "0.7"
 
+[features]
+integration_tests = []
+
 [dev-dependencies]
 tempfile = "3"
