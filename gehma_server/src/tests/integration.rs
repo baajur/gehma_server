@@ -184,6 +184,22 @@ async fn create_user() -> UserDto {
     user
 }
 
+macro_rules! get_user {
+    ($app:ident, $cmp_user:ident) => {{
+        let req = test::TestRequest::get()
+            .uri(&format!(
+                "/api/user/{}?access_token={}",
+                $cmp_user.id.to_string(),
+                $cmp_user.access_token.clone().expect("no access token")
+            ))
+            .to_request();
+
+        let user: UserDto = test::read_response_json(&mut $app, req).await;
+
+        user
+    }};
+}
+
 #[actix_rt::test]
 async fn test_create_user() {
     let pool = get_pool();
@@ -241,8 +257,6 @@ async fn test_create_user() {
 
 #[actix_rt::test]
 async fn test_get_user() {
-    env_logger::init();
-
     let pool = get_pool();
 
     cleanup(&pool);
@@ -276,4 +290,31 @@ async fn test_get_user() {
     assert_eq!(user.xp, cmp_user.xp);
     assert_eq!(user.hash_tele_num, cmp_user.hash_tele_num);
     assert!(user.access_token.is_none());
+}
+
+#[actix_rt::test]
+async fn test_update_token_user() {
+    let pool = get_pool();
+
+    cleanup(&pool);
+
+    let cmp_user = create_user().await;
+
+    let mut app = init_server_integration_test!(&pool).await;
+
+    let req = test::TestRequest::put()
+        .uri(&format!(
+            "/api/user/{}/token?access_token={}",
+            cmp_user.id.to_string(),
+            cmp_user.access_token.clone().unwrap(),
+        ))
+        .set_json(&crate::routes::user::UpdateTokenPayload {
+            token: "test".to_string(),
+        })
+        .to_request();
+
+    let resp = test::call_service(&mut app, req).await;
+    assert!(resp.status().is_success());
+
+    let updated_user = get_user!(app, cmp_user);
 }
