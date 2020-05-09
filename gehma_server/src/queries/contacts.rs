@@ -25,7 +25,7 @@ impl PersistentContactsDao for PgContactsDao {
         _user: &UserDto,
         payload: &'a Vec<&'a mut PayloadUserDto>,
     ) -> Result<(), ServiceError> {
-        info!("queries/push_notification/get_query");
+        info!("queries/contacts/create");
         use core::schema::contacts::dsl::contacts;
 
         let conn: &PgConnection = &self.pool.get().unwrap();
@@ -40,6 +40,7 @@ impl PersistentContactsDao for PgContactsDao {
                 from_id: uid.clone(),
                 target_hash_tele_num: w.hash_tele_num.clone(),
                 name: w.name.clone(),
+                created_at: chrono::Utc::now().naive_local()
             })
             .collect();
 

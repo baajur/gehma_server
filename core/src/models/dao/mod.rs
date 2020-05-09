@@ -183,7 +183,7 @@ pub struct ContactDao {
 #[belongs_to(ContactDao, foreign_key = "target_hash_tele_num")]
 pub struct ContactInsertDao {
     pub from_id: uuid::Uuid,
-    //pub created_at: chrono::NaiveDateTime,
+    pub created_at: chrono::NaiveDateTime,
     pub name: String,
     pub target_hash_tele_num: HashedTeleNum,
 }
