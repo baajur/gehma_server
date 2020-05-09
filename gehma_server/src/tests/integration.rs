@@ -134,6 +134,15 @@ fn cleanup(pool: &Pool) {
     sql_query("DELETE FROM users;")
         .execute(&pool.get().unwrap())
         .unwrap();
+
+    sql_query("DELETE FROM usage_statistics;")
+        .execute(&pool.get().unwrap())
+        .unwrap();
+
+    sql_query("DELETE FROM analytics;")
+        .execute(&pool.get().unwrap())
+        .unwrap();
+
 }
 
 async fn create_user() -> UserDto {
@@ -141,6 +150,54 @@ async fn create_user() -> UserDto {
     let mut app = init_server_integration_test!(&pool).await;
 
     let tele_num = "+4366412345678";
+    let country_code = "AT";
+    let client_version = super::ALLOWED_CLIENT_VERSIONS[0].to_string();
+    let code = "123";
+
+    let req = test::TestRequest::post()
+        .uri("/api/auth/request_code")
+        .set_json(&json! ({
+            "tele_num": tele_num,
+            "country_code": country_code,
+            "client_version": client_version,
+        }))
+        .to_request();
+
+    let resp = test::call_service(&mut app, req).await;
+    assert!(resp.status().is_success());
+
+    eprintln!("Request_code called");
+
+    let req = test::TestRequest::post()
+        .uri("/api/auth/check")
+        .set_json(&json!({
+            "tele_num": tele_num,
+            "country_code": country_code,
+            "client_version": client_version,
+            "code": code
+        }))
+        .to_request();
+
+    let user: UserDto = test::read_response_json(&mut app, req).await;
+
+    eprintln!("auth/check called");
+
+    /*
+    let resp = test::call_service(&mut app, req).await;
+
+    if !resp.status().is_success() {
+        eprintln!("{:?}", resp.response().error().unwrap());
+    }
+    */
+
+    user
+}
+
+async fn create_user2() -> UserDto {
+    let pool = get_pool();
+    let mut app = init_server_integration_test!(&pool).await;
+
+    let tele_num = "+4365012345678";
     let country_code = "AT";
     let client_version = super::ALLOWED_CLIENT_VERSIONS[0].to_string();
     let code = "123";
@@ -317,4 +374,31 @@ async fn test_update_token_user() {
     assert!(resp.status().is_success());
 
     let updated_user = get_user!(app, cmp_user);
+}
+
+#[actix_rt::test]
+async fn test_create_blacklist() {
+    let pool = get_pool();
+
+    cleanup(&pool);
+
+    let cmp_user = create_user().await;
+    let cmp_user2 = create_user2().await;
+
+    let mut app = init_server_integration_test!(&pool).await;
+
+    let req = test::TestRequest::post()
+        .uri(&format!(
+            "/api/user/{}/blacklist?access_token={}",
+            cmp_user.id.to_string(),
+            cmp_user.access_token.unwrap()
+        ))
+        .set_json(&crate::routes::blacklist::PostData {
+            hash_blocked: hash("+4365012345678").to_string(),
+            country_code: "AT".to_string(),
+        })
+        .to_request();
+
+    let resp = test::call_service(&mut app, req).await;
+    assert!(resp.status().is_success());
 }
