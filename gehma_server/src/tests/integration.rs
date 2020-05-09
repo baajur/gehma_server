@@ -129,11 +129,11 @@ macro_rules! init_server_integration_test {
     }};
 }
 
-macro_rules! print_err {
-    ($resp:ident) => {{
-        let resp = test::call_service(&mut app, req).await;
-        if !$resp.status().is_success() {
-            eprintln!("{:?}", $resp.response().error().unwrap());
+macro_rules! execute {
+    ($app: ident, $req:ident) => {{
+        let resp = test::call_service(&mut $app, $req).await;
+        if !resp.status().is_success() {
+            eprintln!("{:?}", resp.response().error().unwrap());
         }
     }};
 }
@@ -484,4 +484,142 @@ async fn test_get_all_blacklists() {
         blacklists.get(0).unwrap().hash_blocked,
         hash("+4365012345678")
     );
+}
+
+#[actix_rt::test]
+async fn test_see_if_blocked_perspective_creator() {
+    //env_logger::init();
+    let pool = get_pool();
+
+    cleanup(&pool);
+
+    let cmp_user = create_user().await;
+    let cmp_user2 = create_user2().await;
+
+    let mut app = init_server_integration_test!(&pool).await;
+
+    // Creating contact
+
+    let req = test::TestRequest::post()
+        .uri(&format!(
+            "/api/contacts/{}/{}?access_token={}",
+            cmp_user.id.to_string(),
+            cmp_user.country_code.clone(),
+            cmp_user.access_token.clone().unwrap()
+        ))
+        .set_json(&core::models::dto::PayloadNumbersDto {
+            numbers: vec![core::models::dto::PayloadUserDto {
+                name: "test contact".to_string(),
+                hash_tele_num: hash("+4365012345678"),
+            }],
+        })
+        .to_request();
+
+    execute!(app, req);
+
+    // Creating blacklist
+    let req = test::TestRequest::post()
+        .uri(&format!(
+            "/api/user/{}/blacklist?access_token={}",
+            cmp_user.id.to_string(),
+            cmp_user.access_token.clone().unwrap()
+        ))
+        .set_json(&crate::routes::blacklist::PostData {
+            hash_blocked: hash("+4365012345678").to_string(),
+            country_code: "AT".to_string(),
+        })
+        .to_request();
+
+    execute!(app, req);
+
+    // Get all blocked
+
+    let req = test::TestRequest::get()
+        .uri(&format!(
+            "/api/contacts/{}?access_token={}",
+            cmp_user.id,
+            cmp_user.access_token.unwrap()
+        ))
+        .to_request();
+
+    let contacts: Vec<ContactDto> = test::read_response_json(&mut app, req).await;
+
+    cleanup(&pool);
+
+    assert_eq!(contacts.len(), 1);
+    assert_eq!(contacts.get(0).unwrap().name, "test contact".to_string());
+    assert_eq!(
+        contacts.get(0).unwrap().user.hash_tele_num,
+        hash("+4365012345678")
+    );
+    assert!(contacts.get(0).unwrap().blocked);
+}
+
+#[actix_rt::test]
+async fn test_see_if_blocked_perspective_blocked() {
+    //env_logger::init();
+    let pool = get_pool();
+
+    cleanup(&pool);
+
+    let cmp_user = create_user().await;
+    let cmp_user2 = create_user2().await;
+
+    let mut app = init_server_integration_test!(&pool).await;
+
+    // Creating contact
+
+    let req = test::TestRequest::post()
+        .uri(&format!(
+            "/api/contacts/{}/{}?access_token={}",
+            cmp_user2.id.to_string(),
+            cmp_user2.country_code.clone(),
+            cmp_user2.access_token.clone().unwrap()
+        ))
+        .set_json(&core::models::dto::PayloadNumbersDto {
+            numbers: vec![core::models::dto::PayloadUserDto {
+                name: "test contact".to_string(),
+                hash_tele_num: hash("+4366412345678"),
+            }],
+        })
+        .to_request();
+
+    execute!(app, req);
+
+    // Creating blacklist
+    let req = test::TestRequest::post()
+        .uri(&format!(
+            "/api/user/{}/blacklist?access_token={}",
+            cmp_user2.id.to_string(),
+            cmp_user2.access_token.clone().unwrap()
+        ))
+        .set_json(&crate::routes::blacklist::PostData {
+            hash_blocked: hash("+4366412345678").to_string(),
+            country_code: "AT".to_string(),
+        })
+        .to_request();
+
+    execute!(app, req);
+
+    // Get all blocked
+
+    let req = test::TestRequest::get()
+        .uri(&format!(
+            "/api/contacts/{}?access_token={}",
+            cmp_user2.id,
+            cmp_user2.access_token.unwrap()
+        ))
+        .to_request();
+
+    let contacts: Vec<ContactDto> = test::read_response_json(&mut app, req).await;
+
+    cleanup(&pool);
+
+    assert_eq!(contacts.len(), 1);
+    assert_eq!(contacts.get(0).unwrap().name, "test contact".to_string());
+    assert_eq!(
+        contacts.get(0).unwrap().user.hash_tele_num,
+        hash("+4366412345678")
+    );
+    assert!(contacts.get(0).unwrap().blocked);
 }
