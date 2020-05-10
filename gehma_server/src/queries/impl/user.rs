@@ -21,8 +21,8 @@ pub struct PgUserDao {
 impl PersistentUserDao for PgUserDao {
     fn create_analytics_for_user(
         &self,
-        user: &UserDto,
-    ) -> Result<AnalyticDto, ::core::errors::ServiceError> {
+        user: &UserDao,
+    ) -> Result<AnalyticDao, ::core::errors::ServiceError> {
         info!("queries/user/analytics_user");
         use core::schema::analytics::dsl::analytics;
 
@@ -32,7 +32,7 @@ impl PersistentUserDao for PgUserDao {
         diesel::insert_into(analytics)
             .values(&ana)
             .get_result::<AnalyticDao>(conn)
-            .map(|w| w.into())
+            //.map(|w| w.into())
             .map_err(|_db_error| {
                 eprintln!("{}", _db_error);
                 ServiceError::BadRequest("Could not log change".into())
@@ -45,7 +45,7 @@ impl PersistentUserDao for PgUserDao {
         country_code: &str,
         version: &str,
         access_token: &str,
-    ) -> Result<UserDto, ServiceError> {
+    ) -> Result<UserDao, ServiceError> {
         info!("queries/user/create_query");
         use core::schema::users::dsl::users;
 
@@ -56,7 +56,7 @@ impl PersistentUserDao for PgUserDao {
         diesel::insert_into(users)
             .values(&new_inv)
             .get_result::<UserDao>(conn)
-            .map(|w| w.into())
+            //.map(|w| w.into())
             .map_err(|_db_error| {
                 eprintln!("{}", _db_error);
                 ServiceError::BadRequest("Cannot insert user".into())
@@ -65,8 +65,8 @@ impl PersistentUserDao for PgUserDao {
 
     fn create_usage_statistics_for_user(
         &self,
-        user: &UserDto,
-    ) -> Result<UsageStatisticEntryDto, ::core::errors::ServiceError> {
+        user: &UserDao,
+    ) -> Result<UsageStatisticEntryDao, ::core::errors::ServiceError> {
         info!("queries/user/analytics_usage_statistics");
         use core::schema::usage_statistics::dsl::usage_statistics;
 
@@ -76,7 +76,7 @@ impl PersistentUserDao for PgUserDao {
         diesel::insert_into(usage_statistics)
             .values(&ana)
             .get_result::<UsageStatisticEntryDao>(conn)
-            .map(|w| w.into())
+            //.map(|w| w.into())
             .map_err(|_db_error| {
                 eprintln!("{}", _db_error);
                 ServiceError::BadRequest("Could not log change".into())
@@ -88,7 +88,7 @@ impl PersistentUserDao for PgUserDao {
         myid: &Uuid,
         user: &UpdateUserDto,
         _current_time: DateTime<Local>,
-    ) -> Result<(UserDto, Vec<ContactPushNotificationDao>), ::core::errors::ServiceError> {
+    ) -> Result<(UserDao, Vec<ContactPushNotificationDao>), ::core::errors::ServiceError> {
         info!("queries/user/update_user_query");
         use core::schema::users::dsl::{
             changed_at, client_version, description, id, led, users, xp,
@@ -136,7 +136,7 @@ impl PersistentUserDao for PgUserDao {
                     .first()
                     .cloned()
                     .ok_or_else(|| ServiceError::BadRequest("No user found".into()))?)
-                .map(|w| w.into())
+                //.map(|w| w.into())
             })
             .and_then(|user| {
                 if my_led {
@@ -171,7 +171,7 @@ impl PersistentUserDao for PgUserDao {
     }
 
     /// Get the user by uid
-    fn get_by_id(&self, myid: &Uuid, my_access_token: String) -> Result<UserDto, ServiceError> {
+    fn get_by_id(&self, myid: &Uuid, my_access_token: String) -> Result<UserDao, ServiceError> {
         info!("queries/user/get_query");
         use core::schema::users::dsl::{access_token, id, users};
 
@@ -185,12 +185,12 @@ impl PersistentUserDao for PgUserDao {
                 w.first()
                     .cloned()
                     .ok_or_else(|| ServiceError::BadRequest("No user found".into()))
-                    .map(|w| w.into())
+                //.map(|w| w.into())
             })
     }
 
     /// Get the user by uid without access_token
-    fn get_by_id_unsafe(&self, myid: &Uuid) -> Result<UserDto, ServiceError> {
+    fn get_by_id_unsafe(&self, myid: &Uuid) -> Result<UserDao, ServiceError> {
         info!("queries/user/get_query");
         use core::schema::users::dsl::{id, users};
 
@@ -204,7 +204,7 @@ impl PersistentUserDao for PgUserDao {
                 w.first()
                     .cloned()
                     .ok_or_else(|| ServiceError::BadRequest("No user found".into()))
-                    .map(|w| w.into())
+                //.map(|w| w.into())
             })
     }
 
@@ -212,7 +212,7 @@ impl PersistentUserDao for PgUserDao {
         &self,
         phone_number: &PhoneNumber,
         my_access_token: String,
-    ) -> Result<UserDto, ServiceError> {
+    ) -> Result<UserDao, ServiceError> {
         info!("queries/user/get_query");
         use core::schema::users::dsl::{access_token, tele_num, users};
 
@@ -230,14 +230,14 @@ impl PersistentUserDao for PgUserDao {
                 w.first()
                     .cloned()
                     .ok_or_else(|| ServiceError::BadRequest("No user found".into()))
-                    .map(|w| w.into())
+                //.map(|w| w.into())
             })
     }
 
     fn get_by_hash_tele_num_unsafe(
         &self,
         user_hash_tele_num: &HashedTeleNum,
-    ) -> Result<UserDto, ServiceError> {
+    ) -> Result<UserDao, ServiceError> {
         info!("queries/user/get_query");
         use core::schema::users::dsl::{hash_tele_num, users};
 
@@ -251,11 +251,11 @@ impl PersistentUserDao for PgUserDao {
                 w.first()
                     .cloned()
                     .ok_or_else(|| ServiceError::BadRequest("No user found".into()))
-                    .map(|w| w.into())
+                //.map(|w| w.into())
             })
     }
 
-    fn update_profile_picture(&self, user: &UserDto) -> Result<(), ServiceError> {
+    fn update_profile_picture(&self, user: &UserDao) -> Result<(), ServiceError> {
         info!("queries/user/update_profile_picture");
         use core::errors::InternalError;
         use core::schema::users::dsl::{id, profile_picture, users};
@@ -306,7 +306,7 @@ impl PersistentUserDao for PgUserDao {
 }
 
 fn get_users_for_sending_push_notification(
-    user: &UserDto, //sender
+    user: &UserDao, //sender
     pool: &Pool,
 ) -> Result<Vec<ContactPushNotificationDao>, ServiceError> {
     info!("queries/user/get_users_for_sending_push_notification");

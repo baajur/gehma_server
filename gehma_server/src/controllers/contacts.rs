@@ -20,8 +20,7 @@ pub(crate) fn create(
 ) -> Result<(), ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
 
-    let user: Result<UserDto, ServiceError> =
-        get_user_by_id!(user_dao, &parsed, access_token.to_string());
+    let user = get_user_by_id!(user_dao, &parsed, access_token.to_string());
 
     if phone_numbers.len() >= MAX_ALLOWED_CONTACTS {
         return Err(ServiceError::BadRequest("Too many contacts.".to_string()));
@@ -55,8 +54,7 @@ pub(crate) fn get_contacts(
 ) -> Result<Vec<ContactDto>, ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
 
-    let user: Result<UserDto, ServiceError> =
-        get_user_by_id!(user_dao, &parsed, access_token.to_owned());
+    let user = get_user_by_id!(user_dao, &parsed, access_token.to_owned());
 
     let user = user?;
 

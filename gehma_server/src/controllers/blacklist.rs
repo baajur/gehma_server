@@ -9,7 +9,7 @@ use crate::queries::*;
 use crate::routes::blacklist::PostData;
 use log::debug;
 
-use crate::{get_user_by_id};
+use crate::get_user_by_id;
 
 pub(crate) fn get_entry(
     blocker: &str,
@@ -19,12 +19,17 @@ pub(crate) fn get_entry(
 ) -> Result<Vec<BlacklistDto>, ServiceError> {
     let blocker = Uuid::parse_str(blocker)?;
 
-    let user: Result<UserDto, ServiceError> =
+    let user =
         get_user_by_id!(user_dao, &blocker, access_token.to_string());
 
     user?;
 
-    let bl = blacklist_dao.get_ref().get(blocker)?;
+    let bl = blacklist_dao
+        .get_ref()
+        .get(blocker)?
+        .into_iter()
+        .map(|w| w.into())
+        .collect();
 
     Ok(bl)
 }
@@ -39,7 +44,7 @@ pub(crate) fn create_entry(
     debug!("controllers/blacklist/create_entry");
     let blocker2 = Uuid::parse_str(blocker)?;
 
-    let user: Result<UserDto, ServiceError> =
+    let user =
         get_user_by_id!(user_dao, &blocker2, access_token.to_string());
 
     let contact = user_dao
@@ -50,7 +55,7 @@ pub(crate) fn create_entry(
 
     let tel = PhoneNumber::my_from(&user?.tele_num, &data.country_code)?;
 
-    let b = blacklist_dao.create(&tel, &blocked)?;
+    let b = blacklist_dao.create(&tel, &blocked)?.into();
 
     Ok(b)
 }
@@ -64,7 +69,7 @@ pub(crate) fn delete_entry(
 ) -> Result<(), ServiceError> {
     let blocker2 = Uuid::parse_str(blocker)?;
 
-    let user: Result<UserDto, ServiceError> =
+    let user =
         get_user_by_id!(user_dao, &blocker2, access_token.to_string());
 
     blacklist_dao.get_ref().delete(

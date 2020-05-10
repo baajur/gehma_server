@@ -64,16 +64,7 @@ pub struct UserDto {
     pub firebase_token: Option<String>,
 }
 
-impl UserDto {
-    pub fn apply_update(mut self, user: &UpdateUserDto, time: chrono::NaiveDateTime) -> Self {
-        self.led = user.led;
-        self.description = user.description.clone();
-        self.client_version = user.client_version.clone();
-        self.changed_at = time;
 
-        self
-    }
-}
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct PayloadNumbersDto {

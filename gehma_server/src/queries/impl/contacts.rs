@@ -20,7 +20,7 @@ impl PersistentContactsDao for PgContactsDao {
     fn create<'a>(
         &self,
         uid: &Uuid,
-        _user: &UserDto,
+        _user: &UserDao,
         payload: &'a Vec<&'a mut PayloadUserDto>,
     ) -> Result<(), ServiceError> {
         info!("queries/contacts/create");
@@ -196,7 +196,7 @@ impl PersistentContactsDao for PgContactsDao {
 
     fn get_contacts(
         &self,
-        user: &UserDto,
+        user: &UserDao,
     ) -> Result<Vec<ContactDto>, ::core::errors::ServiceError> {
         info!("queries/user/get_contacts");
 

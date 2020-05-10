@@ -6,8 +6,8 @@ use uuid::Uuid;
 
 use log::{error, info};
 
-use crate::services::number_registration::NumberRegistrationService;
 use crate::queries::*;
+use crate::services::number_registration::NumberRegistrationService;
 
 pub(crate) fn request(
     body: RequestCodeDto,
@@ -40,7 +40,7 @@ pub(crate) fn check_code(
             .get_ref()
             .create(&parsed, &body.country_code, &body.client_version, &token)
         {
-            Ok(user) => Ok(user),
+            Ok(user) => Ok(user.into()),
             //Err(ServiceError::AlreadyExists(_)) => user_dao.get_ref().get_by_tele_num(&parsed),
             Err(e) => {
                 error!("{}", e);

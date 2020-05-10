@@ -17,7 +17,7 @@ pub struct PgBlacklistDao {
 }
 
 impl PersistentBlacklistDao for PgBlacklistDao {
-    fn get(&self, sblocker: Uuid) -> Result<Vec<BlacklistDto>, ServiceError> {
+    fn get(&self, sblocker: Uuid) -> Result<Vec<BlacklistDao>, ServiceError> {
         info!("queries/blacklist/get_query");
         use core::schema::blacklist::dsl::{blacklist, hash_blocker};
         use core::schema::users::dsl::{id, users};
@@ -35,7 +35,7 @@ impl PersistentBlacklistDao for PgBlacklistDao {
         blacklist
             .filter(hash_blocker.eq(user.hash_tele_num))
             .load::<BlacklistDao>(conn)
-            .map(|w| w.into_iter().map(|k| k.into()).collect())
+            //.map(|w| w.into_iter().map(|k| k.into()).collect())
             .map_err(|_db_err| ServiceError::BadRequest("Invalid User".into()))
     }
 
@@ -43,19 +43,17 @@ impl PersistentBlacklistDao for PgBlacklistDao {
         &self,
         blocker: &PhoneNumber,
         blocked: &PhoneNumber,
-    ) -> Result<BlacklistDto, ServiceError> {
+    ) -> Result<BlacklistDao, ServiceError> {
         info!("queries/blacklist/create_query");
         use core::schema::blacklist::dsl::blacklist;
 
         let conn: &PgConnection = &self.pool.get().unwrap();
         let new_inv: BlacklistDao = BlacklistDao::my_from(blocker, blocked);
 
-        //println!("{:?}", new_inv);
-
         diesel::insert_into(blacklist)
             .values(&new_inv)
             .get_result::<BlacklistDao>(conn)
-            .map(|w| w.into())
+            //.map(|w| w.into())
             .map_err(|_db_error| {
                 error!("{:?}", _db_error);
                 ServiceError::BadRequest("Cannot insert into blacklist".into())

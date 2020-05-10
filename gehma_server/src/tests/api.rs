@@ -4,24 +4,25 @@ use actix_web::{test, web, App};
 use serde_json::json;
 
 use crate::queries::*;
-
+use core::models::dao::*;
 use uuid::Uuid;
 
 use lazy_static::lazy_static;
 
 lazy_static! {
-    static ref USER: UserDto = UserDto {
+    static ref USER: UserDao = UserDao {
         id: Uuid::new_v4(),
         tele_num: "+4366412345678".to_string(),
         led: false,
         country_code: "AT".to_string(),
         description: "".to_string(),
         changed_at: chrono::Utc::now().naive_local(),
+        created_at: chrono::Utc::now().naive_local(),
         profile_picture: "".to_string(),
         hash_tele_num: hash("+4366412345678".to_string()),
         xp: 0,
         client_version: super::ALLOWED_CLIENT_VERSIONS[0].to_string(),
-        access_token: None,
+        access_token: "".to_string(),
         firebase_token: None,
     };
 }
@@ -94,18 +95,19 @@ async fn test_create_user() {
 
     user_dao_mock.expect_create().returning(
         |tele_num, country_code, client_version, _access_token| {
-            Ok(UserDto {
+            Ok(UserDao {
                 id: Uuid::new_v4(),
                 tele_num: tele_num.to_string(),
                 led: false,
                 country_code: country_code.to_string(),
                 description: "".to_string(),
                 changed_at: chrono::Utc::now().naive_local(),
+                created_at: chrono::Utc::now().naive_local(),
                 profile_picture: "".to_string(),
                 hash_tele_num: hash(tele_num.to_string()),
                 xp: 0,
                 client_version: client_version.to_string(),
-                access_token: None,
+                access_token: "".to_string(),
                 firebase_token: None,
             })
         },
@@ -199,7 +201,7 @@ async fn test_update_user() {
         .expect_create_analytics_for_user()
         .times(1)
         .returning(|user| {
-            Ok(AnalyticDto {
+            Ok(AnalyticDao {
                 id: 1,
                 tele_num: user.tele_num.clone(),
                 led: user.led,
@@ -294,7 +296,7 @@ async fn test_create_blacklist() {
         .expect_create()
         .times(1)
         .returning(|blocker, blocked| {
-            Ok(BlacklistDto {
+            Ok(BlacklistDao {
                 id: Uuid::new_v4(),
                 created_at: chrono::Utc::now().naive_local(),
                 hash_blocker: hash(blocker.to_string()),
@@ -334,7 +336,7 @@ async fn test_get_all_blacklist() {
         .expect_get()
         .times(1)
         .returning(|_blocker| {
-            Ok(vec![BlacklistDto {
+            Ok(vec![BlacklistDao {
                 id: Uuid::new_v4(),
                 created_at: chrono::Utc::now().naive_local(),
                 hash_blocker: hash("+4366412345678".to_string()),
@@ -432,7 +434,7 @@ async fn test_contacts() {
             Ok(vec![ContactDto {
                 blocked: false,
                 name: "Test".to_string(),
-                user: u,
+                user: u.into(),
             }])
         });
 
@@ -491,7 +493,7 @@ async fn test_contacts_with_blacklist_1() {
         .returning(|_uid, _user, _phone_number| Ok(()));
 
     blacklist_dao_mock.expect_get().times(2).returning(|_| {
-        Ok(vec![BlacklistDto {
+        Ok(vec![BlacklistDao {
             id: Uuid::new_v4(),
             created_at: chrono::Utc::now().naive_local(),
             hash_blocker: hash("+4366412345678".to_string()),
@@ -578,7 +580,7 @@ async fn test_contacts_with_blacklist_2() {
         .returning(|_uid, _user, _phone_number| Ok(()));
 
     blacklist_dao_mock.expect_get().times(3).returning(|_| {
-        Ok(vec![BlacklistDto {
+        Ok(vec![BlacklistDao {
             id: Uuid::new_v4(),
             created_at: chrono::Utc::now().naive_local(),
             hash_blocked: hash("+4366412345678".to_string()), //reversed

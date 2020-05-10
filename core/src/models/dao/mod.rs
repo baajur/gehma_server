@@ -3,7 +3,7 @@ use crate::models::dto::*;
 use crate::schema::*;
 use crate::utils::phonenumber_to_international;
 
-use diesel::sql_types::{Text, Uuid, Nullable};
+use diesel::sql_types::{Nullable, Text, Uuid};
 use diesel::{Queryable, QueryableByName};
 
 use data_encoding::HEXUPPER;
@@ -62,6 +62,15 @@ impl UserDao {
             xp: 0,
             hash_tele_num: hash!(tele_num),
         }
+    }
+
+    pub fn apply_update(mut self, user: &UpdateUserDto, time: chrono::NaiveDateTime) -> Self {
+        self.led = user.led;
+        self.description = user.description.clone();
+        self.client_version = user.client_version.clone();
+        self.changed_at = time;
+
+        self
     }
 }
 
@@ -135,7 +144,7 @@ pub struct InsertAnalyticDao {
 }
 
 impl AnalyticDao {
-    pub fn my_from(user: &crate::models::dto::UserDto) -> InsertAnalyticDao {
+    pub fn my_from(user: &UserDao) -> InsertAnalyticDao {
         InsertAnalyticDao {
             tele_num: user.tele_num.clone(),
             led: user.led,
@@ -161,7 +170,7 @@ pub struct InsertUsageStatisticEntryDao {
 }
 
 impl UsageStatisticEntryDao {
-    pub fn my_from(user: &crate::models::dto::UserDto) -> InsertUsageStatisticEntryDao {
+    pub fn my_from(user: &UserDao) -> InsertUsageStatisticEntryDao {
         InsertUsageStatisticEntryDao {
             tele_num: user.tele_num.clone(),
             created_at: chrono::Local::now().naive_local(),
@@ -169,7 +178,9 @@ impl UsageStatisticEntryDao {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Queryable, Clone, Associations, QueryableByName, Insertable)]
+#[derive(
+    Debug, Serialize, Deserialize, Queryable, Clone, Associations, QueryableByName, Insertable,
+)]
 #[table_name = "contacts"]
 #[belongs_to(UserDao, foreign_key = "from_id")]
 #[belongs_to(ContactDao, foreign_key = "target_hash_tele_num")]

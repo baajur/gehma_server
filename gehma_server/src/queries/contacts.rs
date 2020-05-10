@@ -1,5 +1,6 @@
 use core::errors::ServiceError;
 use core::models::dto::*;
+use core::models::dao::*;
 use uuid::Uuid;
 use mockall::*;
 
@@ -10,8 +11,8 @@ pub trait PersistentContactsDao {
     fn create<'a>(
         &self,
         id: &Uuid,
-        _user: &UserDto,
+        _user: &UserDao,
         contacts: &'a Vec<&'a mut PayloadUserDto>,
     ) -> IResult<()>;
-    fn get_contacts(&self, user: &UserDto) -> IResult<Vec<ContactDto>>;
+    fn get_contacts(&self, user: &UserDao) -> IResult<Vec<ContactDto>>;
 }

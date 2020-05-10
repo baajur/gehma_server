@@ -1,6 +1,7 @@
 use actix_web::web;
 use chrono::{DateTime, Local};
 use core::errors::ServiceError;
+use core::models::dao::*;
 use core::models::dto::*;
 use core::models::PhoneNumber;
 use uuid::Uuid;
@@ -54,9 +55,11 @@ pub(crate) fn user_signin(
     }
 
     user_dao.get_ref().update_profile_picture(&user)?;
-    user_dao.get_ref().create_usage_statistics_for_user(&user)?;
+    user_dao
+        .get_ref()
+        .create_usage_statistics_for_user(&user)?;
 
-    Ok(user)
+    Ok(user.into())
 }
 
 pub(crate) fn get_entry(
@@ -68,13 +71,13 @@ pub(crate) fn get_entry(
 
     let user = get_user_by_id!(user_dao, &parsed, access_token.to_string());
 
-    let mut u = user?;
+    let mut user: UserDto = user?.into();
 
     // Do not display access token on normal GET
     // It will be only sent on `request_code`
-    u.access_token = None;
+    user.access_token = None;
 
-    Ok(u)
+    Ok(user)
 }
 
 pub(crate) fn update_token_handler(
@@ -85,7 +88,7 @@ pub(crate) fn update_token_handler(
 ) -> Result<(), ServiceError> {
     let parsed = Uuid::parse_str(&uid)?;
 
-    let user: Result<UserDto, ServiceError> =
+    let user =
         get_user_by_id!(user_dao, &parsed, access_token.to_owned());
 
     user?;
@@ -104,12 +107,13 @@ pub(crate) fn update_user_with_auth(
 ) -> Result<UserDto, ::core::errors::ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
 
-    let muser: Result<UserDto, ServiceError> =
+    let muser =
         get_user_by_id!(user_dao, &parsed, access_token.to_owned());
 
     muser?;
 
     update_user_without_auth(&parsed, user, &user_dao, current_time, notification_service)
+        .map(|w| w.into())
 }
 
 fn update_user_without_auth(
@@ -118,7 +122,7 @@ fn update_user_without_auth(
     user_dao: &web::Data<Box<dyn PersistentUserDao>>,
     current_time: DateTime<Local>,
     notification_service: web::Data<NotificationService>,
-) -> Result<UserDto, ::core::errors::ServiceError> {
+) -> Result<UserDao, ::core::errors::ServiceError> {
     info!("controllers/user/update_user_without_auth");
 
     // Do user update
