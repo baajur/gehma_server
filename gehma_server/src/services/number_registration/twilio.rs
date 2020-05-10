@@ -8,8 +8,7 @@ use core::errors::ServiceError;
 use reqwest::Client;
 
 
-//FIXME drop Debug
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct TwilioConfiguration {
     pub project_id: String,
     pub account_id: String,
@@ -79,7 +78,7 @@ struct TwilioVerificationResponse {
     //lookup removed on purpose
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct TwilioAuthenticator {
     pub config: TwilioConfiguration,
 }
