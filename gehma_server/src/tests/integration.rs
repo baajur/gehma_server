@@ -129,6 +129,64 @@ macro_rules! init_server_integration_test {
     }};
 }
 
+macro_rules! make_friend {
+    ($app:ident, $query_user:ident, $contact_name:expr, $contact_tele_num:expr) => {
+        let req = test::TestRequest::post()
+            .uri(&format!(
+                "/api/contacts/{}/{}?access_token={}",
+                $query_user.id.to_string(),
+                $query_user.country_code.clone(),
+                $query_user.access_token.clone().unwrap()
+            ))
+            .set_json(&core::models::dto::PayloadNumbersDto {
+                numbers: vec![core::models::dto::PayloadUserDto {
+                    name: $contact_name.to_string(),
+                    hash_tele_num: hash($contact_tele_num),
+                }],
+            })
+            .to_request();
+
+        execute!($app, req);
+    };
+}
+
+macro_rules! ignore_contact {
+    ($app:ident, $query_user:ident, $contact_tele_num:expr) => {
+        let req = test::TestRequest::post()
+            .uri(&format!(
+                "/api/user/{}/blacklist?access_token={}",
+                $query_user.id.to_string(),
+                $query_user.access_token.clone().unwrap()
+            ))
+            .set_json(&crate::routes::blacklist::PostData {
+                hash_blocked: hash($contact_tele_num).to_string(),
+                country_code: "AT".to_string(),
+            })
+            .to_request();
+
+        execute!($app, req);
+    };
+}
+
+macro_rules! gehma {
+    ($app:ident, $query_user:ident, $descr:expr) => {
+        let req = test::TestRequest::post()
+            .uri(&format!(
+                "/api/user/{}?access_token={}",
+                $query_user.id.to_string(),
+                $query_user.access_token.clone().unwrap()
+            ))
+            .set_json(&core::models::dto::UpdateUserDto {
+                description: $descr.to_string(),
+                led: true,
+                client_version: super::ALLOWED_CLIENT_VERSIONS[0].to_string(),
+            })
+            .to_request();
+
+        execute!($app, req);
+    };
+}
+
 macro_rules! execute {
     ($app: ident, $req:ident) => {{
         let resp = test::call_service(&mut $app, $req).await;
@@ -174,8 +232,6 @@ async fn create_user() -> UserDto {
     let resp = test::call_service(&mut app, req).await;
     assert!(resp.status().is_success());
 
-    eprintln!("Request_code called");
-
     let req = test::TestRequest::post()
         .uri("/api/auth/check")
         .set_json(&json!({
@@ -187,8 +243,6 @@ async fn create_user() -> UserDto {
         .to_request();
 
     let user: UserDto = test::read_response_json(&mut app, req).await;
-
-    eprintln!("auth/check called");
 
     /*
     let resp = test::call_service(&mut app, req).await;
@@ -222,8 +276,6 @@ async fn create_user2() -> UserDto {
     let resp = test::call_service(&mut app, req).await;
     assert!(resp.status().is_success());
 
-    eprintln!("Request_code called");
-
     let req = test::TestRequest::post()
         .uri("/api/auth/check")
         .set_json(&json!({
@@ -235,8 +287,6 @@ async fn create_user2() -> UserDto {
         .to_request();
 
     let user: UserDto = test::read_response_json(&mut app, req).await;
-
-    eprintln!("auth/check called");
 
     /*
     let resp = test::call_service(&mut app, req).await;
@@ -371,9 +421,7 @@ async fn test_update_token_user() {
 
     cleanup(&pool);
 
-    eprintln!("User creating");
     let cmp_user = create_user().await;
-    eprintln!("User created");
 
     let mut app = init_server_integration_test!(&pool).await;
 
@@ -408,20 +456,8 @@ async fn test_create_blacklist() {
 
     let mut app = init_server_integration_test!(&pool).await;
 
-    let req = test::TestRequest::post()
-        .uri(&format!(
-            "/api/user/{}/blacklist?access_token={}",
-            cmp_user.id.to_string(),
-            cmp_user.access_token.unwrap()
-        ))
-        .set_json(&crate::routes::blacklist::PostData {
-            hash_blocked: hash("+4365012345678").to_string(),
-            country_code: "AT".to_string(),
-        })
-        .to_request();
-
-    let resp = test::call_service(&mut app, req).await;
-
+    ignore_contact!(app, cmp_user, "+4365012345678");
+    
     cleanup(&pool);
 
     assert!(resp.status().is_success());
@@ -439,23 +475,9 @@ async fn test_get_all_blacklists() {
     let mut app = init_server_integration_test!(&pool).await;
 
     // Creating blacklist
-    let req = test::TestRequest::post()
-        .uri(&format!(
-            "/api/user/{}/blacklist?access_token={}",
-            cmp_user.id.to_string(),
-            cmp_user.access_token.clone().unwrap()
-        ))
-        .set_json(&crate::routes::blacklist::PostData {
-            hash_blocked: hash("+4365012345678").to_string(),
-            country_code: "AT".to_string(),
-        })
-        .to_request();
-
-    let resp = test::call_service(&mut app, req).await;
-    assert!(resp.status().is_success());
-
+    ignore_contact!(app, cmp_user, "+4365012345678");
+    
     // Get
-
     let req = test::TestRequest::get()
         .uri(&format!(
             "/api/user/{}/blacklist?access_token={}",
@@ -486,6 +508,8 @@ async fn test_get_all_blacklists() {
     );
 }
 
+/// This test checks if a user (A) blocks an user (B),
+/// user (B) `blocked` is true if (A) queries.
 #[actix_rt::test]
 async fn test_see_if_blocked_perspective_creator() {
     //env_logger::init();
@@ -499,41 +523,12 @@ async fn test_see_if_blocked_perspective_creator() {
     let mut app = init_server_integration_test!(&pool).await;
 
     // Creating contact
-
-    let req = test::TestRequest::post()
-        .uri(&format!(
-            "/api/contacts/{}/{}?access_token={}",
-            cmp_user.id.to_string(),
-            cmp_user.country_code.clone(),
-            cmp_user.access_token.clone().unwrap()
-        ))
-        .set_json(&core::models::dto::PayloadNumbersDto {
-            numbers: vec![core::models::dto::PayloadUserDto {
-                name: "test contact".to_string(),
-                hash_tele_num: hash("+4365012345678"),
-            }],
-        })
-        .to_request();
-
-    execute!(app, req);
+    make_friend!(app, cmp_user, "test contact", "+4365012345678");
 
     // Creating blacklist
-    let req = test::TestRequest::post()
-        .uri(&format!(
-            "/api/user/{}/blacklist?access_token={}",
-            cmp_user.id.to_string(),
-            cmp_user.access_token.clone().unwrap()
-        ))
-        .set_json(&crate::routes::blacklist::PostData {
-            hash_blocked: hash("+4365012345678").to_string(),
-            country_code: "AT".to_string(),
-        })
-        .to_request();
-
-    execute!(app, req);
+    ignore_contact!(app, cmp_user, "+4365012345678");
 
     // Get all blocked
-
     let req = test::TestRequest::get()
         .uri(&format!(
             "/api/contacts/{}?access_token={}",
@@ -555,6 +550,8 @@ async fn test_see_if_blocked_perspective_creator() {
     assert!(contacts.get(0).unwrap().blocked);
 }
 
+/// This test checks if a user (A) blocks an user (B),
+/// user (A) `blocked` is true if (B) queries.
 #[actix_rt::test]
 async fn test_see_if_blocked_perspective_blocked() {
     //env_logger::init();
@@ -568,41 +565,12 @@ async fn test_see_if_blocked_perspective_blocked() {
     let mut app = init_server_integration_test!(&pool).await;
 
     // Creating contact
-
-    let req = test::TestRequest::post()
-        .uri(&format!(
-            "/api/contacts/{}/{}?access_token={}",
-            cmp_user2.id.to_string(),
-            cmp_user2.country_code.clone(),
-            cmp_user2.access_token.clone().unwrap()
-        ))
-        .set_json(&core::models::dto::PayloadNumbersDto {
-            numbers: vec![core::models::dto::PayloadUserDto {
-                name: "test contact".to_string(),
-                hash_tele_num: hash("+4366412345678"),
-            }],
-        })
-        .to_request();
-
-    execute!(app, req);
+    make_friend!(app, cmp_user2, "test contact", "+4366412345678");
 
     // Creating blacklist
-    let req = test::TestRequest::post()
-        .uri(&format!(
-            "/api/user/{}/blacklist?access_token={}",
-            cmp_user2.id.to_string(),
-            cmp_user2.access_token.clone().unwrap()
-        ))
-        .set_json(&crate::routes::blacklist::PostData {
-            hash_blocked: hash("+4366412345678").to_string(),
-            country_code: "AT".to_string(),
-        })
-        .to_request();
-
-    execute!(app, req);
+    ignore_contact!(app, cmp_user2, "+4366412345678");
 
     // Get all blocked
-
     let req = test::TestRequest::get()
         .uri(&format!(
             "/api/contacts/{}?access_token={}",
