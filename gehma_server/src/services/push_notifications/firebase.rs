@@ -11,7 +11,7 @@ use futures::Future;
 use reqwest::header::{AUTHORIZATION, CONTENT_TYPE};
 use reqwest::Client;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct FirebaseConfiguration {
     pub fcm_token: String,
 }
