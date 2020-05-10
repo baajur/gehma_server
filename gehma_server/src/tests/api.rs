@@ -274,7 +274,7 @@ async fn test_update_user() {
     assert_eq!(user.tele_num, "+4366412345678".to_string());
     assert_eq!(user.country_code, "AT".to_string());
     assert_eq!(user.led, true);
-    assert_eq!(user.xp, 100);
+    assert_eq!(user.xp, 0);
     assert_eq!(user.description, "test".to_string());
 }
 
@@ -462,10 +462,13 @@ async fn test_contacts() {
         .expect_get_contacts()
         .times(1)
         .returning(|_user| {
+            let mut u = USER.clone();
+            u.led = true;
+            u.description = "test".to_string();
             Ok(vec![ContactDto {
                 blocked: false,
                 name: "Test".to_string(),
-                user: USER.clone(),
+                user: u,
             }])
         });
 
