@@ -1,23 +1,11 @@
 use super::*;
-use crate::services::number_registration::testing::*;
-use crate::services::number_registration::{
-    NumberRegistrationService, NumberRegistrationServiceTrait,
-};
-use crate::services::push_notifications::testing::TestingNotificationService;
-use crate::services::push_notifications::NotificationService;
 
 use actix_web::{test, web, App};
-use core::models::dto::*;
-//use diesel_migrations::run_pending_migrations;
 use serde_json::json;
-
-use data_encoding::HEXUPPER;
-use ring::digest;
 
 use crate::persistence::blacklist::{MockPersistentBlacklistDao, PersistentBlacklistDao};
 use crate::persistence::contacts::{MockPersistentContactsDao, PersistentContactsDao};
 use crate::persistence::user::{MockPersistentUserDao, PersistentUserDao};
-use crate::ratelimits::{DefaultRateLimitPolicy, RateLimitWrapper};
 
 use uuid::Uuid;
 
@@ -38,29 +26,6 @@ lazy_static! {
         access_token: None,
         firebase_token: None,
     };
-}
-
-fn set_testing_auth() -> NumberRegistrationService {
-    let config = TestingAuthConfiguration {
-        id: "test".to_string(),
-        auth_token: "test".to_string(),
-    };
-
-    Box::new(TestingAuthentificator { config: config })
-}
-
-fn set_testing_notification_service() -> NotificationService {
-    Box::new(TestingNotificationService)
-}
-
-fn set_ratelimits() -> RateLimitWrapper {
-    RateLimitWrapper::new(Box::new(DefaultRateLimitPolicy))
-}
-
-fn hash(value: impl Into<String>) -> HashedTeleNum {
-    HashedTeleNum(
-        HEXUPPER.encode(digest::digest(&digest::SHA256, value.into().as_bytes()).as_ref()),
-    )
 }
 
 macro_rules! init_server {
@@ -119,7 +84,7 @@ macro_rules! setup_login_account {
         $user_dao //login
             .expect_get_by_id()
             .times(1)
-            .returning(|id, _access_token| Ok(USER.clone()));
+            .returning(|_id, _access_token| Ok(USER.clone()));
     };
 }
 
@@ -248,7 +213,7 @@ async fn test_update_user() {
     user_dao_mock
         .expect_update_user()
         .times(1)
-        .returning(|id, user, current_time| {
+        .returning(|_id, user, current_time| {
             let u = USER.clone();
             Ok((u.apply_update(user, current_time.naive_local()), vec![]))
         });
@@ -325,7 +290,7 @@ async fn test_create_blacklist() {
     user_dao_mock
         .expect_get_by_hash_tele_num_unsafe()
         .times(1)
-        .returning(|hash_tele_num| Ok(USER.clone()));
+        .returning(|_hash_tele_num| Ok(USER.clone()));
 
     blacklist_dao_mock
         .expect_create()
@@ -447,7 +412,7 @@ async fn test_contacts() {
     user_dao_mock
         .expect_get_by_id()
         .times(2)
-        .returning(|id, _access_token| Ok(USER.clone()));
+        .returning(|_id, _access_token| Ok(USER.clone()));
 
     contacts_dao_mock
         .expect_create()
@@ -520,7 +485,7 @@ async fn test_contacts_with_blacklist_1() {
     user_dao_mock
         .expect_get_by_id()
         .times(2)
-        .returning(|id, _access_token| Ok(USER.clone()));
+        .returning(|_id, _access_token| Ok(USER.clone()));
 
     contacts_dao_mock
         .expect_create()
@@ -607,7 +572,7 @@ async fn test_contacts_with_blacklist_2() {
     user_dao_mock
         .expect_get_by_id()
         .times(2)
-        .returning(|id, _access_token| Ok(USER.clone()));
+        .returning(|_id, _access_token| Ok(USER.clone()));
 
     contacts_dao_mock
         .expect_create()

@@ -1,7 +1,5 @@
 use crate::persistence::user::PersistentUserDao;
-use crate::services::push_notifications::NotificationService;
 use crate::Pool;
-use actix_web::web;
 use chrono::{DateTime, Local};
 use core::errors::ServiceError;
 use core::models::dao::*;
@@ -311,8 +309,6 @@ fn get_users_for_sending_push_notification(
     user: &UserDto, //sender
     pool: &Pool,
 ) -> Result<Vec<ContactPushNotificationDao>, ServiceError> {
-    use diesel::sql_types::{Text, Uuid};
-
     info!("queries/user/get_users_for_sending_push_notification");
 
     let conn: &PgConnection = &pool.get().unwrap();

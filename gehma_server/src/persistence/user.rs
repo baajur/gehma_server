@@ -5,8 +5,6 @@ use core::models::dao::ContactPushNotificationDao;
 use core::models::PhoneNumber;
 use uuid::Uuid;
 use mockall::*;
-use actix_web::web;
-use crate::services::push_notifications::NotificationService;
 
 type IResult<K> = Result<K, ServiceError>;
 

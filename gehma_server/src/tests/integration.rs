@@ -1,7 +1,4 @@
-use crate::ratelimits::{DefaultRateLimitPolicy, RateLimitWrapper};
-use data_encoding::HEXUPPER;
-use ring::digest;
-use uuid::Uuid;
+use super::*;
 
 use actix_web::{test, web, App};
 
@@ -13,45 +10,15 @@ use crate::services::push_notifications::{
 };
 
 use crate::services::number_registration::{
-    NumberRegistrationService, NumberRegistrationServiceTrait,
+    NumberRegistrationServiceTrait,
 };
 
-use crate::dao_factory::*;
-
-use crate::services::number_registration::testing::*;
-use crate::services::push_notifications::testing::TestingNotificationService;
-
 use crate::Pool;
-use core::models::dto::*;
 use diesel::r2d2::{self, ConnectionManager};
 
 use serde_json::json;
 
-use diesel::prelude::*;
 use diesel_migrations::run_pending_migrations;
-
-fn set_testing_auth() -> NumberRegistrationService {
-    let config = TestingAuthConfiguration {
-        id: "test".to_string(),
-        auth_token: "test".to_string(),
-    };
-
-    Box::new(TestingAuthentificator { config: config })
-}
-
-fn set_testing_notification_service() -> NotificationService {
-    Box::new(TestingNotificationService)
-}
-
-fn set_ratelimits() -> RateLimitWrapper {
-    RateLimitWrapper::new(Box::new(DefaultRateLimitPolicy))
-}
-
-fn hash(value: impl Into<String>) -> HashedTeleNum {
-    HashedTeleNum(
-        HEXUPPER.encode(digest::digest(&digest::SHA256, value.into().as_bytes()).as_ref()),
-    )
-}
 
 fn get_pool() -> Pool {
     let database_url = "postgres://psql:test@127.0.0.1:10000/gehma";
@@ -713,7 +680,7 @@ async fn test_create_blacklist() {
     cleanup(&pool);
 
     let cmp_user = create_user().await;
-    let cmp_user2 = create_user2().await;
+    let _cmp_user2 = create_user2().await;
 
     let mut app = init_server_integration_test!(&pool).await;
 
@@ -729,7 +696,7 @@ async fn test_get_all_blacklists() {
     cleanup(&pool);
 
     let cmp_user = create_user().await;
-    let cmp_user2 = create_user2().await;
+    let _cmp_user2 = create_user2().await;
 
     let mut app = init_server_integration_test!(&pool).await;
 
@@ -777,7 +744,7 @@ async fn test_see_if_blocked_perspective_creator() {
     cleanup(&pool);
 
     let cmp_user = create_user().await;
-    let cmp_user2 = create_user2().await;
+    let _cmp_user2 = create_user2().await;
 
     let mut app = init_server_integration_test!(&pool).await;
 
@@ -818,7 +785,7 @@ async fn test_see_if_blocked_perspective_blocked() {
 
     cleanup(&pool);
 
-    let cmp_user = create_user().await;
+    let _cmp_user = create_user().await;
     let cmp_user2 = create_user2().await;
 
     let mut app = init_server_integration_test!(&pool).await;
