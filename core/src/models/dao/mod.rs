@@ -3,6 +3,9 @@ use crate::models::dto::*;
 use crate::schema::*;
 use crate::utils::phonenumber_to_international;
 
+use diesel::sql_types::{Text, Uuid, Nullable};
+use diesel::{Queryable, QueryableByName};
+
 use data_encoding::HEXUPPER;
 use ring::digest;
 
@@ -186,6 +189,18 @@ pub struct ContactInsertDao {
     pub created_at: chrono::NaiveDateTime,
     pub name: String,
     pub target_hash_tele_num: HashedTeleNum,
+}
+
+/// Database response for users which
+/// should be send a push notification
+#[derive(Debug, Deserialize, Clone, Queryable, QueryableByName)]
+pub struct ContactPushNotificationDao {
+    #[sql_type = "Uuid"]
+    pub from_id: uuid::Uuid,
+    #[sql_type = "Text"]
+    pub name: String,
+    #[sql_type = "Nullable<Text>"]
+    pub firebase_token: Option<String>,
 }
 
 /*

@@ -177,7 +177,7 @@ pub(crate) async fn main() -> std::io::Result<()> {
                     .service(
                         web::resource("/user/{uid}")
                             .route(web::get().to(routes::user::get))
-                            .route(web::put().to(routes::user::update)), //token update
+                            .route(web::put().to(routes::user::update)),
                     )
                     .service(
                         web::resource("/contacts/{uid}/{country_code}")

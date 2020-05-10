@@ -1,6 +1,7 @@
 use chrono::{DateTime, Local};
 use core::errors::ServiceError;
 use core::models::dto::*;
+use core::models::dao::ContactPushNotificationDao;
 use core::models::PhoneNumber;
 use uuid::Uuid;
 use mockall::*;
@@ -42,8 +43,7 @@ pub trait PersistentUserDao {
         id: &Uuid,
         user: &UpdateUserDto,
         current_time: DateTime<Local>,
-        notification_service: web::Data<NotificationService>,
-    ) -> IResult<UserDto>;
+    ) -> IResult<(UserDto, Vec<ContactPushNotificationDao>)>;
     fn update_profile_picture(&self, user: &UserDto) -> IResult<()>;
     fn update_token(&self, id: &Uuid, token: String) -> IResult<()>;
 }

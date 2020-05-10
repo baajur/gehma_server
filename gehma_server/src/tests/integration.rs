@@ -8,7 +8,9 @@ use actix_web::{test, web, App};
 use crate::persistence::blacklist::PersistentBlacklistDao;
 use crate::persistence::contacts::PersistentContactsDao;
 use crate::persistence::user::PersistentUserDao;
-use crate::services::push_notifications::NotificationService;
+use crate::services::push_notifications::{
+    MockNotificationServiceTrait, NotificationService, NotificationServiceTrait,
+};
 
 use crate::services::number_registration::{
     NumberRegistrationService, NumberRegistrationServiceTrait,
@@ -74,15 +76,22 @@ fn setup_database(pool: &Pool) {
 
 macro_rules! init_server_integration_test {
     ($pool:expr) => {{
+        private_init_server_integration_test!(
+            $pool,
+            set_testing_notification_service() as NotificationService
+        )
+    }};
+}
+
+macro_rules! private_init_server_integration_test {
+    ($pool:expr, $notification_service:expr) => {{
         setup_database($pool);
         test::init_service(
             App::new()
                 .data(set_testing_auth() as Box<dyn NumberRegistrationServiceTrait>)
-                .data(set_testing_notification_service() as NotificationService)
+                .data($notification_service)
                 .data(set_ratelimits())
                 //.data(get_dao_factory($pool).get_user_dao())
-                .data(get_dao_factory($pool).get_blacklist_dao())
-                .data(get_dao_factory($pool).get_contacts_dao())
                 .data(Box::new(get_dao_factory($pool).get_user_dao()) as Box<dyn PersistentUserDao>)
                 .data(Box::new(get_dao_factory($pool).get_blacklist_dao())
                     as Box<dyn PersistentBlacklistDao>)
@@ -170,11 +179,11 @@ macro_rules! ignore_contact {
 
 macro_rules! gehma {
     ($app:ident, $query_user:ident, $descr:expr) => {
-        let req = test::TestRequest::post()
+        let req = test::TestRequest::put()
             .uri(&format!(
                 "/api/user/{}?access_token={}",
                 $query_user.id.to_string(),
-                $query_user.access_token.clone().unwrap()
+                $query_user.access_token.clone().expect("no access token")
             ))
             .set_json(&core::models::dto::UpdateUserDto {
                 description: $descr.to_string(),
@@ -191,13 +200,20 @@ macro_rules! execute {
     ($app: ident, $req:ident) => {{
         let resp = test::call_service(&mut $app, $req).await;
         if !resp.status().is_success() {
-            eprintln!("{:?}", resp.response().error().unwrap());
+            eprintln!("Status {}", resp.status());
+            eprintln!(
+                "{:?}",
+                resp.response().error().expect("Error but no error message")
+            );
         }
     }};
 }
 
 fn cleanup(pool: &Pool) {
     use diesel::sql_query;
+
+    log::debug!("cleanup");
+
     sql_query("DELETE FROM users;")
         .execute(&pool.get().unwrap())
         .unwrap();
@@ -244,6 +260,8 @@ async fn create_user() -> UserDto {
 
     let user: UserDto = test::read_response_json(&mut app, req).await;
 
+    log::debug!("User created");
+
     /*
     let resp = test::call_service(&mut app, req).await;
 
@@ -260,6 +278,50 @@ async fn create_user2() -> UserDto {
     let mut app = init_server_integration_test!(&pool).await;
 
     let tele_num = "+4365012345678";
+    let country_code = "AT";
+    let client_version = super::ALLOWED_CLIENT_VERSIONS[0].to_string();
+    let code = "123";
+
+    let req = test::TestRequest::post()
+        .uri("/api/auth/request_code")
+        .set_json(&json! ({
+            "tele_num": tele_num,
+            "country_code": country_code,
+            "client_version": client_version,
+        }))
+        .to_request();
+
+    let resp = test::call_service(&mut app, req).await;
+    assert!(resp.status().is_success());
+
+    let req = test::TestRequest::post()
+        .uri("/api/auth/check")
+        .set_json(&json!({
+            "tele_num": tele_num,
+            "country_code": country_code,
+            "client_version": client_version,
+            "code": code
+        }))
+        .to_request();
+
+    let user: UserDto = test::read_response_json(&mut app, req).await;
+
+    /*
+    let resp = test::call_service(&mut app, req).await;
+
+    if !resp.status().is_success() {
+        eprintln!("{:?}", resp.response().error().unwrap());
+    }
+    */
+
+    user
+}
+
+async fn create_user3() -> UserDto {
+    let pool = get_pool();
+    let mut app = init_server_integration_test!(&pool).await;
+
+    let tele_num = "+4366912345678";
     let country_code = "AT";
     let client_version = super::ALLOWED_CLIENT_VERSIONS[0].to_string();
     let code = "123";
@@ -319,6 +381,24 @@ macro_rules! get_user {
         let user: UserDto = test::read_response_json(&mut $app, req).await;
 
         user
+    }};
+}
+
+macro_rules! update_token {
+    ($app:ident, $cmp_user:ident, $token:expr) => {{
+        let req = test::TestRequest::put()
+            .uri(&format!(
+                "/api/user/{}/token?access_token={}",
+                $cmp_user.id.to_string(),
+                $cmp_user.access_token.clone().unwrap(),
+            ))
+            .set_json(&crate::routes::user::UpdateTokenPayload {
+                token: $token.to_string(),
+            })
+            .to_request();
+
+        let resp = test::call_service(&mut $app, req).await;
+        assert!(resp.status().is_success());
     }};
 }
 
@@ -425,24 +505,205 @@ async fn test_update_token_user() {
 
     let mut app = init_server_integration_test!(&pool).await;
 
-    let req = test::TestRequest::put()
-        .uri(&format!(
-            "/api/user/{}/token?access_token={}",
-            cmp_user.id.to_string(),
-            cmp_user.access_token.clone().unwrap(),
-        ))
-        .set_json(&crate::routes::user::UpdateTokenPayload {
-            token: "test".to_string(),
-        })
-        .to_request();
-
-    let resp = test::call_service(&mut app, req).await;
-    assert!(resp.status().is_success());
+    update_token!(app, cmp_user, "token");
 
     let updated_user = get_user!(app, cmp_user);
 
     cleanup(&pool);
-    assert_eq!("test".to_string(), updated_user.firebase_token.unwrap());
+    assert_eq!("token".to_string(), updated_user.firebase_token.unwrap());
+}
+
+#[actix_rt::test]
+async fn test_update_description() {
+    //env_logger::init();
+    let pool = get_pool();
+
+    cleanup(&pool);
+
+    let cmp_user = create_user().await;
+
+    let mut app = init_server_integration_test!(&pool).await;
+
+    gehma!(app, cmp_user, "updated description");
+
+    let updated_user = get_user!(app, cmp_user);
+
+    cleanup(&pool);
+    assert!(updated_user.led);
+    assert_eq!("updated description".to_string(), updated_user.description);
+    assert_eq!(cmp_user.id, updated_user.id);
+    assert!(cmp_user.changed_at < updated_user.changed_at);
+    //assert_eq!(cmp_user.created_at, updated_user.created_at);
+}
+
+#[actix_rt::test]
+async fn test_push_notifications() {
+    //env_logger::init();
+    let pool = get_pool();
+
+    cleanup(&pool);
+
+    let cmp_user = create_user().await;
+    let cmp_user2 = create_user2().await;
+    let cmp_user3 = create_user3().await;
+
+    let mut m = MockNotificationServiceTrait::new();
+
+    m.expect_push().times(1).returning(|contacts| {
+        assert_eq!(contacts.len(), 1);
+        assert_eq!("Second".to_string(), contacts.get(0).unwrap().0);
+        assert_eq!("token2".to_string(), contacts.get(0).unwrap().1);
+        Ok(())
+    });
+
+    let mut app = private_init_server_integration_test!(
+        &pool,
+        Box::new(m) as Box<dyn NotificationServiceTrait>
+    )
+    .await;
+
+    update_token!(app, cmp_user, "token1");
+    update_token!(app, cmp_user2, "token2");
+    update_token!(app, cmp_user3, "token");
+
+    make_friend!(app, cmp_user, "First", cmp_user2.tele_num);
+    make_friend!(app, cmp_user2, "Second", cmp_user.tele_num);
+
+    gehma!(app, cmp_user, "updated description");
+
+    let user = get_user!(app, cmp_user);
+
+    assert_eq!(cmp_user.id, user.id);
+    assert_eq!("updated description".to_string(), user.description);
+}
+
+#[actix_rt::test]
+async fn test_push_notifications_one_friendship() {
+    //env_logger::init();
+    let pool = get_pool();
+
+    cleanup(&pool);
+
+    let cmp_user = create_user().await;
+    let cmp_user2 = create_user2().await;
+    let cmp_user3 = create_user3().await;
+
+    let mut m = MockNotificationServiceTrait::new();
+
+    m.expect_push().times(1).returning(|contacts| {
+        assert_eq!(contacts.len(), 0);
+        Ok(())
+    });
+
+    let mut app = private_init_server_integration_test!(
+        &pool,
+        Box::new(m) as Box<dyn NotificationServiceTrait>
+    )
+    .await;
+
+    update_token!(app, cmp_user, "token1");
+    update_token!(app, cmp_user2, "token2");
+    update_token!(app, cmp_user3, "token3");
+
+    //only one friendship
+    make_friend!(app, cmp_user, "First", cmp_user2.tele_num);
+
+    gehma!(app, cmp_user, "updated description");
+
+    let user = get_user!(app, cmp_user);
+
+    assert_eq!(cmp_user.id, user.id);
+    assert_eq!("updated description".to_string(), user.description);
+}
+
+#[actix_rt::test]
+async fn test_push_notifications_blacklist1() {
+    //env_logger::init();
+    let pool = get_pool();
+
+    cleanup(&pool);
+
+    let cmp_user = create_user().await;
+    let cmp_user2 = create_user2().await;
+    let cmp_user3 = create_user3().await;
+
+    let mut m = MockNotificationServiceTrait::new();
+
+    m.expect_push().times(1).returning(|contacts| {
+        assert_eq!(contacts.len(), 1);
+        assert_eq!("Third2".to_string(), contacts.get(0).unwrap().0);
+        assert_eq!("token3".to_string(), contacts.get(0).unwrap().1);
+        Ok(())
+    });
+
+    let mut app = private_init_server_integration_test!(
+        &pool,
+        Box::new(m) as Box<dyn NotificationServiceTrait>
+    )
+    .await;
+
+    update_token!(app, cmp_user, "token1");
+    update_token!(app, cmp_user2, "token2");
+    update_token!(app, cmp_user3, "token3");
+
+    make_friend!(app, cmp_user, "First", cmp_user2.tele_num.clone());
+    make_friend!(app, cmp_user, "Third", cmp_user3.tele_num);
+    make_friend!(app, cmp_user2, "Second", cmp_user.tele_num.clone());
+    make_friend!(app, cmp_user3, "Third2", cmp_user.tele_num.clone());
+
+    ignore_contact!(app, cmp_user, cmp_user2.tele_num);
+
+    gehma!(app, cmp_user, "updated description");
+
+    let user = get_user!(app, cmp_user);
+
+    assert_eq!(cmp_user.id, user.id);
+    assert_eq!("updated description".to_string(), user.description);
+}
+
+#[actix_rt::test]
+async fn test_push_notifications_blacklist2() {
+    //env_logger::init();
+    let pool = get_pool();
+
+    cleanup(&pool);
+
+    let cmp_user = create_user().await;
+    let cmp_user2 = create_user2().await;
+    let cmp_user3 = create_user3().await;
+
+    let mut m = MockNotificationServiceTrait::new();
+
+    m.expect_push().times(1).returning(|contacts| {
+        assert_eq!(contacts.len(), 1);
+        assert_eq!("Third2".to_string(), contacts.get(0).unwrap().0);
+        assert_eq!("token3".to_string(), contacts.get(0).unwrap().1);
+        Ok(())
+    });
+
+    let mut app = private_init_server_integration_test!(
+        &pool,
+        Box::new(m) as Box<dyn NotificationServiceTrait>
+    )
+    .await;
+
+    update_token!(app, cmp_user, "token1");
+    update_token!(app, cmp_user2, "token2");
+    update_token!(app, cmp_user3, "token3");
+
+    make_friend!(app, cmp_user, "First", cmp_user2.tele_num.clone());
+    make_friend!(app, cmp_user2, "Second", cmp_user.tele_num.clone());
+    make_friend!(app, cmp_user, "Third", cmp_user3.tele_num.clone());
+    make_friend!(app, cmp_user3, "Third2", cmp_user.tele_num.clone());
+
+    ignore_contact!(app, cmp_user2, cmp_user.tele_num); //REVERSED HERE
+
+    gehma!(app, cmp_user, "updated description");
+
+    let user = get_user!(app, cmp_user);
+
+    assert_eq!(cmp_user.id, user.id);
+    assert_eq!("updated description".to_string(), user.description);
 }
 
 #[actix_rt::test]
@@ -457,10 +718,8 @@ async fn test_create_blacklist() {
     let mut app = init_server_integration_test!(&pool).await;
 
     ignore_contact!(app, cmp_user, "+4365012345678");
-    
-    cleanup(&pool);
 
-    assert!(resp.status().is_success());
+    cleanup(&pool);
 }
 
 #[actix_rt::test]
@@ -476,7 +735,7 @@ async fn test_get_all_blacklists() {
 
     // Creating blacklist
     ignore_contact!(app, cmp_user, "+4365012345678");
-    
+
     // Get
     let req = test::TestRequest::get()
         .uri(&format!(

@@ -7,7 +7,7 @@ use core::models::PhoneNumber;
 use uuid::Uuid;
 
 use crate::services::push_notifications::NotificationService;
-use log::{error, info};
+use log::{debug, error, info};
 
 //use crate::routes::user::{ResponseContact, UpdateTokenPayload, UpdateUser};
 use crate::get_user_by_id;
@@ -112,17 +112,36 @@ pub(crate) fn update_user_with_auth(
     update_user_without_auth(&parsed, user, &user_dao, current_time, notification_service)
 }
 
-pub(crate) fn update_user_without_auth(
+fn update_user_without_auth(
     uid: &Uuid,
     user: &UpdateUserDto,
     user_dao: &web::Data<Box<dyn PersistentUserDao>>,
     current_time: DateTime<Local>,
     notification_service: web::Data<NotificationService>,
 ) -> Result<UserDto, ::core::errors::ServiceError> {
-    let user = user_dao
-        .get_ref()
-        .update_user(uid, user, current_time, notification_service)?;
+    info!("controllers/user/update_user_without_auth");
 
+    // Do user update
+    let (user, contacts) = user_dao.get_ref().update_user(uid, user, current_time)?;
+
+    debug!("Contacts sending push_notifications {}", contacts.len());
+
+    // Sending push notification
+    notification_service.into_inner().push(
+        contacts
+            .into_iter()
+            .filter_map(|c| {
+                if c.firebase_token.is_some() {
+                    Some((c.name, c.firebase_token.unwrap()))
+                } else {
+                    debug!("Filtering contact {} because no token", c.name);
+                    None
+                }
+            })
+            .collect(),
+    )?;
+
+    // Log the user update change
     user_dao.get_ref().create_analytics_for_user(&user)?;
 
     Ok(user)

@@ -1,7 +1,7 @@
 use crate::persistence::user::PersistentUserDao;
 use crate::services::push_notifications::NotificationService;
-use actix_web::{web};
 use crate::Pool;
+use actix_web::web;
 use chrono::{DateTime, Local};
 use core::errors::ServiceError;
 use core::models::dao::*;
@@ -52,6 +52,7 @@ impl PersistentUserDao for PgUserDao {
         use core::schema::users::dsl::users;
 
         let new_inv = UserDao::my_from(&tel.to_string(), country_code, version, access_token);
+
         let conn: &PgConnection = &self.pool.get().unwrap();
 
         diesel::insert_into(users)
@@ -89,8 +90,7 @@ impl PersistentUserDao for PgUserDao {
         myid: &Uuid,
         user: &UpdateUserDto,
         _current_time: DateTime<Local>,
-        notification_service: web::Data<NotificationService>,
-    ) -> Result<UserDto, ::core::errors::ServiceError> {
+    ) -> Result<(UserDto, Vec<ContactPushNotificationDao>), ::core::errors::ServiceError> {
         info!("queries/user/update_user_query");
         use core::schema::users::dsl::{
             changed_at, client_version, description, id, led, users, xp,
@@ -142,29 +142,33 @@ impl PersistentUserDao for PgUserDao {
             })
             .and_then(|user| {
                 if my_led {
-                    //Sending push notification
-                    /*if !self
-                        .ratelimit_service
-                        .inner
-                        .lock()
-                        .unwrap()
-                        .check_rate_limit_updates(&myid, &self.pool, current_time)?
-                    {*/
+                    let contacts = get_users_for_sending_push_notification(&user, &self.pool)?;
 
-                    sending_push_notifications(&user, &self.pool, &notification_service).map_err(
-                        |err| {
-                            error!("{}", err);
-                            ServiceError::BadRequest("Cannot send push notifications".to_string())
-                        },
-                    )?;
+                    Ok((user, contacts))
 
-                    //return Err(ServiceError::RateLimit("No push notification sent. Try again later".to_string()));
-                    /*} else {
-                        info!("Ratelimit reached, not sending push notification");
-                    }*/
+                //Sending push notification
+                /*if !self
+                    .ratelimit_service
+                    .inner
+                    .lock()
+                    .unwrap()
+                    .check_rate_limit_updates(&myid, &self.pool, current_time)?
+                {*/
+
+                /*sending_push_notifications(&user, &self.pool, &notification_service).map_err(
+                    |err| {
+                        error!("{}", err);
+                        ServiceError::BadRequest("Cannot send push notifications".to_string())
+                    },
+                )?;*/
+
+                //return Err(ServiceError::RateLimit("No push notification sent. Try again later".to_string()));
+                /*} else {
+                    info!("Ratelimit reached, not sending push notification");
+                }*/
+                } else {
+                    Ok((user, vec![]))
                 }
-
-                Ok(user)
             })
     }
 
@@ -303,36 +307,21 @@ impl PersistentUserDao for PgUserDao {
     }
 }
 
-fn sending_push_notifications(
-    user: &UserDto, //this is the sender
+fn get_users_for_sending_push_notification(
+    user: &UserDto, //sender
     pool: &Pool,
-    notify_service: &NotificationService,
-) -> Result<(), ServiceError> {
-    info!("queries/user/sending_push_notifications");
+) -> Result<Vec<ContactPushNotificationDao>, ServiceError> {
     use diesel::sql_types::{Text, Uuid};
-    use diesel::{Queryable, QueryableByName};
+
+    info!("queries/user/get_users_for_sending_push_notification");
 
     let conn: &PgConnection = &pool.get().unwrap();
 
-    type FromId = uuid::Uuid;
-    type Name = String;
-    type FirebaseToken = String;
-
-    #[derive(Debug, Deserialize, Clone, Queryable, QueryableByName)]
-    struct DatabaseResponse {
-        #[sql_type = "Uuid"]
-        from_id: FromId,
-        #[sql_type = "Text"]
-        name: Name,
-        #[sql_type = "Text"]
-        firebase_token: FirebaseToken,
-    };
-
-    let my_contacts: Vec<DatabaseResponse> = diesel::sql_query(
+    let my_contacts: Vec<ContactPushNotificationDao> = diesel::sql_query(
         "SELECT from_id, name, firebase_token FROM contact_view WHERE from_id = $1",
     )
-    .bind::<Uuid, _>(user.id)
-    .load::<DatabaseResponse>(conn)
+    .bind::<diesel::sql_types::Uuid, _>(user.id)
+    .load::<ContactPushNotificationDao>(conn)
     .map_err(|_db_error| {
         error!("{:?}", _db_error);
         ServiceError::BadRequest("Database error".into())
@@ -341,13 +330,13 @@ fn sending_push_notifications(
     .take(crate::LIMIT_PUSH_NOTIFICATION_CONTACTS)
     .collect();
 
-    //FIXME check
+    /*
     notify_service.clone().push(
         my_contacts
             .into_iter()
             .map(|c| (c.name, c.firebase_token))
             .collect(),
-    )?;
+    )?;*/
 
-    Ok(())
+    Ok(my_contacts)
 }

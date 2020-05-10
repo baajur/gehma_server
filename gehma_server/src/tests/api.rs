@@ -245,12 +245,13 @@ async fn test_update_user() {
             })
         });
 
-    user_dao_mock.expect_update_user().times(1).returning(
-        |id, user, current_time, _notify_service| {
+    user_dao_mock
+        .expect_update_user()
+        .times(1)
+        .returning(|id, user, current_time| {
             let u = USER.clone();
-            Ok(u.apply_update(user, current_time.naive_local()))
-        },
-    );
+            Ok((u.apply_update(user, current_time.naive_local()), vec![]))
+        });
 
     let mut app = init_server!(user_dao_mock, blacklist_dao_mock, contacts_dao_mock).await;
 
