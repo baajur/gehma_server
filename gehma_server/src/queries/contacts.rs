@@ -10,8 +10,6 @@ use crate::Pool;
 use crate::persistence::contacts::PersistentContactsDao;
 use log::{error, info};
 
-pub const MAX_ALLOWED_CONTACTS: usize = 10000;
-
 #[derive(Clone)]
 pub struct PgContactsDao {
     pub pool: Pool,

@@ -649,3 +649,35 @@ async fn test_contacts_with_blacklist_2() {
     //let resp = test::call_service(&mut app, req).await;
     //assert!(resp.status().is_success());
 }
+
+#[actix_rt::test]
+async fn test_contacts_max() {
+    let user_dao_mock = MockPersistentUserDao::new();
+    let blacklist_dao_mock = MockPersistentBlacklistDao::new();
+    let contacts_dao_mock = MockPersistentContactsDao::new();
+
+    let mut app = init_server!(user_dao_mock, blacklist_dao_mock, contacts_dao_mock).await;
+
+    let len = 100000;
+    let mut numbers = Vec::with_capacity(len);
+
+    for _ in 0..len {
+        numbers.push(PayloadUserDto {
+            name: "Test".to_string(),
+            hash_tele_num: hash("+4366412345678"),
+        });
+    }
+
+    let req = test::TestRequest::post()
+        .uri(&format!(
+            "/api/contacts/{}/{}?access_token={}",
+            Uuid::new_v4(),
+            "AT",
+            "ACCESS"
+        ))
+        .set_json(&PayloadNumbersDto { numbers })
+        .to_request();
+
+    let resp = test::call_service(&mut app, req).await;
+    assert!(resp.status().is_client_error());
+}

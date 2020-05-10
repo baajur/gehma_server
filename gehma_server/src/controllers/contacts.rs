@@ -9,6 +9,8 @@ use crate::persistence::user::PersistentUserDao;
 
 use crate::get_user_by_id;
 
+pub const MAX_ALLOWED_CONTACTS: usize = 10000;
+
 pub(crate) fn create(
     uid: &str,
     _country_code: &str,
@@ -23,7 +25,10 @@ pub(crate) fn create(
     let user: Result<UserDto, ServiceError> =
         get_user_by_id!(user_dao, &parsed, access_token.to_string());
 
-    //TODO check if filtered correct
+    if phone_numbers.len() >= MAX_ALLOWED_CONTACTS {
+        return Err(ServiceError::BadRequest("Too many contacts.".to_string()));
+    }
+
     let blacklists: Vec<_> = blacklist_dao
         .get_ref()
         .get(parsed)?
@@ -54,7 +59,7 @@ pub(crate) fn get_contacts(
 
     let user: Result<UserDto, ServiceError> =
         get_user_by_id!(user_dao, &parsed, access_token.to_owned());
-    
+
     let user = user?;
 
     let blacklists: Vec<_> = blacklist_dao
