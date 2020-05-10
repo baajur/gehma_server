@@ -22,7 +22,6 @@ use std::path::PathBuf;
 
 
 pub(crate) mod controllers;
-pub(crate) mod persistence;
 pub(crate) mod queries;
 pub(crate) mod ratelimits; //move to services
 pub(crate) mod routes;

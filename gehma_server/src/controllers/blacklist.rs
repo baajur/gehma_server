@@ -5,8 +5,7 @@ use core::errors::ServiceError;
 use core::models::dto::*;
 use core::models::PhoneNumber;
 
-use crate::persistence::blacklist::PersistentBlacklistDao;
-use crate::persistence::user::PersistentUserDao;
+use crate::queries::*;
 use crate::routes::blacklist::PostData;
 use log::debug;
 

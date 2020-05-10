@@ -3,9 +3,7 @@ use actix_web::{web, HttpResponse};
 use core::errors::ServiceError;
 use log::{info, error};
 use web_contrib::utils::{set_response_headers, QueryParams};
-
-use crate::persistence::blacklist::PersistentBlacklistDao;
-use crate::persistence::user::PersistentUserDao;
+use crate::queries::*;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PostData {

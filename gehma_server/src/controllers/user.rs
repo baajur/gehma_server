@@ -1,4 +1,3 @@
-use crate::persistence::user::PersistentUserDao;
 use actix_web::web;
 use chrono::{DateTime, Local};
 use core::errors::ServiceError;
@@ -6,6 +5,7 @@ use core::models::dto::*;
 use core::models::PhoneNumber;
 use uuid::Uuid;
 
+use crate::queries::*;
 use crate::services::push_notifications::NotificationService;
 use log::{debug, error, info};
 

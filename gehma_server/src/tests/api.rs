@@ -3,9 +3,7 @@ use super::*;
 use actix_web::{test, web, App};
 use serde_json::json;
 
-use crate::persistence::blacklist::{MockPersistentBlacklistDao, PersistentBlacklistDao};
-use crate::persistence::contacts::{MockPersistentContactsDao, PersistentContactsDao};
-use crate::persistence::user::{MockPersistentUserDao, PersistentUserDao};
+use crate::queries::*;
 
 use uuid::Uuid;
 

@@ -1,8 +1,6 @@
 use crate::Pool;
 
-use crate::queries::blacklist::PgBlacklistDao;
-use crate::queries::contacts::PgContactsDao;
-use crate::queries::user::PgUserDao;
+use crate::queries::*;
 
 pub struct DaoFactory(Pool);
 

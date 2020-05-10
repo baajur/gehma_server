@@ -6,8 +6,8 @@ use uuid::Uuid;
 
 use log::{error, info};
 
-use crate::persistence::user::PersistentUserDao;
 use crate::services::number_registration::NumberRegistrationService;
+use crate::queries::*;
 
 pub(crate) fn request(
     body: RequestCodeDto,

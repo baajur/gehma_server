@@ -2,9 +2,7 @@ use super::*;
 
 use actix_web::{test, web, App};
 
-use crate::persistence::blacklist::PersistentBlacklistDao;
-use crate::persistence::contacts::PersistentContactsDao;
-use crate::persistence::user::PersistentUserDao;
+use crate::queries::*;
 use crate::services::push_notifications::{
     MockNotificationServiceTrait, NotificationService, NotificationServiceTrait,
 };

@@ -9,8 +9,8 @@ use web_contrib::utils::{set_response_headers, QueryParams};
 use crate::controllers::user::{
     get_entry, update_token_handler, update_user_with_auth, user_signin,
 };
-use crate::persistence::user::PersistentUserDao;
 use chrono::Local;
+use crate::queries::*;
 
 pub async fn signin(
     _info: web::Path<()>,

@@ -6,9 +6,7 @@ use core::models::dto::PayloadNumbersDto;
 use web_contrib::utils::{set_response_headers, QueryParams};
 
 use crate::controllers::contacts::{create as ctrl_create, get_contacts as ctrl_get_contacts};
-use crate::persistence::blacklist::PersistentBlacklistDao;
-use crate::persistence::contacts::PersistentContactsDao;
-use crate::persistence::user::PersistentUserDao;
+use crate::queries::*;
 
 use log::info;
 

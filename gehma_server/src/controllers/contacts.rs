@@ -3,9 +3,7 @@ use core::errors::ServiceError;
 use core::models::dto::*;
 use uuid::Uuid;
 
-use crate::persistence::blacklist::PersistentBlacklistDao;
-use crate::persistence::contacts::PersistentContactsDao;
-use crate::persistence::user::PersistentUserDao;
+use crate::queries::*;
 
 use crate::get_user_by_id;
 

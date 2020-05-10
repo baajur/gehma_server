@@ -9,8 +9,8 @@ use web_contrib::utils::set_response_headers;
 use core::errors::ServiceError;
 
 use core::models::dto::*;
-use crate::persistence::user::PersistentUserDao;
 use crate::services::number_registration::NumberRegistrationService;
+use crate::queries::*;
 
 pub async fn request_code(
     _info: web::Path<()>,
