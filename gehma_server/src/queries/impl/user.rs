@@ -1,7 +1,7 @@
 use crate::queries::*;
 use crate::Pool;
 use chrono::{DateTime, Local};
-use core::errors::ServiceError;
+use core::errors::{InternalServerError, ServiceError};
 use core::models::dao::*;
 use core::models::dto::*;
 use core::models::PhoneNumber;
@@ -257,7 +257,6 @@ impl PersistentUserDao for PgUserDao {
 
     fn update_profile_picture(&self, user: &UserDao) -> Result<(), ServiceError> {
         info!("queries/user/update_profile_picture");
-        use core::errors::InternalError;
         use core::schema::users::dsl::{id, profile_picture, users};
 
         let conn: &PgConnection = &self.pool.get().unwrap();
@@ -266,8 +265,12 @@ impl PersistentUserDao for PgUserDao {
 
         //FIXME add better error message
         let path = format!("static/profile_pictures/{}.jpg", user.hash_tele_num);
-        let _ = img_profile::generate(PROFILE_HEIGHT, PROFILE_WIDTH, path.clone())
-            .map_err(InternalError::GenerateImage)?;
+        let _ = img_profile::generate(PROFILE_HEIGHT, PROFILE_WIDTH, path.clone()).map_err(
+            |error| {
+                error!("{}", error);
+                InternalServerError::GenerateImageError
+            },
+        )?;
 
         diesel::update(target)
             .set((
@@ -275,7 +278,12 @@ impl PersistentUserDao for PgUserDao {
                 profile_picture.eq(&path),
             ))
             .execute(conn)
-            .map_err(|_db_error| ServiceError::BadRequest("Updating state failed".into()))?;
+            .map_err(|_db_error| {
+                error!("db_error: {}", _db_error);
+                ServiceError::InternalServerError(InternalServerError::DatabaseError(
+                    _db_error.to_string(),
+                ))
+            })?;
 
         info!("Updating profile {}", path);
 

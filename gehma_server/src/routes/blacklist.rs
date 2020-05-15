@@ -1,7 +1,7 @@
 use crate::controllers::blacklist::{create_entry, delete_entry, get_entry};
 use actix_web::{web, HttpResponse};
 use core::errors::ServiceError;
-use log::{info, error};
+use log::{info};
 use web_contrib::utils::{set_response_headers, QueryParams};
 use crate::queries::*;
 
@@ -21,8 +21,7 @@ pub async fn get_all(
 
     let info = info.into_inner();
 
-    let users = get_entry(&info, &query.access_token, user_dao, blacklist_dao)
-        .map_err(|_err| ServiceError::InternalServerError)?;
+    let users = get_entry(&info, &query.access_token, user_dao, blacklist_dao)?;
 
     let mut res = HttpResponse::Ok()
         .content_type("application/json")
@@ -48,11 +47,7 @@ pub async fn add(
         &query.access_token,
         user_dao,
         blacklist_dao,
-    )
-    .map_err(|err| {
-        error!("{}", err);
-        ServiceError::InternalServerError
-    })?;
+    )?;
 
     let mut res = HttpResponse::Ok().content_type("application/json").finish();
     set_response_headers(&mut res);
@@ -75,11 +70,7 @@ pub async fn delete(
         &query.access_token,
         user_dao,
         blacklist_dao,
-    )
-    .map_err(|err| {
-        error!("{}", err);
-        ServiceError::InternalServerError
-    })?;
+    )?;
 
 
     let mut res = HttpResponse::Ok().content_type("application/json").finish();

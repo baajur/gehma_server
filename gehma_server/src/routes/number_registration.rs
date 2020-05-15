@@ -23,7 +23,7 @@ pub async fn request_code(
     let _ = request(
             body.into_inner(),
             number_registration_service,
-        ).map_err(|_err| ServiceError::InternalServerError)?;
+        )?;
 
     let mut res = HttpResponse::Ok()
                     .content_type("application/json")
@@ -46,7 +46,7 @@ pub async fn check(
             body.into_inner(),
             user_dao,
             number_registration_service,
-        ).map_err(|_err| ServiceError::InternalServerError)?;
+        )?;
 
     let mut res = HttpResponse::Ok()
                 .content_type("application/json")

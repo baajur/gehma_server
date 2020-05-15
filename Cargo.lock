@@ -984,6 +984,7 @@ dependencies = [
  "data-encoding",
  "derive_more 0.15.0",
  "diesel",
+ "log",
  "phonenumber",
  "ring",
  "serde",

@@ -13,13 +13,12 @@ use actix_cors::Cors;
 use actix_files::NamedFile;
 use actix_web::http::header;
 use actix_web::{middleware as actix_middleware, web, App, HttpResponse, HttpServer};
-use core::errors::ServiceError;
+use core::errors::{ServiceError, InternalServerError};
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
 use diesel_migrations::run_pending_migrations;
 use log::error;
 use std::path::PathBuf;
-
 
 pub(crate) mod controllers;
 pub(crate) mod queries;
@@ -86,7 +85,6 @@ fn set_testing_notification() -> NotificationService {
 fn get_ratelimits() -> ratelimits::RateLimitWrapper {
     ratelimits::RateLimitWrapper::new(Box::new(ratelimits::DefaultRateLimitPolicy))
 }
-
 
 #[allow(dead_code)]
 fn get_firebase_notification_service() -> NotificationService {
@@ -214,6 +212,6 @@ async fn load_file(req: actix_web::HttpRequest) -> Result<NamedFile, ServiceErro
     dir.push(path);
     Ok(NamedFile::open(dir).map_err(|err| {
         error!("load_file {:?}", err);
-        ServiceError::InternalServerError
+        ServiceError::InternalServerError(InternalServerError::IOError(err.to_string()))
     })?)
 }

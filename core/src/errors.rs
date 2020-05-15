@@ -1,82 +1,76 @@
 use actix_web::{error::ResponseError, HttpResponse};
 use derive_more::Display;
 use diesel::result::{DatabaseErrorKind, Error as DBError};
+use log::error;
+use serde::Serialize;
 use std::convert::From;
 use uuid::ParseError;
 
 #[derive(Debug, Display)]
 pub enum ServiceError {
     #[display(fmt = "Internal Server Error")]
-    InternalServerError,
+    InternalError,
 
-    #[display(fmt = "Internal Server Error: {}", _0)]
-    InternalServerError2(String),
+    #[display(fmt = "Internal Server Error")]
+    InternalServerError(InternalServerError),
 
     #[display(fmt = "BadRequest: {}", _0)]
     BadRequest(String),
 
-    #[display(fmt = "Already exists: {}", _0)]
-    AlreadyExists(String),
+    #[display(fmt = "Wrong parameters ({})", _0)]
+    InvalidUserInput(InvalidUserInput),
+
+    #[display(fmt = "Entity already exists")]
+    AlreadyExists,
 
     #[display(fmt = "Unauthorized")]
     Unauthorized,
 
-    #[display(fmt = "NotificationError: {}", _0)]
-    NotificationError(String),
-
-    #[display(fmt = "SchaumaError: {}", _0)]
-    SchaumaError(SchaumaError),
-
-    #[display(fmt = "RateLimit was reached ({})", _0)]
-    RateLimit(String),
+    #[display(fmt = "RateLimit was reached")]
+    RateLimit,
 }
 
-#[derive(Debug, Display)]
-pub enum InternalError {
+#[derive(Debug, Display, Serialize)]
+pub enum InternalServerError {
+    #[display(fmt = "Cannot generate profile")]
+    GenerateImageError,
+    #[display(fmt = "Database failed {}", _0)]
+    DatabaseError(String),
+    #[display(fmt = "Notification sending failed")]
+    NotificationError,
+    #[display(fmt = "Input/Output error {}", _0)]
+    IOError(String)
+}
+
+#[derive(Debug, Display, Serialize)]
+pub enum InvalidUserInput {
     #[display(fmt = "Invalid Phone Number: {}", _0)]
     InvalidPhoneNumber(String),
     #[display(fmt = "Invalid Country: {}", _0)]
     InvalidCountry(String),
-    #[display(fmt = "Cannot generate profile: {}", _0)]
-    GenerateImage(std::io::Error),
-}
-
-#[derive(Debug, Display)]
-pub enum SchaumaError {
-    #[display(fmt = "Cannot parse: {}", _0)]
-    ParseError(String),
-    #[display(fmt = "Datasource error occured: {}", _0)]
-    DatasourceError(String),
+    #[display(fmt = "Invalid code")]
+    InvalidCode,
 }
 
 impl ResponseError for ServiceError {
     fn error_response(&self) -> HttpResponse {
         match self {
-            ServiceError::InternalServerError => {
+            ServiceError::InternalError => {
+                error!("InternalError");
                 HttpResponse::InternalServerError().json("Internal Server Error")
             }
-            ServiceError::InternalServerError2(ref message) => {
-                HttpResponse::InternalServerError().json(message)
+            ServiceError::InternalServerError(err) => {
+                error!("{}", err);
+                HttpResponse::InternalServerError().json("Internal Server Error")
+            }
+            ServiceError::InvalidUserInput(err) => {
+                error!("{}", err);
+                HttpResponse::BadRequest().json(err)
             }
             ServiceError::BadRequest(ref message) => HttpResponse::BadRequest().json(message),
-            ServiceError::AlreadyExists(ref message) => HttpResponse::BadRequest().json(message),
+            ServiceError::AlreadyExists => HttpResponse::BadRequest().json("Entity already exists"),
             ServiceError::Unauthorized => HttpResponse::Unauthorized().json("Unauthorized"),
-            ServiceError::NotificationError(ref message) => {
-                HttpResponse::BadRequest().json(message)
-            }
-            ServiceError::SchaumaError(ref message) => message.error_response(),
-            ServiceError::RateLimit(ref message) => HttpResponse::TooManyRequests().json(message),
-        }
-    }
-}
-
-impl ResponseError for SchaumaError {
-    fn error_response(&self) -> HttpResponse {
-        match self {
-            SchaumaError::ParseError(ref message) => HttpResponse::BadRequest().json(message),
-            SchaumaError::DatasourceError(ref message) => {
-                HttpResponse::InternalServerError().json(message)
-            }
+            ServiceError::RateLimit => HttpResponse::TooManyRequests().json("Too many requests"),
         }
     }
 }
@@ -87,9 +81,15 @@ impl From<ParseError> for ServiceError {
     }
 }
 
-impl From<InternalError> for ServiceError {
-    fn from(err: InternalError) -> ServiceError {
-        ServiceError::BadRequest(format!("{}", err))
+impl From<InvalidUserInput> for ServiceError {
+    fn from(err: InvalidUserInput) -> ServiceError {
+        ServiceError::InvalidUserInput(err)
+    }
+}
+
+impl From<InternalServerError> for ServiceError {
+    fn from(err: InternalServerError) -> ServiceError {
+        ServiceError::InternalServerError(err)
     }
 }
 
@@ -99,11 +99,16 @@ impl From<DBError> for ServiceError {
             DBError::DatabaseError(kind, info) => {
                 if let DatabaseErrorKind::UniqueViolation = kind {
                     let message = info.details().unwrap_or_else(|| info.message()).to_string();
-                    return ServiceError::AlreadyExists(message);
+                    error!("{}", message);
+                    return ServiceError::AlreadyExists;
                 }
-                ServiceError::InternalServerError
+                error!("kind {:?} info {:?}", kind, info);
+                ServiceError::InternalError
             }
-            _ => ServiceError::InternalServerError,
+            other => {
+                error!("{}", other);
+                ServiceError::InternalError
+            }
         }
     }
 }

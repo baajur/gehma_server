@@ -187,6 +187,59 @@ async fn test_get_user() {
 }
 
 #[actix_rt::test]
+async fn test_get_user_with_invalid_id() {
+    let user_dao_mock = MockPersistentUserDao::new();
+    let blacklist_dao_mock = MockPersistentBlacklistDao::new();
+    let contacts_dao_mock = MockPersistentContactsDao::new();
+
+    let mut app = init_server!(user_dao_mock, blacklist_dao_mock, contacts_dao_mock).await;
+
+    let req = test::TestRequest::get()
+        .uri(&format!(
+            "/api/user/{}?access_token={}",
+            "WRONGUID",
+            "TEST".to_string()
+        ))
+        .to_request();
+
+    let resp = test::call_service(&mut app, req).await;
+    assert_eq!(400, resp.status());
+    assert_eq!(
+        "BadRequest: Invalid UUID",
+        resp.response().error().unwrap().to_string()
+    );
+}
+
+#[actix_rt::test]
+async fn test_get_user_with_invalid_login() {
+    let mut user_dao_mock = MockPersistentUserDao::new();
+    let blacklist_dao_mock = MockPersistentBlacklistDao::new();
+    let contacts_dao_mock = MockPersistentContactsDao::new();
+
+    user_dao_mock //login
+        .expect_get_by_id()
+        .times(1)
+        .returning(|_id, _access_token| Err(ServiceError::Unauthorized));
+
+    let mut app = init_server!(user_dao_mock, blacklist_dao_mock, contacts_dao_mock).await;
+
+    let req = test::TestRequest::get()
+        .uri(&format!(
+            "/api/user/{}?access_token={}",
+            Uuid::new_v4(),
+            "TEST".to_string()
+        ))
+        .to_request();
+
+    let resp = test::call_service(&mut app, req).await;
+    assert_eq!(401, resp.status());
+    assert_eq!(
+        "Unauthorized",
+        resp.response().error().unwrap().to_string()
+    );
+}
+
+#[actix_rt::test]
 /// This updates the description of an user.
 async fn test_update_user() {
     let id = Uuid::new_v4();

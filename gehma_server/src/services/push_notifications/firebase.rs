@@ -1,8 +1,8 @@
 use super::FirebaseToken;
 use crate::services::push_notifications::*;
-use core::errors::ServiceError;
+use core::errors::{InternalServerError, ServiceError};
 
-use log::error;
+use log::{error, info};
 use serde::Deserialize;
 use serde_json::json;
 
@@ -46,10 +46,10 @@ impl NotificationServiceTrait for FirebaseNotificationService {
         //let size : usize = values.len();
 
         let api_token = self.config.fcm_token.clone();
+
         let work = futures::stream::iter_ok(values)
             .map(move |(name, token)| {
-                println!("Send to {}", name);
-                //FIXME implement return
+                info!("Send to {}", token);
                 client
                     .post("https://fcm.googleapis.com/fcm/send")
                     .header(CONTENT_TYPE, "application/json")
@@ -64,27 +64,30 @@ impl NotificationServiceTrait for FirebaseNotificationService {
                         "registration_ids": [token]
                     }))
                     .send()
-            })
+                    .map_err(|err| {
+                error!("error {:?}", err);
+                ServiceError::InternalServerError(InternalServerError::NotificationError)
+            })})
             .buffer_unordered(10)
-            .map_err(|w| {
-                error!("{:?}", w);
-                ServiceError::InternalServerError
-            })
             .and_then(|mut res| {
                 res.json::<FirebaseResponse>().map_err(|w| {
                     error!("FirebaseResponse {:?}", w);
-                    ServiceError::InternalServerError
+                    ServiceError::InternalServerError(InternalServerError::NotificationError)
                 })
             })
             .for_each(move |res| {
                 if res.success != 1 {
-                    //FIXME report
                     error!("SOME NOTIFICATIONS FAILED");
+                    error!("{:#?}", res);
                 }
 
                 Ok(())
             })
-            .map_err(|e| error!("{}", e));
+            .map_err(|e| {
+                error!("error {:?}", e);
+                //ServiceError::InternalServerError(InternalServerError::NotificationError)
+                ()
+            });
 
         tokio::run(work);
 

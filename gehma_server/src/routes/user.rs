@@ -29,8 +29,7 @@ pub async fn signin(
         user_dao,
         current_time,
         notification_service,
-    )
-    .map_err(|_err| ServiceError::InternalServerError)?;
+    )?;
 
     let mut res = HttpResponse::Ok()
         .content_type("application/json")
@@ -48,8 +47,7 @@ pub async fn get(
 ) -> Result<HttpResponse, ServiceError> {
     info!("routes/user/get");
 
-    let users = get_entry(&info.into_inner(), &query.access_token, user_dao)
-        .map_err(|_err| ServiceError::InternalServerError)?;
+    let users = get_entry(&info.into_inner(), &query.access_token, user_dao)?;
 
     let mut res = HttpResponse::Ok()
         .content_type("application/json")
@@ -114,8 +112,7 @@ pub async fn update(
         user_dao,
         current_time,
         notification_service,
-    )
-    .map_err(|_err| ServiceError::InternalServerError)?;
+    )?;
 
     Ok(HttpResponse::Ok()
         .content_type("application/json")
@@ -140,8 +137,7 @@ pub async fn update_token(
         body.into_inner(),
         &query.access_token,
         user_dao,
-    )
-    .map_err(|_err| ServiceError::InternalServerError)?;
+    )?;
 
     let mut res = HttpResponse::Ok().content_type("application/json").json(());
 

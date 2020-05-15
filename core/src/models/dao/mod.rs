@@ -1,4 +1,4 @@
-use crate::errors::InternalError;
+use crate::errors::ServiceError;
 use crate::models::dto::*;
 use crate::schema::*;
 use crate::utils::phonenumber_to_international;
@@ -109,7 +109,7 @@ impl PhoneNumber {
     }
     */
 
-    pub fn my_from(raw: &str, cc: &str) -> Result<Self, InternalError> {
+    pub fn my_from(raw: &str, cc: &str) -> Result<Self, ServiceError> {
         Ok(PhoneNumber(phonenumber_to_international(raw, cc)?))
     }
 }

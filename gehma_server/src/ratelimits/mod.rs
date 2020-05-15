@@ -1,7 +1,7 @@
 use crate::Pool;
 use chrono::prelude::*;
 use chrono::{Duration, Local};
-use core::errors::ServiceError;
+use core::errors::{ServiceError, InternalServerError};
 use core::models::dao::*;
 use diesel::{prelude::*, PgConnection};
 use log::{debug, error, info};
@@ -84,7 +84,7 @@ impl DefaultRateLimitPolicy {
                     .load::<AnalyticDao>(conn)
                     .map_err(|_db_error| {
                         error!("db error: {}", _db_error);
-                        ServiceError::InternalServerError
+                        ServiceError::InternalServerError(InternalServerError::DatabaseError(_db_error.to_string()))
                     })?
                     .len();
 

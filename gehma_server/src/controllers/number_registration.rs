@@ -1,5 +1,5 @@
 use actix_web::web;
-use core::errors::ServiceError;
+use core::errors::{InternalServerError, InvalidUserInput, ServiceError};
 use core::models::dto::*;
 use core::models::PhoneNumber;
 use uuid::Uuid;
@@ -41,16 +41,17 @@ pub(crate) fn check_code(
             .create(&parsed, &body.country_code, &body.client_version, &token)
         {
             Ok(user) => Ok(user.into()),
-            //Err(ServiceError::AlreadyExists(_)) => user_dao.get_ref().get_by_tele_num(&parsed),
             Err(e) => {
                 error!("{}", e);
-                Err(ServiceError::InternalServerError)
+                Err(ServiceError::InternalServerError(
+                    InternalServerError::DatabaseError(e.to_string()),
+                ))
             }
         }
     } else {
         info!("Code was wrong");
-        Err(ServiceError::BadRequest(
-            "Check node returned false".to_string(),
+        Err(ServiceError::InvalidUserInput(
+            InvalidUserInput::InvalidCode,
         ))
     }
 }

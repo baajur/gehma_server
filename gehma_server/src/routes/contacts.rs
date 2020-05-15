@@ -25,8 +25,7 @@ pub async fn get_contacts(
         blacklist_dao,
         contact_dao,
         &query.access_token,
-    )
-    .map_err(|_err| ServiceError::InternalServerError)?;
+    )?;
 
     let mut res = HttpResponse::Ok()
         .content_type("application/json")
@@ -56,8 +55,7 @@ pub async fn create(
         user_dao,
         blacklist_dao,
         contacts_dao,
-    )
-    .map_err(|_err| ServiceError::InternalServerError)?;
+    )?;
 
     let mut res = HttpResponse::Ok()
         .content_type("application/json")
