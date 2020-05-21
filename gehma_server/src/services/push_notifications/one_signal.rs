@@ -1,4 +1,4 @@
-use super::Token as FirebaseToken;
+use super::Token;
 use crate::services::push_notifications::*;
 use core::errors::{InternalServerError, ServiceError};
 
@@ -10,55 +10,50 @@ use reqwest::header::{AUTHORIZATION, CONTENT_TYPE};
 use reqwest::Client;
 
 #[derive(Clone)]
-pub struct FirebaseConfiguration {
-    pub fcm_token: String,
+pub struct OneSignalConfiguration {
+    pub id: String,
+    pub key: String,
 }
 
-pub struct FirebaseNotificationService {
-    pub config: FirebaseConfiguration,
+pub struct OneSignalService {
+    pub config: OneSignalConfiguration,
 }
 
-/*{
-    "multicast_id": 1715198469273987789,
-    "success": 0,
-    "failure": 1,
-    "canonical_ids": 0,
-    "results": [
-        {
-            "error": "NotRegistered"
-        }
-    ]
+/**
+ *
+ * {
+    "id": "xxx",
+    "recipients": 1,
+    "external_id": null
 }*/
-
 #[derive(Debug, Deserialize)]
-struct FirebaseResponse {
-    success: usize,
-    failure: usize,
-    canonical_ids: usize,
+struct OneSignalResponse {
+    id: String,
+    recipients: u32,
 }
 
 type Name = String;
-impl NotificationServiceTrait for FirebaseNotificationService {
-    fn push(&self, values: Vec<(Name, FirebaseToken)>) -> Result<(), ServiceError> {
+impl NotificationServiceTrait for OneSignalService {
+    fn push(&self, values: Vec<(Name, Token)>) -> Result<(), ServiceError> {
         let client = Client::new();
         //let size : usize = values.len();
 
-        let api_token = self.config.fcm_token.clone();
+        let id = self.config.id.clone();
+        let api_token = self.config.key.clone();
 
         for (name, token) in values {
             info!("Send to {}", token);
             let response = client
-                .post("https://fcm.googleapis.com/fcm/send")
+                .post("https://onesignal.com/api/v1/notifications")
                 .header(CONTENT_TYPE, "application/json")
-                .header(AUTHORIZATION, format!("key={}", api_token))
+                .header(AUTHORIZATION, api_token.clone())
                 .json(&json!({
-                    "notification": {
-                        "title": format!("{} ist motiviert", name),
-                        "body": "",
-                        "icon": "ic_stat_name_nougat"
+                    "app_id": id,
+                    "contents": {
+                        "de": format!("{} ist motiviert", name),
+                        "en": format!("{} is motivated", name),
                     },
-                    "priority": "high",
-                    "registration_ids": [token]
+                    "include_player_ids": [token]
                 }))
                 .send()
                 .map_err(|err| {
