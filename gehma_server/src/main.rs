@@ -141,6 +141,7 @@ pub(crate) async fn main() -> std::io::Result<()> {
             .wrap(actix_middleware::Logger::default())
             .data(web::JsonConfig::default().limit(4048 * 1024))
             .wrap(actix_middleware::Compress::default())
+            //.wrap(middleware::auth::Authentication)
             .service(
                 web::scope("/static")
                     .service(web::resource("/{filename:.*}").route(web::get().to(load_file))),

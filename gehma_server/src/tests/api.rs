@@ -37,6 +37,9 @@ macro_rules! init_server {
                 .data(Box::new($user_dao) as Box<dyn PersistentUserDao>)
                 .data(Box::new($blacklist_dao) as Box<dyn PersistentBlacklistDao>)
                 .data(Box::new($contact_exists_dao) as Box<dyn PersistentContactsDao>)
+                .data(web::JsonConfig::default().limit(4048 * 1024))
+                .wrap(actix_middleware::Compress::default())
+                //.wrap(middleware::auth::Authentication)
                 .route(
                     "/api/auth/request_code",
                     web::post().to(crate::routes::number_registration::request_code),

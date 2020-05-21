@@ -2,7 +2,7 @@ use super::FirebaseToken;
 use crate::services::push_notifications::*;
 use core::errors::{InternalServerError, ServiceError};
 
-use log::{error, info};
+use log::{debug, error, info};
 use serde::Deserialize;
 use serde_json::json;
 
@@ -47,7 +47,32 @@ impl NotificationServiceTrait for FirebaseNotificationService {
 
         let api_token = self.config.fcm_token.clone();
 
-        let work = futures::stream::iter_ok(values)
+        for (name, token) in values {
+            info!("Send to {}", token);
+            let response = client
+                .post("https://fcm.googleapis.com/fcm/send")
+                .header(CONTENT_TYPE, "application/json")
+                .header(AUTHORIZATION, format!("key={}", api_token))
+                .json(&json!({
+                    "notification": {
+                        "title": format!("{} ist motiviert", name),
+                        "body": "",
+                        "icon": "ic_stat_name_nougat"
+                    },
+                    "priority": "high",
+                    "registration_ids": [token]
+                }))
+                .send()
+                .map_err(|err| {
+                    error!("error {:?}", err);
+                    ServiceError::InternalServerError(InternalServerError::NotificationError)
+                });
+
+            debug!("response {:?}", response);
+        }
+
+        /*
+        let work = tokio::prelude::stream::iter_ok(values)
             .map(move |(name, token)| {
                 info!("Send to {}", token);
                 client
@@ -90,6 +115,7 @@ impl NotificationServiceTrait for FirebaseNotificationService {
             });
 
         tokio::run(work);
+        */
 
         Ok(())
     }
