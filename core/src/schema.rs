@@ -20,7 +20,6 @@ table! {
 table! {
     contacts (from_id, target_hash_tele_num) {
         from_id -> Uuid,
-        target_tele_num -> Varchar,
         created_at -> Timestamp,
         name -> Varchar,
         target_hash_tele_num -> Bpchar,

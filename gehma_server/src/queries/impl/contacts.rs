@@ -1,7 +1,7 @@
 use diesel::{prelude::*, PgConnection};
 use uuid::Uuid;
 
-use core::errors::ServiceError;
+use core::errors::{InternalServerError, ServiceError};
 use core::models::dao::*;
 use core::models::dto::*;
 
@@ -24,7 +24,7 @@ impl PersistentContactsDao for PgContactsDao {
         payload: &'a Vec<&'a mut PayloadUserDto>,
     ) -> Result<(), ServiceError> {
         info!("queries/contacts/create");
-        use core::schema::contacts::dsl::contacts;
+        use core::schema::contacts::dsl::{contacts, target_hash_tele_num};
 
         let conn: &PgConnection = &self.pool.get().unwrap();
 
@@ -38,26 +38,17 @@ impl PersistentContactsDao for PgContactsDao {
                 from_id: uid.clone(),
                 target_hash_tele_num: w.hash_tele_num.clone(),
                 name: w.name.clone(),
-                created_at: chrono::Utc::now().naive_local()
+                created_at: chrono::Utc::now().naive_local(),
             })
             .collect();
 
-        let _ = diesel::insert_into(contacts)
-            .values(inserts)
-            .on_conflict_do_nothing()
-            .execute(conn)
-            .map_err(|_db_err| {
-                error!("{}", _db_err);
-                ServiceError::BadRequest("Could set contacts".into())
-            })?;
+        for phone_contact in inserts {
+            let _ = diesel::insert_into(contacts)
+                .values(phone_contact)
+                .execute(conn); //IGNORE error, because there might be no user in `users`
+        }
 
         Ok(())
-
-        /*
-        if contacts.len() == MAX_ALLOWED_CONTACTS {
-            return Err(ServiceError::BadRequest("Too many contacts".into()));
-        }
-        */
 
         /*
             let mut numbers: Vec<WrappedUserDto> = phone_numbers
