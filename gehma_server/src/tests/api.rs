@@ -95,6 +95,11 @@ async fn test_create_user() {
     let mut user_dao_mock = MockPersistentUserDao::new();
     let blacklist_dao_mock = MockPersistentBlacklistDao::new();
     let contact_exists_dao_mock = MockPersistentContactsDao::new();
+    
+    // Create a new user, because there is no
+    user_dao_mock.expect_get_by_tele_num().returning(|_| {
+        Err(ServiceError::ResourceDoesNotExist)
+    });
 
     user_dao_mock.expect_create().returning(
         |tele_num, country_code, client_version, _access_token| {

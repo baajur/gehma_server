@@ -34,8 +34,6 @@ pub(crate) fn user_signin(
     let country_code = &body.country_code;
     let tele = PhoneNumber::my_from(&body.tele_num, country_code)?;
 
-    //let user = get_user_by_tele_num!(&tele, &access_token, _auth.into_inner(), &pool)?;
-
     let user = user_dao.get_ref().get_by_tele_num(&tele)?;
 
     if &user.access_token != access_token {

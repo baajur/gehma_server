@@ -6,7 +6,7 @@ use core::models::dao::*;
 use core::models::dto::*;
 use core::models::PhoneNumber;
 use diesel::{prelude::*, PgConnection};
-use log::{error, info, debug};
+use log::{error, info};
 use uuid::Uuid;
 
 const INCREASE_XP: i32 = 100;
