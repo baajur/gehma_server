@@ -58,6 +58,7 @@ pub(crate) fn get_contacts(
 
     let user = user?;
 
+    //TODO change this to a HashSet for performance
     let blacklists: Vec<_> = blacklist_dao
         .get_ref()
         .get(parsed)?
