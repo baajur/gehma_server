@@ -66,6 +66,7 @@ pub(crate) async fn main() -> std::io::Result<()> {
             .data(dao_factory.get_user_dao())
             .data(dao_factory.get_contacts_dao())
             .data(dao_factory.get_blacklist_dao())
+            .data(dao_factory.get_session_dao())
             .wrap(
                 Cors::new()
                     .allowed_origin("http://localhost:3000")

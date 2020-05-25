@@ -26,4 +26,10 @@ impl DaoFactory {
             pool: self.0.clone(),
         })
     }
+
+    pub fn get_session_dao(&self) -> Box<dyn PersistentSessionDao> {
+        Box::new(RedisSessionDao {
+            redis_pool: self.1.clone(),
+        })
+    }
 }
