@@ -4,7 +4,7 @@ use core::models::dto::*;
 use core::models::PhoneNumber;
 use uuid::Uuid;
 
-use log::{error, info};
+use log::{error, debug, info};
 
 use crate::queries::*;
 use crate::services::number_registration::NumberRegistrationService;
@@ -34,6 +34,13 @@ pub(crate) fn check_code(
     let res = number_registration_service.check_code(&parsed, &body.code)?;
 
     if res {
+
+        match user_dao.get_ref().get_by_tele_num(&parsed) {
+            Ok(user) => return Ok(user.into()),
+            Err(ServiceError::ResourceDoesNotExist) => debug!("User does not exist. Inserting"),
+            Err(e) => return Err(e),
+        }
+
         let token = Uuid::new_v4().simple().to_string();
 
         match user_dao

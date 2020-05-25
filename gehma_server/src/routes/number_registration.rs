@@ -37,11 +37,10 @@ pub async fn request_code(
 pub async fn check(
     _info: web::Path<()>,
     body: web::Json<RequestCheckCodeDto>,
-    //pool: web::Data<Pool>,
     number_registration_service: web::Data<NumberRegistrationService>,
     user_dao: web::Data<Box<dyn PersistentUserDao>>,
 ) -> Result<HttpResponse, ServiceError> {
-    info!("controllers/auth/check");
+    info!("routes/auth/check");
 
     let res = check_code(
             body.into_inner(),

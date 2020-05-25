@@ -28,6 +28,9 @@ pub enum ServiceError {
 
     #[display(fmt = "RateLimit was reached")]
     RateLimit,
+
+    #[display(fmt = "Resource does not exist")]
+    ResourceDoesNotExist
 }
 
 #[derive(Debug, Display, Serialize)]
@@ -71,6 +74,7 @@ impl ResponseError for ServiceError {
             ServiceError::AlreadyExists => HttpResponse::BadRequest().json("Entity already exists"),
             ServiceError::Unauthorized => HttpResponse::Unauthorized().json("Unauthorized"),
             ServiceError::RateLimit => HttpResponse::TooManyRequests().json("Too many requests"),
+            ServiceError::ResourceDoesNotExist => HttpResponse::NotFound().json("Resource does not exist"),
         }
     }
 }

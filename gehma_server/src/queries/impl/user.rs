@@ -6,7 +6,7 @@ use core::models::dao::*;
 use core::models::dto::*;
 use core::models::PhoneNumber;
 use diesel::{prelude::*, PgConnection};
-use log::{error, info};
+use log::{error, info, debug};
 use uuid::Uuid;
 
 const INCREASE_XP: i32 = 100;
@@ -34,7 +34,7 @@ impl PersistentUserDao for PgUserDao {
             .get_result::<AnalyticDao>(conn)
             //.map(|w| w.into())
             .map_err(|_db_error| {
-                eprintln!("{}", _db_error);
+                error!("{}", _db_error);
                 ServiceError::BadRequest("Could not log change".into())
             })
     }
@@ -58,8 +58,10 @@ impl PersistentUserDao for PgUserDao {
             .get_result::<UserDao>(conn)
             //.map(|w| w.into())
             .map_err(|_db_error| {
-                eprintln!("{}", _db_error);
-                ServiceError::BadRequest("Cannot insert user".into())
+                error!("{}", _db_error);
+                ServiceError::InternalServerError(InternalServerError::DatabaseError(
+                    _db_error.to_string(),
+                ))
             })
     }
 
@@ -208,11 +210,7 @@ impl PersistentUserDao for PgUserDao {
             })
     }
 
-    fn get_by_tele_num(
-        &self,
-        phone_number: &PhoneNumber,
-        my_access_token: String,
-    ) -> Result<UserDao, ServiceError> {
+    fn get_by_tele_num(&self, phone_number: &PhoneNumber) -> Result<UserDao, ServiceError> {
         info!("queries/user/get_query");
         use core::schema::users::dsl::{access_token, tele_num, users};
 
@@ -220,17 +218,20 @@ impl PersistentUserDao for PgUserDao {
 
         users
             .filter(
-                tele_num
-                    .eq(phone_number.to_string())
-                    .and(access_token.eq(my_access_token)),
+                tele_num.eq(phone_number.to_string())
+                //.and(access_token.eq(my_access_token)),
             )
             .load::<UserDao>(conn)
-            .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
+            .map_err(|_db_error| {
+                error!("db_error: {}", _db_error);
+                ServiceError::InternalServerError(InternalServerError::DatabaseError(
+                    _db_error.to_string(),
+                ))
+            })
             .and_then(|w| {
                 w.first()
                     .cloned()
-                    .ok_or_else(|| ServiceError::BadRequest("No user found".into()))
-                //.map(|w| w.into())
+                    .ok_or_else(|| ServiceError::ResourceDoesNotExist)
             })
     }
 
@@ -328,7 +329,7 @@ fn get_users_for_sending_push_notification(
     .load::<ContactPushNotificationDao>(conn)
     .map_err(|_db_error| {
         error!("{:?}", _db_error);
-        ServiceError::BadRequest("Database error".into())
+        ServiceError::InternalServerError(InternalServerError::DatabaseError(_db_error.to_string()))
     })?
     .into_iter()
     .take(crate::LIMIT_PUSH_NOTIFICATION_CONTACTS)

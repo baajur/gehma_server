@@ -36,9 +36,11 @@ pub(crate) fn user_signin(
 
     //let user = get_user_by_tele_num!(&tele, &access_token, _auth.into_inner(), &pool)?;
 
-    let user = user_dao
-        .get_ref()
-        .get_by_tele_num(&tele, access_token.to_owned())?;
+    let user = user_dao.get_ref().get_by_tele_num(&tele)?;
+
+    if &user.access_token != access_token {
+        return Err(ServiceError::Unauthorized);
+    }
 
     if user.client_version != body.client_version {
         update_user_without_auth(
@@ -55,9 +57,7 @@ pub(crate) fn user_signin(
     }
 
     user_dao.get_ref().update_profile_picture(&user)?;
-    user_dao
-        .get_ref()
-        .create_usage_statistics_for_user(&user)?;
+    user_dao.get_ref().create_usage_statistics_for_user(&user)?;
 
     Ok(user.into())
 }
@@ -88,8 +88,7 @@ pub(crate) fn update_token_handler(
 ) -> Result<(), ServiceError> {
     let parsed = Uuid::parse_str(&uid)?;
 
-    let user =
-        get_user_by_id!(user_dao, &parsed, access_token.to_owned());
+    let user = get_user_by_id!(user_dao, &parsed, access_token.to_owned());
 
     user?;
 
@@ -107,8 +106,7 @@ pub(crate) fn update_user_with_auth(
 ) -> Result<UserDto, ::core::errors::ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
 
-    let muser =
-        get_user_by_id!(user_dao, &parsed, access_token.to_owned());
+    let muser = get_user_by_id!(user_dao, &parsed, access_token.to_owned());
 
     muser?;
 

@@ -6,6 +6,8 @@ use core::models::PhoneNumber;
 use uuid::Uuid;
 use mockall::*;
 
+use log::debug;
+
 type IResult<K> = Result<K, ServiceError>;
 
 #[automock]
@@ -13,7 +15,6 @@ pub trait PersistentUserDao {
     fn get_by_tele_num(
         &self,
         tele: &PhoneNumber,
-        my_access_token: String,
     ) -> IResult<UserDao>;
 
     /// Get user by hash_tele_num without access_token
