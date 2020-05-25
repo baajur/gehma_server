@@ -4,7 +4,6 @@
 cert.pem
 key.pem
 server.csr
-gehma-6dcfe-firebase-adminsdk-awohk-aae1257b4d.json
 node_modules
 client.js
 core/target
@@ -16,3 +15,5 @@ schauma/target
 schauma_spider/target
 web_contrib/target
 gehma_server/target
+docker-compose.yml
+redis.conf

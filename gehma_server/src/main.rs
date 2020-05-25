@@ -2,23 +2,15 @@
 extern crate serde_derive;
 extern crate web_contrib;
 
-use crate::services::number_registration::testing::*;
-use crate::services::number_registration::twilio::*;
-use crate::services::number_registration::NumberRegistrationService;
-use crate::services::push_notifications::firebase::*;
-use crate::services::push_notifications::testing::*;
-use crate::services::push_notifications::NotificationService;
-
 use actix_cors::Cors;
 use actix_files::NamedFile;
 use actix_web::http::header;
 use actix_web::{middleware as actix_middleware, web, App, HttpResponse, HttpServer};
-use core::errors::{ServiceError, InternalServerError};
-use diesel::prelude::*;
-use diesel::r2d2::{self, ConnectionManager};
-use diesel_migrations::run_pending_migrations;
+use core::errors::{InternalServerError, ServiceError};
 use log::error;
 use std::path::PathBuf;
+
+use crate::utils::*;
 
 pub(crate) mod controllers;
 pub(crate) mod queries;
@@ -30,6 +22,10 @@ pub(crate) mod dao_factory;
 
 //mod middleware;
 
+mod database;
+mod redis;
+mod utils;
+
 use dao_factory::*;
 
 #[cfg(test)]
@@ -39,63 +35,8 @@ pub const ALLOWED_CLIENT_VERSIONS: &[&str] = &["0.5.4"];
 pub const LIMIT_PUSH_NOTIFICATION_CONTACTS: usize = 128;
 pub const ALLOWED_PROFILE_PICTURE_SIZE: usize = 10_000; //in Kilobytes
 
-pub type Pool = r2d2::Pool<ConnectionManager<PgConnection>>;
-
-#[allow(dead_code)]
-fn get_auth() -> NumberRegistrationService {
-    let project_id = std::env::var("TWILIO_PROJECT_ID").expect("no PROJECT_ID");
-    let auth_token = std::env::var("TWILIO_AUTH_TOKEN").expect("no AUTH_TOKEN");
-    let sid = std::env::var("TWILIO_ACCOUNT_ID").expect("no ACCOUNT_ID");
-
-    let config = TwilioConfiguration {
-        project_id,
-        account_id: sid,
-        auth_token,
-    };
-
-    Box::new(TwilioAuthenticator { config })
-}
-
-#[allow(dead_code)]
-fn set_testing_auth() -> NumberRegistrationService {
-    let config = TestingAuthConfiguration {
-        id: "test".to_string(),
-        auth_token: "test".to_string(),
-    };
-
-    Box::new(TestingAuthentificator { config })
-}
-
-#[allow(dead_code)]
-fn set_testing_auth_false() -> NumberRegistrationService {
-    let config = TestingAuthConfiguration {
-        id: "test".to_string(),
-        auth_token: "test".to_string(),
-    };
-
-    Box::new(TestingAuthentificatorAlwaysFalse { config })
-}
-
-#[allow(dead_code)]
-fn set_testing_notification() -> NotificationService {
-    Box::new(TestingNotificationService)
-}
-
-#[allow(dead_code)]
-fn get_ratelimits() -> ratelimits::RateLimitWrapper {
-    ratelimits::RateLimitWrapper::new(Box::new(ratelimits::DefaultRateLimitPolicy))
-}
-
-#[allow(dead_code)]
-fn get_firebase_notification_service() -> NotificationService {
-    let api_token = std::env::var("FCM_TOKEN").expect("No FCM_TOKEN configured");
-
-    let config = FirebaseConfiguration {
-        fcm_token: api_token,
-    };
-
-    Box::new(FirebaseNotificationService { config })
-}
+use crate::database::*;
+use crate::redis::*;
 
 #[actix_rt::main]
 pub(crate) async fn main() -> std::io::Result<()> {
@@ -104,23 +45,20 @@ pub(crate) async fn main() -> std::io::Result<()> {
     env_logger::init();
 
     let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL expected");
+    let redis_url = std::env::var("REDIS_URL").expect("REDIS_URL expected");
 
     let port = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());
     let addr = std::env::var("BINDING_ADDR").unwrap_or_else(|_| "localhost".to_string());
 
-    let manager = ConnectionManager::<PgConnection>::new(database_url);
-    let pool: Pool = r2d2::Pool::builder()
-        .build(manager)
-        .expect("Failed to create a pool");
-
-    let connection: &PgConnection = &pool.get().unwrap();
-    run_pending_migrations(connection).expect("cannot run pending migrations");
+    let pool_pg = connect_pg(database_url);
+    let pool_redis = connect_redis(redis_url);
 
     let server = HttpServer::new(move || {
-        let dao_factory = DaoFactory::new(pool.clone());
+        let dao_factory = DaoFactory::new(pool_pg.clone(), pool_redis.clone());
 
         App::new()
-            .data(pool.clone())
+            .data(pool_pg.clone())
+            .data(pool_redis.clone())
             //.data(get_auth())
             .data(set_testing_auth())
             .data(get_firebase_notification_service())
