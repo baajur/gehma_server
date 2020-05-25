@@ -7,9 +7,7 @@ use crate::services::push_notifications::{
     MockNotificationServiceTrait, NotificationService, NotificationServiceTrait,
 };
 
-use crate::services::number_registration::{
-    NumberRegistrationServiceTrait,
-};
+use crate::services::number_registration::NumberRegistrationServiceTrait;
 
 use crate::Pool;
 use diesel::r2d2::{self, ConnectionManager};
@@ -56,12 +54,9 @@ macro_rules! private_init_server_integration_test {
                 .data(set_testing_auth() as Box<dyn NumberRegistrationServiceTrait>)
                 .data($notification_service)
                 .data(set_ratelimits())
-                //.data(get_dao_factory($pool).get_user_dao())
-                .data(Box::new(get_dao_factory($pool).get_user_dao()) as Box<dyn PersistentUserDao>)
-                .data(Box::new(get_dao_factory($pool).get_blacklist_dao())
-                    as Box<dyn PersistentBlacklistDao>)
-                .data(Box::new(get_dao_factory($pool).get_contacts_dao())
-                    as Box<dyn PersistentContactsDao>)
+                .data(get_dao_factory($pool).get_user_dao())
+                .data(get_dao_factory($pool).get_blacklist_dao())
+                .data(get_dao_factory($pool).get_contacts_dao())
                 .route(
                     "/api/auth/request_code",
                     web::post().to(crate::routes::number_registration::request_code),
