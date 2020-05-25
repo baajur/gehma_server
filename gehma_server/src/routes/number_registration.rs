@@ -18,7 +18,7 @@ pub async fn request_code(
     //pool: web::Data<Pool>,
     number_registration_service: web::Data<NumberRegistrationService>,
 ) -> Result<HttpResponse, ServiceError> {
-    info!("controllers/auth/request_code");
+    info!("routes/auth/request_code");
 
     let _ = request(
             body.into_inner(),
@@ -28,6 +28,7 @@ pub async fn request_code(
     let mut res = HttpResponse::Ok()
                     .content_type("application/json")
                     .json(());
+
     set_response_headers(&mut res);
 
     Ok(res)

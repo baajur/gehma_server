@@ -9,21 +9,21 @@ impl DaoFactory {
         Self(pool)
     }
 
-    pub fn get_user_dao(&self) -> PgUserDao {
-        PgUserDao {
+    pub fn get_user_dao(&self) -> Box<dyn PersistentUserDao> {
+        Box::new(PgUserDao {
             pool: self.0.clone(),
-        }
+        })
     }
 
-    pub fn get_blacklist_dao(&self) -> PgBlacklistDao {
-        PgBlacklistDao {
+    pub fn get_blacklist_dao(&self) -> Box<dyn PersistentBlacklistDao> {
+        Box::new(PgBlacklistDao {
             pool: self.0.clone(),
-        }
+        })
     }
 
-    pub fn get_contacts_dao(&self) -> PgContactsDao {
-        PgContactsDao {
+    pub fn get_contacts_dao(&self) -> Box<dyn PersistentContactsDao> {
+        Box::new(PgContactsDao {
             pool: self.0.clone(),
-        }
+        })
     }
 }
