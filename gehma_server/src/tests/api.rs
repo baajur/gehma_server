@@ -41,7 +41,6 @@ macro_rules! init_server {
                 .data(web::JsonConfig::default().limit(4048 * 1024))
                 .wrap(actix_middleware::Compress::default())
                 //.wrap(middleware::auth::Authentication)
-                .wrap(middleware::auth::Authentication)
                 .route(
                     "/api/auth/request_code",
                     web::post().to(crate::routes::number_registration::request_code),
@@ -180,9 +179,8 @@ async fn test_get_user() {
 
     let req = test::TestRequest::get()
         .uri(&format!(
-            "/api/user/{}?access_token={}",
+            "/api/user/{}",
             Uuid::new_v4(),
-            "TEST".to_string()
         ))
         .to_request();
 
@@ -206,9 +204,8 @@ async fn test_get_user_with_invalid_id() {
 
     let req = test::TestRequest::get()
         .uri(&format!(
-            "/api/user/{}?access_token={}",
+            "/api/user/{}",
             "WRONGUID",
-            "TEST".to_string()
         ))
         .to_request();
 
@@ -235,9 +232,8 @@ async fn test_get_user_with_invalid_login() {
 
     let req = test::TestRequest::get()
         .uri(&format!(
-            "/api/user/{}?access_token={}",
+            "/api/user/{}",
             Uuid::new_v4(),
-            "TEST".to_string()
         ))
         .to_request();
 
@@ -284,7 +280,7 @@ async fn test_update_user() {
     let mut app = init_server!(user_dao_mock, blacklist_dao_mock, contacts_dao_mock).await;
 
     let req = test::TestRequest::put()
-        .uri(&format!("/api/user/{}?access_token={}", id, "ACCESS_TOKEN"))
+        .uri(&format!("/api/user/{}", id))
         .set_json(&core::models::dto::UpdateUserDto {
             description: "test".to_string(),
             led: true,
@@ -324,9 +320,8 @@ async fn test_update_token_user() {
 
     let req = test::TestRequest::put()
         .uri(&format!(
-            "/api/user/{}/token?access_token={}",
+            "/api/user/{}/token",
             Uuid::new_v4(),
-            "ACCESS_TOKEN"
         ))
         .set_json(&crate::routes::user::UpdateTokenPayload {
             token: "test".to_string(),
@@ -371,9 +366,8 @@ async fn test_create_blacklist() {
 
     let req = test::TestRequest::post()
         .uri(&format!(
-            "/api/user/{}/blacklist?access_token={}",
+            "/api/user/{}/blacklist",
             id.to_string(),
-            "ACCESS"
         ))
         .set_json(&crate::routes::blacklist::PostData {
             hash_blocked: hash("+4365012345678").to_string(),
@@ -411,9 +405,8 @@ async fn test_get_all_blacklist() {
 
     let req = test::TestRequest::get()
         .uri(&format!(
-            "/api/user/{}/blacklist?access_token={}",
+            "/api/user/{}/blacklist",
             Uuid::new_v4(),
-            "ACCESS"
         ))
         .to_request();
 
@@ -452,9 +445,8 @@ async fn test_remove_blacklist() {
 
     let req = test::TestRequest::put()
         .uri(&format!(
-            "/api/user/{}/blacklist?access_token={}",
+            "/api/user/{}/blacklist",
             Uuid::new_v4(),
-            "ACCESS"
         ))
         .set_json(&crate::routes::blacklist::PostData {
             hash_blocked: hash("+4365012345678").to_string(),
@@ -505,10 +497,9 @@ async fn test_contacts() {
 
     let req = test::TestRequest::post()
         .uri(&format!(
-            "/api/contacts/{}/{}?access_token={}",
+            "/api/contacts/{}/{}",
             Uuid::new_v4(),
             "AT",
-            "ACCESS"
         ))
         .set_json(&PayloadNumbersDto {
             numbers: vec![PayloadUserDto {
@@ -523,9 +514,8 @@ async fn test_contacts() {
 
     let req = test::TestRequest::get()
         .uri(&format!(
-            "/api/contacts/{}?access_token={}",
+            "/api/contacts/{}",
             Uuid::new_v4(),
-            "ACCESS"
         ))
         .to_request();
 
@@ -593,10 +583,9 @@ async fn test_contacts_with_blacklist_1() {
 
     let req = test::TestRequest::post()
         .uri(&format!(
-            "/api/contacts/{}/{}?access_token={}",
+            "/api/contacts/{}/{}",
             Uuid::new_v4(),
             "AT",
-            "ACCESS"
         ))
         .set_json(&PayloadNumbersDto {
             numbers: vec![PayloadUserDto {
@@ -611,9 +600,8 @@ async fn test_contacts_with_blacklist_1() {
 
     let req = test::TestRequest::get()
         .uri(&format!(
-            "/api/contacts/{}?access_token={}",
+            "/api/contacts/{}",
             Uuid::new_v4(),
-            "ACCESS"
         ))
         .to_request();
 
@@ -681,10 +669,9 @@ async fn test_contacts_with_blacklist_2() {
 
     let req = test::TestRequest::post()
         .uri(&format!(
-            "/api/contacts/{}/{}?access_token={}",
+            "/api/contacts/{}/{}",
             Uuid::new_v4(),
             "AT",
-            "ACCESS"
         ))
         .set_json(&PayloadNumbersDto {
             numbers: vec![PayloadUserDto {
@@ -699,9 +686,8 @@ async fn test_contacts_with_blacklist_2() {
 
     let req = test::TestRequest::get()
         .uri(&format!(
-            "/api/contacts/{}?access_token={}",
+            "/api/contacts/{}",
             Uuid::new_v4(),
-            "ACCESS"
         ))
         .to_request();
 
@@ -735,10 +721,9 @@ async fn test_contacts_max() {
 
     let req = test::TestRequest::post()
         .uri(&format!(
-            "/api/contacts/{}/{}?access_token={}",
+            "/api/contacts/{}/{}",
             Uuid::new_v4(),
             "AT",
-            "ACCESS"
         ))
         .set_json(&PayloadNumbersDto { numbers })
         .to_request();

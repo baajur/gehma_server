@@ -97,7 +97,6 @@ pub(crate) fn update_token_handler(
     user_dao: web::Data<Box<dyn PersistentUserDao>>,
 ) -> Result<(), ServiceError> {
     let parsed = Uuid::parse_str(&uid)?;
-
     let user = get_user_by_id!(user_dao, &parsed);
 
     user?;
@@ -114,6 +113,9 @@ pub(crate) fn update_user(
 ) -> Result<UserDao, ::core::errors::ServiceError> {
     info!("controllers/user/update_user_without_auth");
     let parsed = Uuid::parse_str(uid)?;
+    let _user = get_user_by_id!(user_dao, &parsed);
+
+    _user?;
 
     let (user, contacts) = user_dao.get_ref().update_user(&parsed, user, current_time)?;
 
