@@ -10,9 +10,9 @@ use crate::services::push_notifications::{
 use crate::services::number_registration::NumberRegistrationServiceTrait;
 
 use crate::Pool;
-use diesel::PgConnection;
 use diesel::query_dsl::RunQueryDsl;
 use diesel::r2d2::{self, ConnectionManager};
+use diesel::PgConnection;
 
 use serde_json::json;
 
@@ -61,6 +61,7 @@ macro_rules! private_init_server_integration_test {
                 .data(get_dao_factory($pool).get_contacts_dao())
                 .data(get_session_service())
                 .wrap(middleware::auth::Authentication)
+                .route("/api/signin", web::post().to(crate::routes::user::signin))
                 .route(
                     "/api/auth/request_code",
                     web::post().to(crate::routes::number_registration::request_code),
@@ -103,14 +104,14 @@ macro_rules! private_init_server_integration_test {
 }
 
 macro_rules! make_friend {
-    ($app:ident, $query_user:ident, $contact_name:expr, $contact_tele_num:expr) => {
+    ($app:ident, $query_user:ident, $contact_name:expr, $contact_tele_num:expr, $session_token:expr) => {
         let req = test::TestRequest::post()
             .uri(&format!(
-                "/api/contacts/{}/{}?access_token={}",
+                "/api/contacts/{}/{}",
                 $query_user.id.to_string(),
                 $query_user.country_code.clone(),
-                $query_user.access_token.clone().unwrap()
             ))
+            .header("AUTHORIZATION", $session_token)
             .set_json(&core::models::dto::PayloadNumbersDto {
                 numbers: vec![core::models::dto::PayloadUserDto {
                     name: $contact_name.to_string(),
@@ -124,13 +125,13 @@ macro_rules! make_friend {
 }
 
 macro_rules! ignore_contact {
-    ($app:ident, $query_user:ident, $contact_tele_num:expr) => {
+    ($app:ident, $query_user:ident, $contact_tele_num:expr, $session_token:expr) => {
         let req = test::TestRequest::post()
             .uri(&format!(
-                "/api/user/{}/blacklist?access_token={}",
+                "/api/user/{}/blacklist",
                 $query_user.id.to_string(),
-                $query_user.access_token.clone().unwrap()
             ))
+            .header("AUTHORIZATION", $session_token)
             .set_json(&crate::routes::blacklist::PostData {
                 hash_blocked: hash($contact_tele_num).to_string(),
                 country_code: "AT".to_string(),
@@ -141,14 +142,30 @@ macro_rules! ignore_contact {
     };
 }
 
-macro_rules! gehma {
-    ($app:ident, $query_user:ident, $descr:expr) => {
-        let req = test::TestRequest::put()
+macro_rules! signin {
+    ($app:ident, $query_user:ident) => {{
+        let req = test::TestRequest::post()
             .uri(&format!(
-                "/api/user/{}?access_token={}",
-                $query_user.id.to_string(),
-                $query_user.access_token.clone().expect("no access token")
+                "/api/signin?access_token={}",
+                $query_user.access_token.clone().unwrap()
             ))
+            .set_json(&core::models::dto::PostUserDto {
+                tele_num: $query_user.tele_num.clone(),
+                country_code: $query_user.country_code.clone(),
+                client_version: super::ALLOWED_CLIENT_VERSIONS[0].to_string(),
+            })
+            .to_request();
+
+        let user: UserDto = test::read_response_json(&mut $app, req).await;
+        user
+    }};
+}
+
+macro_rules! gehma {
+    ($app:ident, $query_user:ident, $descr:expr, $session_token:expr) => {
+        let req = test::TestRequest::put()
+            .uri(&format!("/api/user/{}", $query_user.id.to_string(),))
+            .header("AUTHORIZATION", $session_token)
             .set_json(&core::models::dto::UpdateUserDto {
                 description: $descr.to_string(),
                 led: true,
@@ -327,13 +344,10 @@ async fn create_user3() -> UserDto {
 }
 
 macro_rules! get_user {
-    ($app:ident, $cmp_user:ident) => {{
+    ($app:ident, $cmp_user:ident, $session_token:expr) => {{
         let req = test::TestRequest::get()
-            .uri(&format!(
-                "/api/user/{}?access_token={}",
-                $cmp_user.id.to_string(),
-                $cmp_user.access_token.clone().expect("no access token")
-            ))
+            .uri(&format!("/api/user/{}", $cmp_user.id.to_string()))
+            .header("AUTHORIZATION", $session_token)
             .to_request();
 
         /*
@@ -350,13 +364,10 @@ macro_rules! get_user {
 }
 
 macro_rules! update_token {
-    ($app:ident, $cmp_user:ident, $token:expr) => {{
+    ($app:ident, $cmp_user:ident, $token:expr, $session_token: expr) => {{
         let req = test::TestRequest::put()
-            .uri(&format!(
-                "/api/user/{}/token?access_token={}",
-                $cmp_user.id.to_string(),
-                $cmp_user.access_token.clone().unwrap(),
-            ))
+            .uri(&format!("/api/user/{}/token", $cmp_user.id.to_string()))
+            .header("AUTHORIZATION", $session_token)
             .set_json(&crate::routes::user::UpdateTokenPayload {
                 token: $token.to_string(),
             })
@@ -369,6 +380,7 @@ macro_rules! update_token {
 
 #[actix_rt::test]
 async fn test_create_user() {
+    env_logger::init();
     let pool = get_pool();
     let mut app = init_server_integration_test!(&pool).await;
 
@@ -420,10 +432,12 @@ async fn test_create_user() {
 
     cleanup(&pool);
     assert_eq!(user.tele_num, tele_num.to_string());
+    assert!(user.session_token.is_none());
 }
 
 #[actix_rt::test]
 async fn test_get_user() {
+    env_logger::init();
     let pool = get_pool();
 
     cleanup(&pool);
@@ -432,12 +446,11 @@ async fn test_get_user() {
 
     let mut app = init_server_integration_test!(&pool).await;
 
+    let user_signin = signin!(app, cmp_user);
+
     let req = test::TestRequest::get()
-        .uri(&format!(
-            "/api/user/{}?access_token={}",
-            cmp_user.id.to_string(),
-            cmp_user.access_token.expect("no access token")
-        ))
+        .uri(&format!("/api/user/{}", cmp_user.id.to_string()))
+        .header("AUTHORIZATION", user_signin.session_token.unwrap())
         .to_request();
 
     let user: UserDto = test::read_response_json(&mut app, req).await;
@@ -457,6 +470,7 @@ async fn test_get_user() {
     assert_eq!(user.xp, cmp_user.xp);
     assert_eq!(user.hash_tele_num, cmp_user.hash_tele_num);
     assert!(user.access_token.is_none());
+    assert!(user.session_token.is_none());
 }
 
 #[actix_rt::test]
@@ -470,9 +484,11 @@ async fn test_update_token_user() {
 
     let mut app = init_server_integration_test!(&pool).await;
 
-    update_token!(app, cmp_user, "token");
+    let user_signin = signin!(app, cmp_user);
 
-    let updated_user = get_user!(app, cmp_user);
+    update_token!(app, cmp_user, "token", user_signin.session_token.clone().unwrap());
+
+    let updated_user = get_user!(app, cmp_user, user_signin.session_token.unwrap());
 
     cleanup(&pool);
     assert_eq!("token".to_string(), updated_user.firebase_token.unwrap());
@@ -488,10 +504,12 @@ async fn test_update_description() {
     let cmp_user = create_user().await;
 
     let mut app = init_server_integration_test!(&pool).await;
+    let user_signin = signin!(app, cmp_user);
+    let session_token = user_signin.session_token.unwrap();
 
-    gehma!(app, cmp_user, "updated description");
+    gehma!(app, cmp_user, "updated description", session_token.clone());
 
-    let updated_user = get_user!(app, cmp_user);
+    let updated_user = get_user!(app, cmp_user, session_token.clone());
 
     cleanup(&pool);
     assert!(updated_user.led);
@@ -527,16 +545,36 @@ async fn test_push_notifications() {
     )
     .await;
 
-    update_token!(app, cmp_user, "token1");
-    update_token!(app, cmp_user2, "token2");
-    update_token!(app, cmp_user3, "token");
+    let user_signin = signin!(app, cmp_user);
+    let user_signin2 = signin!(app, cmp_user2);
+    let user_signin3 = signin!(app, cmp_user3);
 
-    make_friend!(app, cmp_user, "First", cmp_user2.tele_num);
-    make_friend!(app, cmp_user2, "Second", cmp_user.tele_num);
+    let session_token = user_signin.session_token.unwrap();
+    let session_token2 = user_signin2.session_token.unwrap();
+    let session_token3 = user_signin3.session_token.unwrap();
 
-    gehma!(app, cmp_user, "updated description");
+    update_token!(app, cmp_user, "token1", session_token.clone());
+    update_token!(app, cmp_user2, "token2", session_token2.clone());
+    update_token!(app, cmp_user3, "token", session_token3.clone());
 
-    let user = get_user!(app, cmp_user);
+    make_friend!(
+        app,
+        cmp_user,
+        "First",
+        cmp_user2.tele_num,
+        session_token.clone()
+    );
+    make_friend!(
+        app,
+        cmp_user2,
+        "Second",
+        cmp_user.tele_num,
+        session_token2.clone()
+    );
+
+    gehma!(app, cmp_user, "updated description", session_token.clone());
+
+    let user = get_user!(app, cmp_user, session_token);
 
     assert_eq!(cmp_user.id, user.id);
     assert_eq!("updated description".to_string(), user.description);
@@ -566,16 +604,30 @@ async fn test_push_notifications_one_friendship() {
     )
     .await;
 
-    update_token!(app, cmp_user, "token1");
-    update_token!(app, cmp_user2, "token2");
-    update_token!(app, cmp_user3, "token3");
+    let user_signin = signin!(app, cmp_user);
+    let user_signin2 = signin!(app, cmp_user2);
+    let user_signin3 = signin!(app, cmp_user3);
+
+    let session_token = user_signin.session_token.unwrap();
+    let session_token2 = user_signin2.session_token.unwrap();
+    let session_token3 = user_signin3.session_token.unwrap();
+
+    update_token!(app, cmp_user, "token1", session_token.clone());
+    update_token!(app, cmp_user2, "token2", session_token2.clone());
+    update_token!(app, cmp_user3, "token3", session_token3.clone());
 
     //only one friendship
-    make_friend!(app, cmp_user, "First", cmp_user2.tele_num);
+    make_friend!(
+        app,
+        cmp_user,
+        "First",
+        cmp_user2.tele_num,
+        session_token.clone()
+    );
 
-    gehma!(app, cmp_user, "updated description");
+    gehma!(app, cmp_user, "updated description", session_token.clone());
 
-    let user = get_user!(app, cmp_user);
+    let user = get_user!(app, cmp_user, session_token.clone());
 
     assert_eq!(cmp_user.id, user.id);
     assert_eq!("updated description".to_string(), user.description);
@@ -607,20 +659,52 @@ async fn test_push_notifications_blacklist1() {
     )
     .await;
 
-    update_token!(app, cmp_user, "token1");
-    update_token!(app, cmp_user2, "token2");
-    update_token!(app, cmp_user3, "token3");
+    let user_signin = signin!(app, cmp_user);
+    let user_signin2 = signin!(app, cmp_user2);
+    let user_signin3 = signin!(app, cmp_user3);
 
-    make_friend!(app, cmp_user, "First", cmp_user2.tele_num.clone());
-    make_friend!(app, cmp_user, "Third", cmp_user3.tele_num);
-    make_friend!(app, cmp_user2, "Second", cmp_user.tele_num.clone());
-    make_friend!(app, cmp_user3, "Third2", cmp_user.tele_num.clone());
+    let session_token = user_signin.session_token.unwrap();
+    let session_token2 = user_signin2.session_token.unwrap();
+    let session_token3 = user_signin3.session_token.unwrap();
 
-    ignore_contact!(app, cmp_user, cmp_user2.tele_num);
+    update_token!(app, cmp_user, "token1", session_token.clone());
+    update_token!(app, cmp_user2, "token2", session_token2.clone());
+    update_token!(app, cmp_user3, "token3", session_token3.clone());
 
-    gehma!(app, cmp_user, "updated description");
+    make_friend!(
+        app,
+        cmp_user,
+        "First",
+        cmp_user2.tele_num.clone(),
+        session_token.clone()
+    );
+    make_friend!(
+        app,
+        cmp_user,
+        "Third",
+        cmp_user3.tele_num,
+        session_token.clone()
+    );
+    make_friend!(
+        app,
+        cmp_user2,
+        "Second",
+        cmp_user.tele_num.clone(),
+        session_token2.clone()
+    );
+    make_friend!(
+        app,
+        cmp_user3,
+        "Third2",
+        cmp_user.tele_num.clone(),
+        session_token3.clone()
+    );
 
-    let user = get_user!(app, cmp_user);
+    ignore_contact!(app, cmp_user, cmp_user2.tele_num, session_token.clone());
+
+    gehma!(app, cmp_user, "updated description", session_token.clone());
+
+    let user = get_user!(app, cmp_user, session_token.clone());
 
     assert_eq!(cmp_user.id, user.id);
     assert_eq!("updated description".to_string(), user.description);
@@ -652,20 +736,28 @@ async fn test_push_notifications_blacklist2() {
     )
     .await;
 
-    update_token!(app, cmp_user, "token1");
-    update_token!(app, cmp_user2, "token2");
-    update_token!(app, cmp_user3, "token3");
+    let user_signin = signin!(app, cmp_user);
+    let user_signin2 = signin!(app, cmp_user2);
+    let user_signin3 = signin!(app, cmp_user3);
 
-    make_friend!(app, cmp_user, "First", cmp_user2.tele_num.clone());
-    make_friend!(app, cmp_user2, "Second", cmp_user.tele_num.clone());
-    make_friend!(app, cmp_user, "Third", cmp_user3.tele_num.clone());
-    make_friend!(app, cmp_user3, "Third2", cmp_user.tele_num.clone());
+    let session_token = user_signin.session_token.unwrap();
+    let session_token2 = user_signin2.session_token.unwrap();
+    let session_token3 = user_signin3.session_token.unwrap();
 
-    ignore_contact!(app, cmp_user2, cmp_user.tele_num); //REVERSED HERE
+    update_token!(app, cmp_user, "token1", session_token.clone());
+    update_token!(app, cmp_user2, "token2", session_token2.clone());
+    update_token!(app, cmp_user3, "token3", session_token3.clone());
 
-    gehma!(app, cmp_user, "updated description");
+    make_friend!(app, cmp_user, "First", cmp_user2.tele_num.clone(), session_token.clone());
+    make_friend!(app, cmp_user2, "Second", cmp_user.tele_num.clone(), session_token2.clone());
+    make_friend!(app, cmp_user, "Third", cmp_user3.tele_num.clone(), session_token.clone());
+    make_friend!(app, cmp_user3, "Third2", cmp_user.tele_num.clone(), session_token3.clone());
 
-    let user = get_user!(app, cmp_user);
+    ignore_contact!(app, cmp_user2, cmp_user.tele_num, session_token2.clone()); //REVERSED HERE
+
+    gehma!(app, cmp_user, "updated description", session_token.clone());
+
+    let user = get_user!(app, cmp_user, session_token.clone());
 
     assert_eq!(cmp_user.id, user.id);
     assert_eq!("updated description".to_string(), user.description);
@@ -682,7 +774,13 @@ async fn test_create_blacklist() {
 
     let mut app = init_server_integration_test!(&pool).await;
 
-    ignore_contact!(app, cmp_user, "+4365012345678");
+    let user_signin = signin!(app, cmp_user);
+    let user_signin2 = signin!(app, _cmp_user2);
+
+    let session_token = user_signin.session_token.unwrap();
+    let session_token2 = user_signin2.session_token.unwrap();
+
+    ignore_contact!(app, cmp_user, "+4365012345678", session_token);
 
     cleanup(&pool);
 }
@@ -698,16 +796,22 @@ async fn test_get_all_blacklists() {
 
     let mut app = init_server_integration_test!(&pool).await;
 
+    let user_signin = signin!(app, cmp_user);
+    let user_signin2 = signin!(app, _cmp_user2);
+
+    let session_token = user_signin.session_token.unwrap();
+    let session_token2 = user_signin2.session_token.unwrap();
+
     // Creating blacklist
-    ignore_contact!(app, cmp_user, "+4365012345678");
+    ignore_contact!(app, cmp_user, "+4365012345678", session_token.clone());
 
     // Get
     let req = test::TestRequest::get()
         .uri(&format!(
-            "/api/user/{}/blacklist?access_token={}",
+            "/api/user/{}/blacklist",
             cmp_user.id,
-            cmp_user.access_token.unwrap()
         ))
+        .header("AUTHORIZATION", session_token)
         .to_request();
 
     /*
@@ -746,19 +850,25 @@ async fn test_see_if_blocked_perspective_creator() {
 
     let mut app = init_server_integration_test!(&pool).await;
 
+    let user_signin = signin!(app, cmp_user);
+    let user_signin2 = signin!(app, _cmp_user2);
+
+    let session_token = user_signin.session_token.unwrap();
+    let session_token2 = user_signin2.session_token.unwrap();
+
     // Creating contact
-    make_friend!(app, cmp_user, "test contact", "+4365012345678");
+    make_friend!(app, cmp_user, "test contact", "+4365012345678", session_token.clone());
 
     // Creating blacklist
-    ignore_contact!(app, cmp_user, "+4365012345678");
+    ignore_contact!(app, cmp_user, "+4365012345678", session_token.clone());
 
     // Get all blocked
     let req = test::TestRequest::get()
         .uri(&format!(
-            "/api/contacts/{}?access_token={}",
+            "/api/contacts/{}",
             cmp_user.id,
-            cmp_user.access_token.unwrap()
         ))
+        .header("AUTHORIZATION", session_token.clone())
         .to_request();
 
     let contacts: Vec<ContactDto> = test::read_response_json(&mut app, req).await;
@@ -788,11 +898,17 @@ async fn test_see_if_blocked_perspective_blocked() {
 
     let mut app = init_server_integration_test!(&pool).await;
 
+    let user_signin = signin!(app, _cmp_user);
+    let user_signin2 = signin!(app, cmp_user2);
+
+    let session_token = user_signin.session_token.unwrap();
+    let session_token2 = user_signin2.session_token.unwrap();
+
     // Creating contact
-    make_friend!(app, cmp_user2, "test contact", "+4366412345678");
+    make_friend!(app, cmp_user2, "test contact", "+4366412345678", session_token2.clone());
 
     // Creating blacklist
-    ignore_contact!(app, cmp_user2, "+4366412345678");
+    ignore_contact!(app, cmp_user2, "+4366412345678", session_token2.clone());
 
     // Get all blocked
     let req = test::TestRequest::get()
@@ -801,6 +917,7 @@ async fn test_see_if_blocked_perspective_blocked() {
             cmp_user2.id,
             cmp_user2.access_token.unwrap()
         ))
+        .header("AUTHORIZATION", session_token2.clone())
         .to_request();
 
     let contacts: Vec<ContactDto> = test::read_response_json(&mut app, req).await;

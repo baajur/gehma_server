@@ -72,9 +72,7 @@ where
             .app_data::<SessionService>()
             .expect("no session service configured");
 
-        if req.path().starts_with("/api/signin")
-        //|| req.path().starts_with("api/auth")
-        {
+        if req.path().starts_with("/api/signin") || req.path().starts_with("/api/auth") {
             debug!("Skipping authentication");
             let fut = self.service.call(req);
             return Box::pin(async move {
