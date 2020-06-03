@@ -3,6 +3,7 @@ use core::errors::ServiceError;
 use core::models::dto::{PostUserDto, UpdateUserDto};
 
 use crate::services::push_notifications::NotificationService;
+use crate::services::session::SessionService;
 use log::info;
 use web_contrib::utils::{set_response_headers, QueryParams};
 
@@ -18,6 +19,7 @@ pub async fn signin(
     query: web::Query<QueryParams>,
     user_dao: web::Data<Box<dyn PersistentUserDao>>,
     notification_service: web::Data<NotificationService>,
+    session_service: web::Data<SessionService>,
 ) -> Result<HttpResponse, ServiceError> {
     info!("routes/user/signin");
 
@@ -29,6 +31,7 @@ pub async fn signin(
         user_dao,
         current_time,
         notification_service,
+        session_service,
     )?;
 
     let mut res = HttpResponse::Ok()

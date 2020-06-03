@@ -8,6 +8,7 @@ use uuid::Uuid;
 
 use crate::queries::*;
 use crate::services::push_notifications::NotificationService;
+use crate::services::session::*;
 use log::{debug, error, info};
 
 const SESSION_TOKEN_LENGTH: usize = 30;
@@ -22,6 +23,7 @@ pub(crate) fn user_signin(
     user_dao: web::Data<Box<dyn PersistentUserDao>>,
     current_time: DateTime<Local>,
     notification_service: web::Data<NotificationService>,
+    session_service: web::Data<SessionService>,
 ) -> Result<UserDto, ServiceError> {
     info!("controllers/user/user_signin");
 
@@ -64,9 +66,7 @@ pub(crate) fn user_signin(
     user_dao.get_ref().create_usage_statistics_for_user(&user)?;
 
     // Set a new session token
-    let session_token = core::utils::generate_random_string(3);
-
-    println!("session {}", session_token);
+    let (session_token, _) = session_service.new_session(user.id);
 
     let mut dto: UserDto = user.into();
     dto.session_token = Some(session_token);
