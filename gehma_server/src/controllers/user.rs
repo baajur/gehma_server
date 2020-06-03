@@ -47,8 +47,8 @@ pub(crate) fn user_signin(
 
     // Update client version
     if user.client_version != body.client_version {
-        update_user_without_auth(
-            &user.id,
+        update_user(
+            &user.id.to_string(),
             &UpdateUserDto {
                 description: user.description.clone(),
                 led: user.led,
@@ -76,12 +76,11 @@ pub(crate) fn user_signin(
 
 pub(crate) fn get_entry(
     uid: &str,
-    access_token: &str,
     user_dao: web::Data<Box<dyn PersistentUserDao>>,
 ) -> Result<UserDto, ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
 
-    let user = get_user_by_id!(user_dao, &parsed, access_token.to_string());
+    let user = get_user_by_id!(user_dao, &parsed);
 
     let mut user: UserDto = user?.into();
 
@@ -95,48 +94,28 @@ pub(crate) fn get_entry(
 pub(crate) fn update_token_handler(
     uid: String,
     payload: UpdateTokenPayload,
-    access_token: &str,
     user_dao: web::Data<Box<dyn PersistentUserDao>>,
 ) -> Result<(), ServiceError> {
     let parsed = Uuid::parse_str(&uid)?;
 
-    let user = get_user_by_id!(user_dao, &parsed, access_token.to_owned());
+    let user = get_user_by_id!(user_dao, &parsed);
 
     user?;
 
     user_dao.get_ref().update_token(&parsed, payload.token)
 }
 
-#[allow(clippy::too_many_arguments)]
-pub(crate) fn update_user_with_auth(
-    uid: &str,
-    user: &UpdateUserDto,
-    access_token: &str,
-    user_dao: web::Data<Box<dyn PersistentUserDao>>,
-    current_time: DateTime<Local>,
-    notification_service: web::Data<NotificationService>,
-) -> Result<UserDto, ::core::errors::ServiceError> {
-    let parsed = Uuid::parse_str(uid)?;
-
-    let muser = get_user_by_id!(user_dao, &parsed, access_token.to_owned());
-
-    muser?;
-
-    update_user_without_auth(&parsed, user, &user_dao, current_time, notification_service)
-        .map(|w| w.into())
-}
-
-fn update_user_without_auth(
-    uid: &Uuid,
+pub(crate) fn update_user(
+    uid: &String,
     user: &UpdateUserDto,
     user_dao: &web::Data<Box<dyn PersistentUserDao>>,
     current_time: DateTime<Local>,
     notification_service: web::Data<NotificationService>,
 ) -> Result<UserDao, ::core::errors::ServiceError> {
     info!("controllers/user/update_user_without_auth");
+    let parsed = Uuid::parse_str(uid)?;
 
-    // Do user update
-    let (user, contacts) = user_dao.get_ref().update_user(uid, user, current_time)?;
+    let (user, contacts) = user_dao.get_ref().update_user(&parsed, user, current_time)?;
 
     debug!("Contacts sending push_notifications {}", contacts.len());
 

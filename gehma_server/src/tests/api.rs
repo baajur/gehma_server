@@ -88,7 +88,7 @@ macro_rules! setup_login_account {
         $user_dao //login
             .expect_get_by_id()
             .times(1)
-            .returning(|_id, _access_token| Ok(USER.clone()));
+            .returning(|_id| Ok(USER.clone()));
     };
 }
 
@@ -229,7 +229,7 @@ async fn test_get_user_with_invalid_login() {
     user_dao_mock //login
         .expect_get_by_id()
         .times(1)
-        .returning(|_id, _access_token| Err(ServiceError::Unauthorized));
+        .returning(|_id| Err(ServiceError::Unauthorized));
 
     let mut app = init_server!(user_dao_mock, blacklist_dao_mock, contacts_dao_mock).await;
 
@@ -475,7 +475,7 @@ async fn test_contacts() {
     user_dao_mock
         .expect_get_by_id()
         .times(2)
-        .returning(|_id, _access_token| Ok(USER.clone()));
+        .returning(|_id| Ok(USER.clone()));
 
     contacts_dao_mock
         .expect_create()
@@ -548,7 +548,7 @@ async fn test_contacts_with_blacklist_1() {
     user_dao_mock
         .expect_get_by_id()
         .times(2)
-        .returning(|_id, _access_token| Ok(USER.clone()));
+        .returning(|_id| Ok(USER.clone()));
 
     contacts_dao_mock
         .expect_create()
@@ -636,7 +636,7 @@ async fn test_contacts_with_blacklist_2() {
     user_dao_mock
         .expect_get_by_id()
         .times(2)
-        .returning(|_id, _access_token| Ok(USER.clone()));
+        .returning(|_id| Ok(USER.clone()));
 
     contacts_dao_mock
         .expect_create()

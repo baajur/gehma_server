@@ -23,10 +23,10 @@ pub trait PersistentUserDao {
         hash_tele_num: &HashedTeleNum,
     ) -> IResult<UserDao>;
 
-    fn get_by_id(&self, id: &Uuid, my_access_token: String) -> IResult<UserDao>;
-    fn get_by_id_unsafe(&self, id: &Uuid) -> IResult<UserDao>;
+    fn get_by_id(&self, id: &Uuid) -> IResult<UserDao>;
 
     fn create_analytics_for_user(&self, user: &UserDao) -> IResult<AnalyticDao>;
+
     fn create(
         &self,
         tele_num: &PhoneNumber,

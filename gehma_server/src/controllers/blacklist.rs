@@ -13,14 +13,13 @@ use crate::get_user_by_id;
 
 pub(crate) fn get_entry(
     blocker: &str,
-    access_token: &str,
     user_dao: web::Data<Box<dyn PersistentUserDao>>,
     blacklist_dao: web::Data<Box<dyn PersistentBlacklistDao>>,
 ) -> Result<Vec<BlacklistDto>, ServiceError> {
     let blocker = Uuid::parse_str(blocker)?;
 
     let user =
-        get_user_by_id!(user_dao, &blocker, access_token.to_string());
+        get_user_by_id!(user_dao, &blocker);
 
     user?;
 
@@ -37,7 +36,6 @@ pub(crate) fn get_entry(
 pub(crate) fn create_entry(
     blocker: &str,
     data: &PostData,
-    access_token: &str,
     user_dao: web::Data<Box<dyn PersistentUserDao>>,
     blacklist_dao: web::Data<Box<dyn PersistentBlacklistDao>>,
 ) -> Result<BlacklistDto, ServiceError> {
@@ -45,7 +43,7 @@ pub(crate) fn create_entry(
     let blocker2 = Uuid::parse_str(blocker)?;
 
     let user =
-        get_user_by_id!(user_dao, &blocker2, access_token.to_string());
+        get_user_by_id!(user_dao, &blocker2);
 
     let contact = user_dao
         .get_ref()
@@ -63,14 +61,13 @@ pub(crate) fn create_entry(
 pub(crate) fn delete_entry(
     blocker: &str,
     data: &PostData,
-    access_token: &str,
     user_dao: web::Data<Box<dyn PersistentUserDao>>,
     blacklist_dao: web::Data<Box<dyn PersistentBlacklistDao>>,
 ) -> Result<(), ServiceError> {
     let blocker2 = Uuid::parse_str(blocker)?;
 
     let user =
-        get_user_by_id!(user_dao, &blocker2, access_token.to_string());
+        get_user_by_id!(user_dao, &blocker2);
 
     blacklist_dao.get_ref().delete(
         &user?.hash_tele_num,

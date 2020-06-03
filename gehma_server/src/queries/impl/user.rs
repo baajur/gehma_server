@@ -173,26 +173,7 @@ impl PersistentUserDao for PgUserDao {
     }
 
     /// Get the user by uid
-    fn get_by_id(&self, myid: &Uuid, my_access_token: String) -> Result<UserDao, ServiceError> {
-        info!("queries/user/get_query");
-        use core::schema::users::dsl::{access_token, id, users};
-
-        let conn: &PgConnection = &self.pool.get().unwrap();
-
-        users
-            .filter(id.eq(myid).and(access_token.eq(my_access_token)))
-            .load::<UserDao>(conn)
-            .map_err(|_db_error| ServiceError::BadRequest("Invalid User".into()))
-            .and_then(|w| {
-                w.first()
-                    .cloned()
-                    .ok_or_else(|| ServiceError::BadRequest("No user found".into()))
-                //.map(|w| w.into())
-            })
-    }
-
-    /// Get the user by uid without access_token
-    fn get_by_id_unsafe(&self, myid: &Uuid) -> Result<UserDao, ServiceError> {
+    fn get_by_id(&self, myid: &Uuid) -> Result<UserDao, ServiceError> {
         info!("queries/user/get_query");
         use core::schema::users::dsl::{id, users};
 
@@ -212,14 +193,13 @@ impl PersistentUserDao for PgUserDao {
 
     fn get_by_tele_num(&self, phone_number: &PhoneNumber) -> Result<UserDao, ServiceError> {
         info!("queries/user/get_query");
-        use core::schema::users::dsl::{access_token, tele_num, users};
+        use core::schema::users::dsl::{tele_num, users};
 
         let conn: &PgConnection = &self.pool.get().unwrap();
 
         users
             .filter(
-                tele_num.eq(phone_number.to_string())
-                //.and(access_token.eq(my_access_token)),
+                tele_num.eq(phone_number.to_string()),
             )
             .load::<UserDao>(conn)
             .map_err(|_db_error| {

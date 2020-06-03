@@ -12,7 +12,6 @@ use log::info;
 
 pub async fn get_contacts(
     info: web::Path<String>,
-    query: web::Query<QueryParams>,
     user_dao: web::Data<Box<dyn PersistentUserDao>>,
     blacklist_dao: web::Data<Box<dyn PersistentBlacklistDao>>,
     contact_dao: web::Data<Box<dyn PersistentContactsDao>>,
@@ -24,7 +23,6 @@ pub async fn get_contacts(
         user_dao,
         blacklist_dao,
         contact_dao,
-        &query.access_token,
     )?;
 
     let mut res = HttpResponse::Ok()
@@ -39,7 +37,6 @@ pub async fn get_contacts(
 pub async fn create(
     info: web::Path<(String, String)>,
     mut payload: web::Json<PayloadNumbersDto>,
-    query: web::Query<QueryParams>,
     user_dao: web::Data<Box<dyn PersistentUserDao>>,
     blacklist_dao: web::Data<Box<dyn PersistentBlacklistDao>>,
     contacts_dao: web::Data<Box<dyn PersistentContactsDao>>,
@@ -51,7 +48,6 @@ pub async fn create(
         &info.0,
         &info.1,
         &mut payload.numbers,
-        &query.access_token,
         user_dao,
         blacklist_dao,
         contacts_dao,

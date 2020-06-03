@@ -13,14 +13,13 @@ pub(crate) fn create(
     uid: &str,
     _country_code: &str,
     phone_numbers: &mut Vec<PayloadUserDto>,
-    access_token: &str,
     user_dao: web::Data<Box<dyn PersistentUserDao>>,
     blacklist_dao: web::Data<Box<dyn PersistentBlacklistDao>>,
     contact_dao: web::Data<Box<dyn PersistentContactsDao>>,
 ) -> Result<(), ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
 
-    let user = get_user_by_id!(user_dao, &parsed, access_token.to_string());
+    let user = get_user_by_id!(user_dao, &parsed);
 
     if phone_numbers.len() >= MAX_ALLOWED_CONTACTS {
         return Err(ServiceError::BadRequest("Too many contacts.".to_string()));
@@ -50,11 +49,10 @@ pub(crate) fn get_contacts(
     user_dao: web::Data<Box<dyn PersistentUserDao>>,
     blacklist_dao: web::Data<Box<dyn PersistentBlacklistDao>>,
     contact_dao: web::Data<Box<dyn PersistentContactsDao>>,
-    access_token: &str,
 ) -> Result<Vec<ContactDto>, ServiceError> {
     let parsed = Uuid::parse_str(uid)?;
 
-    let user = get_user_by_id!(user_dao, &parsed, access_token.to_owned());
+    let user = get_user_by_id!(user_dao, &parsed);
 
     let user = user?;
 

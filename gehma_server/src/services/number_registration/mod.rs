@@ -30,11 +30,11 @@ pub trait NumberRegistrationServiceTrait : Send + Sync {
 
 #[macro_export]
 macro_rules! get_user_by_tele_num {
-    ( $dao:ident, $tele_num:expr, $access_token:expr ) => {{
+    ( $dao:ident, $tele_num:expr) => {{
         use log::info;
         info!("services/number_registration/get_user_by_tele_num");
         $dao.get_ref()
-            .get_by_tele_num($tele_num, $access_token)
+            .get_by_tele_num($tele_num)
             .map_err(|w| {
                 log::error!("{:?}", w);
                 ServiceError::Unauthorized
@@ -44,11 +44,11 @@ macro_rules! get_user_by_tele_num {
 
 #[macro_export]
 macro_rules! get_user_by_id {
-    ( $dao:ident, $id:expr, $access_token:expr ) => {{
+    ( $dao:ident, $id:expr) => {{
         use log::info;
         info!("services/number_registration/get_user_by_id");
         $dao.get_ref()
-            .get_by_id($id, $access_token)
+            .get_by_id($id)
             .map_err(|w| {
                 log::error!("{:?}", w);
                 ServiceError::Unauthorized
