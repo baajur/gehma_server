@@ -20,7 +20,7 @@ pub(crate) mod services;
 
 pub(crate) mod dao_factory;
 
-//mod middleware;
+mod middleware;
 
 mod database;
 mod redis;
@@ -45,28 +45,28 @@ pub(crate) async fn main() -> std::io::Result<()> {
     env_logger::init();
 
     let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL expected");
-    let redis_url = std::env::var("REDIS_URL").expect("REDIS_URL expected");
+    //let redis_url = std::env::var("REDIS_URL").expect("REDIS_URL expected");
 
     let port = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());
     let addr = std::env::var("BINDING_ADDR").unwrap_or_else(|_| "localhost".to_string());
 
     let pool_pg = connect_pg(database_url);
-    let pool_redis = connect_redis(redis_url);
+    //let pool_redis = connect_redis(redis_url);
 
     let server = HttpServer::new(move || {
-        let dao_factory = DaoFactory::new(pool_pg.clone(), pool_redis.clone());
+        let dao_factory = DaoFactory::new(pool_pg.clone());
 
         App::new()
             .data(pool_pg.clone())
-            .data(pool_redis.clone())
+            //.data(pool_redis.clone())
             //.data(get_auth())
             .data(set_testing_auth())
             .data(get_firebase_notification_service())
             .data(get_ratelimits())
+            .data(get_session_service())
             .data(dao_factory.get_user_dao())
             .data(dao_factory.get_contacts_dao())
             .data(dao_factory.get_blacklist_dao())
-            .data(dao_factory.get_session_dao())
             .wrap(
                 Cors::new()
                     .allowed_origin("http://localhost:3000")
@@ -80,6 +80,7 @@ pub(crate) async fn main() -> std::io::Result<()> {
             .wrap(actix_middleware::Logger::default())
             .data(web::JsonConfig::default().limit(4048 * 1024))
             .wrap(actix_middleware::Compress::default())
+            .wrap(middleware::auth::Authentication)
             //.wrap(middleware::auth::Authentication)
             .service(
                 web::scope("/static")

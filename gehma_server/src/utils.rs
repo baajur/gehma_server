@@ -4,6 +4,7 @@ use crate::services::number_registration::NumberRegistrationService;
 use crate::services::push_notifications::firebase::*;
 use crate::services::push_notifications::testing::*;
 use crate::services::push_notifications::NotificationService;
+use crate::services::session::*;
 
 use crate::ratelimits::*;
 
@@ -61,4 +62,11 @@ pub(crate) fn get_firebase_notification_service() -> NotificationService {
     };
 
     Box::new(FirebaseNotificationService { config })
+}
+
+#[allow(dead_code)]
+pub(crate) fn get_session_service() -> SessionService {
+    let secret = std::env::var("SESSION_KEY").expect("No SESSION_KEY configured");
+
+    Box::new(SessionServicePriv::new(secret))
 }

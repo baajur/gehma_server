@@ -9,6 +9,8 @@ use log::{debug, error, info};
 use crate::queries::*;
 use crate::services::number_registration::NumberRegistrationService;
 
+const ACCESS_TOKEN_LENGTH : usize = 32;
+
 pub(crate) fn request(
     body: RequestCodeDto,
     number_registration_service: web::Data<NumberRegistrationService>,
@@ -43,7 +45,7 @@ pub(crate) fn check_code(
         }
 
         // If not then create one
-        let token = Uuid::new_v4().simple().to_string();
+        let token = core::utils::generate_random_string(ACCESS_TOKEN_LENGTH);
 
         match user_dao
             .get_ref()

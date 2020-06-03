@@ -16,6 +16,7 @@ impl Into<UserDto> for UserDao {
             client_version: self.client_version,
             access_token: Some(self.access_token),
             firebase_token: self.firebase_token,
+            session_token: None,
         }
     }
 }
@@ -33,7 +34,7 @@ impl Into<BlacklistDto> for BlacklistDao {
 
 impl Into<UsageStatisticEntryDto> for UsageStatisticEntryDao {
     fn into(self) -> UsageStatisticEntryDto {
-        UsageStatisticEntryDto  {
+        UsageStatisticEntryDto {
             id: self.id,
             tele_num: self.tele_num.clone(),
             created_at: self.created_at,
@@ -43,13 +44,12 @@ impl Into<UsageStatisticEntryDto> for UsageStatisticEntryDao {
 
 impl Into<AnalyticDto> for AnalyticDao {
     fn into(self) -> AnalyticDto {
-        AnalyticDto  {
+        AnalyticDto {
             id: self.id,
             description: self.description.clone(),
             tele_num: self.tele_num.clone(),
             led: self.led,
             created_at: self.created_at,
-
         }
     }
 }

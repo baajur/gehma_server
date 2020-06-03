@@ -1,4 +1,6 @@
-use crate::errors::{ServiceError, InvalidUserInput};
+use crate::errors::{InvalidUserInput, ServiceError};
+use rand::distributions::Alphanumeric;
+use rand::Rng;
 
 pub fn phonenumber_to_international(
     number: &str,
@@ -14,4 +16,11 @@ pub fn phonenumber_to_international(
         .map_err(|_| InvalidUserInput::InvalidPhoneNumber(number.to_string()))?;
 
     Ok(number)
+}
+
+pub fn generate_random_string(n: usize) -> String {
+    rand::thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(n)
+        .collect::<String>()
 }

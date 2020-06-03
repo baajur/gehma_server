@@ -10,6 +10,8 @@ use crate::services::push_notifications::{
 use crate::services::number_registration::NumberRegistrationServiceTrait;
 
 use crate::Pool;
+use diesel::PgConnection;
+use diesel::query_dsl::RunQueryDsl;
 use diesel::r2d2::{self, ConnectionManager};
 
 use serde_json::json;
@@ -57,6 +59,8 @@ macro_rules! private_init_server_integration_test {
                 .data(get_dao_factory($pool).get_user_dao())
                 .data(get_dao_factory($pool).get_blacklist_dao())
                 .data(get_dao_factory($pool).get_contacts_dao())
+                .data(get_session_service())
+                .wrap(middleware::auth::Authentication)
                 .route(
                     "/api/auth/request_code",
                     web::post().to(crate::routes::number_registration::request_code),
@@ -175,6 +179,7 @@ fn cleanup(pool: &Pool) {
     log::debug!("cleanup");
 
     sql_query("DELETE FROM users;")
+        //.get_results(&pool.get().unwrap())
         .execute(&pool.get().unwrap())
         .unwrap();
 

@@ -1,4 +1,5 @@
 use crate::queries::PersistentUserDao;
+use crate::services::session::SessionService;
 use chrono::prelude::*;
 use core::errors::ServiceError;
 use uuid::Uuid;
@@ -67,39 +68,31 @@ where
     }
 
     fn call(&mut self, mut req: ServiceRequest) -> Self::Future {
-        let mut authenticate_pass: bool = false;
+        let session_service = req
+            .app_data::<SessionService>()
+            .expect("no session service configured");
 
-        if req.path().starts_with("api/static") || req.path().starts_with("api/") {
-            authenticate_pass = true;
+        if req.path().starts_with("/api/signin")
+        //|| req.path().starts_with("api/auth")
+        {
+            debug!("Skipping authentication");
+            let fut = self.service.call(req);
+            return Box::pin(async move {
+                let res = fut.await?;
+                Ok(res)
+            });
         }
 
-        if !authenticate_pass {
-            if let Some(user_dao) = req.app_data::<Box<dyn PersistentUserDao>>() {
-                let path : Vec<&str> = req.path().split("/").skip(3).take(1).collect();
-                let access_token = req.query_string().split("=").collect::<Vec<_>>()[1].to_string();
+        let token = req
+            .headers()
+            .get("AUTHORIZATION")
+            .map(|value| value.to_str().ok())
+            .ok_or_else(|| {
+                warn!("No AUTHORIZATION header");
+                ServiceError::Unauthorized
+            }).unwrap().unwrap();
 
-                //debug!("id {:?} access_token {:?}", path, access_token);
-                let id = uuid::Uuid::parse_str(path[0]).expect("invalid uuid");
-
-                let res = user_dao
-                    .get_ref()
-                    .get_by_id(&id, access_token)
-                    .map_err(|w| {
-                        log::error!("{:?}", w);
-                        ServiceError::Unauthorized
-                    });
-
-                //debug!("auth_res {:?}", res);
-
-                if res.is_ok() {
-                    //info!("Authentication ok");
-                    authenticate_pass = true;
-                } 
-                /*else {
-                    warn!("auth failed");
-                }*/
-            }
-        }
+        let authenticate_pass = session_service.validate(token.to_string()).unwrap();
 
         if authenticate_pass {
             debug!("Authentication ok");
@@ -109,9 +102,13 @@ where
                 Ok(res)
             })
         } else {
-            warn!("Authentication failed");
+            info!("Authentication failed");
             Box::pin(async move {
-                Ok(req.into_response(HttpResponse::Unauthorized().finish().into_body()))
+                Ok(req.into_response(
+                    HttpResponse::Unauthorized()
+                        .json("Session expired")
+                        .into_body(),
+                ))
             })
         }
     }

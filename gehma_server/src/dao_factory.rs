@@ -2,11 +2,12 @@ use crate::{Pool, RedisPool};
 
 use crate::queries::*;
 
-pub struct DaoFactory(Pool, RedisPool);
+//pub struct DaoFactory(Pool, RedisPool);
+pub struct DaoFactory(Pool);
 
 impl DaoFactory {
-    pub fn new(pool: Pool, pool_redis: RedisPool) -> Self {
-        Self(pool, pool_redis)
+    pub fn new(pool: Pool) -> Self {
+        Self(pool)
     }
 
     pub fn get_user_dao(&self) -> Box<dyn PersistentUserDao> {
@@ -27,9 +28,11 @@ impl DaoFactory {
         })
     }
 
+    /*
     pub fn get_session_dao(&self) -> Box<dyn PersistentSessionDao> {
         Box::new(RedisSessionDao {
             redis_pool: self.1.clone(),
         })
     }
+    */
 }

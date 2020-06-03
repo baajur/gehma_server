@@ -10,6 +10,8 @@ use crate::queries::*;
 use crate::services::push_notifications::NotificationService;
 use log::{debug, error, info};
 
+const SESSION_TOKEN_LENGTH: usize = 30;
+
 //use crate::routes::user::{ResponseContact, UpdateTokenPayload, UpdateUser};
 use crate::get_user_by_id;
 use crate::routes::user::UpdateTokenPayload;
@@ -36,10 +38,12 @@ pub(crate) fn user_signin(
 
     let user = user_dao.get_ref().get_by_tele_num(&tele)?;
 
+    // Check if authorized
     if &user.access_token != access_token {
         return Err(ServiceError::Unauthorized);
     }
 
+    // Update client version
     if user.client_version != body.client_version {
         update_user_without_auth(
             &user.id,
@@ -54,10 +58,20 @@ pub(crate) fn user_signin(
         )?;
     }
 
+    // Generate a new profile picture on every signin
     user_dao.get_ref().update_profile_picture(&user)?;
+
     user_dao.get_ref().create_usage_statistics_for_user(&user)?;
 
-    Ok(user.into())
+    // Set a new session token
+    let session_token = core::utils::generate_random_string(3);
+
+    println!("session {}", session_token);
+
+    let mut dto: UserDto = user.into();
+    dto.session_token = Some(session_token);
+
+    Ok(dto)
 }
 
 pub(crate) fn get_entry(

@@ -34,12 +34,14 @@ macro_rules! init_server {
                 .data(set_testing_auth() as Box<dyn NumberRegistrationServiceTrait>)
                 .data(set_testing_notification_service() as NotificationService)
                 .data(set_ratelimits())
+                .data(get_session_service())
                 .data(Box::new($user_dao) as Box<dyn PersistentUserDao>)
                 .data(Box::new($blacklist_dao) as Box<dyn PersistentBlacklistDao>)
                 .data(Box::new($contact_exists_dao) as Box<dyn PersistentContactsDao>)
                 .data(web::JsonConfig::default().limit(4048 * 1024))
                 .wrap(actix_middleware::Compress::default())
                 //.wrap(middleware::auth::Authentication)
+                .wrap(middleware::auth::Authentication)
                 .route(
                     "/api/auth/request_code",
                     web::post().to(crate::routes::number_registration::request_code),
@@ -582,6 +584,7 @@ async fn test_contacts_with_blacklist_1() {
                     client_version: super::ALLOWED_CLIENT_VERSIONS[0].to_string(),
                     access_token: None,
                     firebase_token: None,
+                    session_token: None,
                 },
             }])
         });
@@ -669,6 +672,7 @@ async fn test_contacts_with_blacklist_2() {
                     client_version: super::ALLOWED_CLIENT_VERSIONS[0].to_string(),
                     access_token: None,
                     firebase_token: None,
+                    session_token: None,
                 },
             }])
         });

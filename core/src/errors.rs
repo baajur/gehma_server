@@ -6,7 +6,7 @@ use serde::Serialize;
 use std::convert::From;
 use uuid::ParseError;
 
-#[derive(Debug, Display)]
+#[derive(Debug, Display, PartialEq)]
 pub enum ServiceError {
     #[display(fmt = "Internal Server Error")]
     InternalError,
@@ -33,7 +33,7 @@ pub enum ServiceError {
     ResourceDoesNotExist
 }
 
-#[derive(Debug, Display, Serialize)]
+#[derive(Debug, Display, Serialize, PartialEq)]
 pub enum InternalServerError {
     #[display(fmt = "Cannot generate profile")]
     GenerateImageError,
@@ -42,10 +42,12 @@ pub enum InternalServerError {
     #[display(fmt = "Notification sending failed")]
     NotificationError,
     #[display(fmt = "Input/Output error {}", _0)]
-    IOError(String)
+    IOError(String),
+    #[display(fmt = "Session key verification failed: {}", _0)]
+    SessionKeyVerificationError(String),
 }
 
-#[derive(Debug, Display, Serialize)]
+#[derive(Debug, Display, Serialize, PartialEq)]
 pub enum InvalidUserInput {
     #[display(fmt = "Invalid Phone Number: {}", _0)]
     InvalidPhoneNumber(String),
