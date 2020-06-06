@@ -64,6 +64,7 @@ impl NotificationServiceTrait for OneSignalService {
                     "en": format!("Your friends are motivated"),
                     "de": format!("Deine Freunde sind motiviert"),
                 },
+                "ttl": 172800, //two days
                 "include_player_ids": tokens
             }))
             .send()
