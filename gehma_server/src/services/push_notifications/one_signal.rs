@@ -41,28 +41,38 @@ impl NotificationServiceTrait for OneSignalService {
         let id = self.config.id.clone();
         let api_token = self.config.key.clone();
 
-        for (name, token) in values {
-            info!("Send to {}", token);
-            let response = client
-                .post("https://onesignal.com/api/v1/notifications")
-                .header(CONTENT_TYPE, "application/json")
-                .header(AUTHORIZATION, api_token.clone())
-                .json(&json!({
-                    "app_id": id,
-                    "contents": {
-                        "de": format!("{} ist motiviert", name),
-                        "en": format!("{} is motivated", name),
-                    },
-                    "include_player_ids": [token]
-                }))
-                .send()
-                .map_err(|err| {
-                    error!("error {:?}", err);
-                    ServiceError::InternalServerError(InternalServerError::NotificationError)
-                });
-
-            debug!("response {:?}", response);
+        if values.len() > 2000 {
+            //Onesignal rate limit
+            return Err(ServiceError::BadRequest(
+                "Too many contacts. Ratelimit reached".to_string(),
+            ));
         }
+
+        let tokens: Vec<_> = values
+            .into_iter()
+            .filter(|w| w.1 != "".to_string())
+            .map(|w| w.1)
+            .collect();
+
+        let response = client
+            .post("https://onesignal.com/api/v1/notifications")
+            .header(CONTENT_TYPE, "application/json")
+            //.header(AUTHORIZATION, api_token.clone())
+            .json(&json!({
+                "app_id": id,
+                "contents": {
+                    "en": format!("Your friends are motivated"),
+                    "de": format!("Deine Freunde sind motiviert"),
+                },
+                "include_player_ids": tokens
+            }))
+            .send()
+            .map_err(|err| {
+                error!("error {:#?}", err);
+                ServiceError::InternalServerError(InternalServerError::NotificationError)
+            });
+
+        //info!("response {:#?}", response);
 
         /*
         let work = tokio::prelude::stream::iter_ok(values)

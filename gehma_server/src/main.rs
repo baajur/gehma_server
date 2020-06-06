@@ -61,7 +61,7 @@ pub(crate) async fn main() -> std::io::Result<()> {
             //.data(pool_redis.clone())
             //.data(get_auth())
             .data(set_testing_auth())
-            .data(get_firebase_notification_service())
+            .data(get_onesignal_notification_service())
             .data(get_ratelimits())
             .data(get_session_service())
             .data(dao_factory.get_user_dao())

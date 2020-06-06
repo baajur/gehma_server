@@ -72,7 +72,10 @@ where
             .app_data::<SessionService>()
             .expect("no session service configured");
 
-        if req.path().starts_with("/api/signin") || req.path().starts_with("/api/auth") {
+        if req.path().starts_with("/api/signin")
+            || req.path().starts_with("/api/auth")
+            || req.path().starts_with("/api/static")
+        {
             debug!("Skipping authentication");
             let fut = self.service.call(req);
             return Box::pin(async move {
@@ -88,7 +91,9 @@ where
             .ok_or_else(|| {
                 warn!("No AUTHORIZATION header");
                 ServiceError::Unauthorized
-            }).unwrap().unwrap();
+            })
+            .unwrap()
+            .unwrap();
 
         let authenticate_pass = session_service.validate(token.to_string()).unwrap();
 
