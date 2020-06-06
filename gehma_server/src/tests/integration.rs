@@ -146,9 +146,9 @@ macro_rules! signin {
     ($app:ident, $query_user:ident) => {{
         let req = test::TestRequest::post()
             .uri(&format!(
-                "/api/signin?access_token={}",
-                $query_user.access_token.clone().unwrap()
+                "/api/signin",
             ))
+            .header("ACCESS_TOKEN", $query_user.access_token.clone().unwrap())
             .set_json(&core::models::dto::PostUserDto {
                 tele_num: $query_user.tele_num.clone(),
                 country_code: $query_user.country_code.clone(),
@@ -437,7 +437,7 @@ async fn test_create_user() {
 
 #[actix_rt::test]
 async fn test_get_user() {
-    env_logger::init();
+    //env_logger::init();
     let pool = get_pool();
 
     cleanup(&pool);
@@ -913,9 +913,8 @@ async fn test_see_if_blocked_perspective_blocked() {
     // Get all blocked
     let req = test::TestRequest::get()
         .uri(&format!(
-            "/api/contacts/{}?access_token={}",
+            "/api/contacts/{}",
             cmp_user2.id,
-            cmp_user2.access_token.unwrap()
         ))
         .header("AUTHORIZATION", session_token2.clone())
         .to_request();

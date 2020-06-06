@@ -1,20 +1,19 @@
-use actix_web::{web, HttpResponse};
+use actix_web::{web, HttpResponse, HttpRequest};
 use core::errors::ServiceError;
 use core::models::dto::{PostUserDto, UpdateUserDto};
 
 use crate::services::push_notifications::NotificationService;
 use crate::services::session::SessionService;
 use log::info;
-use web_contrib::utils::{set_response_headers, QueryParams};
+use web_contrib::utils::{set_response_headers};
 
 use crate::controllers::user::*;
 use chrono::Local;
 use crate::queries::*;
 
 pub async fn signin(
-    _info: web::Path<()>,
+    request: HttpRequest,
     body: web::Json<PostUserDto>,
-    query: web::Query<QueryParams>,
     user_dao: web::Data<Box<dyn PersistentUserDao>>,
     notification_service: web::Data<NotificationService>,
     session_service: web::Data<SessionService>,
@@ -24,8 +23,8 @@ pub async fn signin(
     let current_time = Local::now();
 
     let user = user_signin(
+        request,
         body.into_inner(),
-        &query.access_token,
         user_dao,
         current_time,
         notification_service,

@@ -95,7 +95,7 @@ pub(crate) async fn main() -> std::io::Result<()> {
                             ),
                     )
                     .service(
-                        web::resource("/signin") //must have query string access_token
+                        web::resource("/signin")
                             .route(web::post().to(routes::user::signin)),
                     )
                     .service(

@@ -1,4 +1,4 @@
-use actix_web::web;
+use actix_web::{web, HttpRequest};
 use chrono::{DateTime, Local};
 use core::errors::ServiceError;
 use core::models::dao::*;
@@ -18,14 +18,21 @@ use crate::get_user_by_id;
 use crate::routes::user::UpdateTokenPayload;
 
 pub(crate) fn user_signin(
+    request: HttpRequest,
     body: PostUserDto,
-    access_token: &str,
     user_dao: web::Data<Box<dyn PersistentUserDao>>,
     current_time: DateTime<Local>,
     notification_service: web::Data<NotificationService>,
     session_service: web::Data<SessionService>,
 ) -> Result<UserDto, ServiceError> {
     info!("controllers/user/user_signin");
+
+    let access_token = request
+        .headers()
+        .get("ACCESS_TOKEN")
+        .ok_or(ServiceError::BadRequest(
+            "Missing access token in ACCESS_TOKEN header".to_string(),
+        ))?;
 
     if !crate::ALLOWED_CLIENT_VERSIONS.contains(&body.client_version.as_str()) {
         error!("Version mismatch. Server does not suppoert client version");
@@ -117,7 +124,9 @@ pub(crate) fn update_user(
 
     _user?;
 
-    let (user, contacts) = user_dao.get_ref().update_user(&parsed, user, current_time)?;
+    let (user, contacts) = user_dao
+        .get_ref()
+        .update_user(&parsed, user, current_time)?;
 
     debug!("Contacts sending push_notifications {}", contacts.len());
 
