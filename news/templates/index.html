@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Actix web</title>
+</head>
+<body>
+  <h1>Welcome!</h1>
+  <p>
+ {% for s in events -%}
+	{{ s.name }}
+{% endfor -%}  
+</body>
+</html>
+

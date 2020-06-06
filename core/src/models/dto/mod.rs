@@ -147,3 +147,12 @@ pub struct RequestCheckCodeDto {
     pub country_code: String,
     pub client_version: String,
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone, Eq, PartialEq)]
+pub struct EventDto {
+    pub name: String,
+    pub description: String,
+    pub opening: chrono::NaiveDateTime,
+    pub href: Option<String>,
+    pub id: i32,
+}

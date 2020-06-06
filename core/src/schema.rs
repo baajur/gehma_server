@@ -28,17 +28,16 @@ table! {
 
 table! {
     events (id) {
-        id -> Uuid,
         name -> Varchar,
         description -> Varchar,
         opening -> Timestamp,
-        closing -> Timestamp,
         country -> Varchar,
         city -> Varchar,
         addr -> Varchar,
-        href -> Nullable<Varchar>,
+        href -> Nullable<Text>,
         created_at -> Timestamp,
         changed_at -> Timestamp,
+        id -> Int4,
     }
 }
 

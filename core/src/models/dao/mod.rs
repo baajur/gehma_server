@@ -214,6 +214,21 @@ pub struct ContactPushNotificationDao {
     pub firebase_token: Option<String>,
 }
 
+#[derive(Debug, Serialize, Deserialize, Queryable, Clone, Identifiable, AsChangeset, Eq, PartialEq, QueryableByName)]
+#[table_name = "events"]
+pub struct EventDao {
+    pub name: String,
+    pub description: String,
+    pub opening: chrono::NaiveDateTime,
+    pub country: String,
+    pub city: String,
+    pub addr: String,
+    pub href: Option<String>,
+    pub created_at: chrono::NaiveDateTime,
+    pub changed_at: chrono::NaiveDateTime,
+    pub id: i32,
+}
+
 /*
 impl ContactDao {
     pub fn my_from(name: String, user: &UserDao, target_tele_num: String) -> ContactInsertDao {

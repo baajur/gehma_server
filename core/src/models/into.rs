@@ -53,3 +53,15 @@ impl Into<AnalyticDto> for AnalyticDao {
         }
     }
 }
+
+impl Into<EventDto> for EventDao {
+    fn into(self) -> EventDto {
+        EventDto {
+            name: self.name,
+            description: self.description,
+            opening: self.opening,
+            href: self.href,
+            id: self.id,
+        }
+    }
+}
