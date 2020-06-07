@@ -24,8 +24,8 @@ mod utils;
 #[derive(Template)]
 #[template(path = "index.html")]
 struct UserTemplate {
-    offset: usize,
-    next_offset: usize,
+    offset: i32,
+    next_offset: i32,
     events: Vec<EventDto>,
 }
 
@@ -77,15 +77,22 @@ async fn index(
             .parse()
             .map_err(|_| HttpResponse::BadRequest().json("wrong offset"))?;
 
+        if offset < 0 {
+            return Ok(HttpResponse::BadRequest().json("wrong offset"));
+        }
+
+        let events = get_events(pool.into_inner(), offset);
+
         UserTemplate {
             offset,
             next_offset: offset + n,
-            events: Vec::new(),
+            events,
         }
         .render()
         .unwrap()
     } else {
         let events = get_events(pool.into_inner(), 0);
+
         UserTemplate {
             offset: 0,
             next_offset: n,
