@@ -3,7 +3,7 @@ use crate::queries::*;
 use actix_web::{web, HttpResponse};
 use core::errors::ServiceError;
 use log::info;
-use web_contrib::utils::{set_response_headers, QueryParams};
+use web_contrib::utils::set_response_headers;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PostData {

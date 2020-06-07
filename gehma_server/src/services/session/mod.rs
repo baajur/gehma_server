@@ -1,6 +1,6 @@
 use chrono::prelude::*;
 use core::errors::ServiceError;
-use jsonwebtoken::{decode, encode, Algorithm, Header, Validation};
+use jsonwebtoken::{decode, encode, Header, Validation};
 use mockall::*;
 use time::Duration;
 use uuid::Uuid;

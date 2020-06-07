@@ -1,14 +1,14 @@
 use diesel::{prelude::*, PgConnection};
 use uuid::Uuid;
 
-use core::errors::{InternalServerError, ServiceError};
+use core::errors::ServiceError;
 use core::models::dao::*;
 use core::models::dto::*;
 
 use crate::Pool;
 
 use crate::queries::*;
-use log::{error, info};
+use log::info;
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -25,7 +25,7 @@ impl PersistentContactsDao for PgContactsDao {
         payload: &'a Vec<&'a mut PayloadUserDto>,
     ) -> Result<(), ServiceError> {
         info!("queries/contacts/create");
-        use core::schema::contacts::dsl::{contacts, target_hash_tele_num};
+        use core::schema::contacts::dsl::contacts;
 
         let conn: &PgConnection = &self.pool.get().unwrap();
 

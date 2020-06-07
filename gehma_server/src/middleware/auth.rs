@@ -1,8 +1,6 @@
-use crate::queries::PersistentUserDao;
 use crate::services::session::SessionService;
 use chrono::prelude::*;
 use core::errors::ServiceError;
-use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Claims {
@@ -13,10 +11,8 @@ struct Claims {
 }
 
 use actix_service::{Service, Transform};
-use actix_web::http::header::{HeaderName, HeaderValue};
 use actix_web::{
     dev::{ServiceRequest, ServiceResponse},
-    http::Method,
     Error, HttpResponse,
 };
 use futures::{
@@ -67,7 +63,7 @@ where
         self.service.poll_ready(cx)
     }
 
-    fn call(&mut self, mut req: ServiceRequest) -> Self::Future {
+    fn call(&mut self, req: ServiceRequest) -> Self::Future {
         let session_service = req
             .app_data::<SessionService>()
             .expect("no session service configured");

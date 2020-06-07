@@ -3,7 +3,7 @@ use actix_web::{web, HttpResponse};
 use core::errors::ServiceError;
 use core::models::dto::PayloadNumbersDto;
 
-use web_contrib::utils::{set_response_headers, QueryParams};
+use web_contrib::utils::set_response_headers;
 
 use crate::controllers::contacts::{create as ctrl_create, get_contacts as ctrl_get_contacts};
 use crate::queries::*;
@@ -18,12 +18,7 @@ pub async fn get_contacts(
 ) -> Result<HttpResponse, ServiceError> {
     info!("routes/user/get_contacts");
 
-    let users = ctrl_get_contacts(
-        &info.into_inner(),
-        user_dao,
-        blacklist_dao,
-        contact_dao,
-    )?;
+    let users = ctrl_get_contacts(&info.into_inner(), user_dao, blacklist_dao, contact_dao)?;
 
     let mut res = HttpResponse::Ok()
         .content_type("application/json")

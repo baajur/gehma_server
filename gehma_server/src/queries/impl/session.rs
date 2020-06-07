@@ -1,6 +1,6 @@
 use crate::queries::*;
 use crate::RedisPool;
-use r2d2_redis::redis::{cmd, RedisResult, ToRedisArgs};
+use r2d2_redis::redis::{cmd};
 use uuid::Uuid;
 use core::errors::ServiceError;
 

@@ -6,6 +6,7 @@ use log::{info, trace};
 pub type RedisPool = Pool<RedisConnectionManager>;
 
 /// Connects to redis
+#[allow(dead_code)]
 pub(crate) fn connect_redis(redis_url: impl Into<String>) -> RedisPool {
     trace!("Entering connect_redis");
 

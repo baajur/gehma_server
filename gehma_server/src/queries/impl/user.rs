@@ -10,8 +10,6 @@ use log::{error, info, trace};
 use uuid::Uuid;
 
 const INCREASE_XP: i32 = 100;
-const PROFILE_WIDTH: u32 = 500;
-const PROFILE_HEIGHT: u32 = 500;
 
 #[derive(Clone)]
 pub struct PgUserDao {

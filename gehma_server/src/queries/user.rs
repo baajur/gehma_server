@@ -6,8 +6,6 @@ use core::models::PhoneNumber;
 use uuid::Uuid;
 use mockall::*;
 
-use log::debug;
-
 type IResult<K> = Result<K, ServiceError>;
 
 #[automock]

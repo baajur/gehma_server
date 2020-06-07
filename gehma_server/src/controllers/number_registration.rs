@@ -2,7 +2,6 @@ use actix_web::web;
 use core::errors::{InternalServerError, InvalidUserInput, ServiceError};
 use core::models::dto::*;
 use core::models::PhoneNumber;
-use uuid::Uuid;
 
 use log::{debug, error, info};
 

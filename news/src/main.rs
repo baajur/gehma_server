@@ -1,15 +1,10 @@
-#[macro_use]
 extern crate actix_web;
-
-#[macro_use]
 extern crate serde_json;
 
 use crate::utils::*;
 use core::models::dao::EventDao;
 use core::models::dto::EventDto;
 
-use actix_web::http::StatusCode;
-use actix_web::middleware::errhandlers::{ErrorHandlerResponse, ErrorHandlers};
 use actix_web::{web, App, HttpResponse, HttpServer, Result};
 use diesel::prelude::*;
 use std::collections::HashMap;
@@ -124,7 +119,7 @@ async fn item(pool: web::Data<Arc<Pool>>, id: web::Path<String>) -> Result<HttpR
     Ok(HttpResponse::Ok().content_type("text/html").body(s))
 }
 
-async fn privacy(pool: web::Data<Arc<Pool>>) -> Result<HttpResponse> {
+async fn privacy() -> Result<HttpResponse> {
     Ok(HttpResponse::Ok().content_type("text/plain").body("Bei dem Aufruf der Seite werden IP-Adresse, Uhrzeit und Browser mitgespeichert. Diese Daten werden alle 3 Monate wieder geloescht werden."))
 }
 

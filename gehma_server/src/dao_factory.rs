@@ -1,4 +1,4 @@
-use crate::{Pool, RedisPool};
+use crate::{Pool};
 
 use crate::queries::*;
 

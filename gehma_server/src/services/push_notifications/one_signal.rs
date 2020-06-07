@@ -2,11 +2,11 @@ use super::Token;
 use crate::services::push_notifications::*;
 use core::errors::{InternalServerError, ServiceError};
 
-use log::{debug, error, info};
+use log::{error};
 use serde::Deserialize;
 use serde_json::json;
 
-use reqwest::header::{AUTHORIZATION, CONTENT_TYPE};
+use reqwest::header::{CONTENT_TYPE};
 use reqwest::Client;
 
 #[derive(Clone)]
@@ -39,7 +39,7 @@ impl NotificationServiceTrait for OneSignalService {
         //let size : usize = values.len();
 
         let id = self.config.id.clone();
-        let api_token = self.config.key.clone();
+        let _api_token = self.config.key.clone();
 
         if values.len() > 2000 {
             //Onesignal rate limit
@@ -54,7 +54,7 @@ impl NotificationServiceTrait for OneSignalService {
             .map(|w| w.1)
             .collect();
 
-        let response = client
+        let _response = client
             .post("https://onesignal.com/api/v1/notifications")
             .header(CONTENT_TYPE, "application/json")
             //.header(AUTHORIZATION, api_token.clone())

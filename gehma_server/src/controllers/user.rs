@@ -1,7 +1,6 @@
 use actix_web::{web, HttpRequest};
 use chrono::{DateTime, Local};
 use core::errors::ServiceError;
-use core::models::dao::*;
 use core::models::dto::*;
 use core::models::PhoneNumber;
 use uuid::Uuid;
