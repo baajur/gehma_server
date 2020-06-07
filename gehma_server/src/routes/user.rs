@@ -1,10 +1,10 @@
 use actix_web::{web, HttpRequest, HttpResponse};
 use core::errors::ServiceError;
-use core::models::dto::{PostUserDto, UpdateUserDto};
+use core::models::dto::*;
 
 use crate::services::push_notifications::NotificationService;
 use crate::services::session::SessionService;
-use log::info;
+use log::{info, trace};
 use web_contrib::utils::set_response_headers;
 
 use crate::controllers::user::*;
@@ -55,6 +55,23 @@ pub async fn get(
     set_response_headers(&mut res);
 
     Ok(res)
+}
+
+pub async fn upload_profile_picture(
+    info: web::Path<String>,
+    user_dao: web::Data<Box<dyn PersistentUserDao>>,
+    update: web::Json<UpdateProfilePictureDto>,
+) -> Result<HttpResponse, ServiceError> {
+    trace!("routes/user/upload_profile_picture");
+
+    change_profile_picture(&info.into_inner(), &user_dao, &update.into_inner())?;
+
+    let mut res = HttpResponse::Ok().finish();
+
+    set_response_headers(&mut res);
+
+    Ok(res)
+
 }
 
 /*

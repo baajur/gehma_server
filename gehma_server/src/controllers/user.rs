@@ -9,9 +9,7 @@ use uuid::Uuid;
 use crate::queries::*;
 use crate::services::push_notifications::NotificationService;
 use crate::services::session::*;
-use log::{debug, error, info};
-
-const SESSION_TOKEN_LENGTH: usize = 30;
+use log::{debug, error, info, trace};
 
 //use crate::routes::user::{ResponseContact, UpdateTokenPayload, UpdateUser};
 use crate::get_user_by_id;
@@ -157,6 +155,21 @@ pub(crate) fn update_user(
     let path = user_dao.get_profile_picture(&user)?;
 
     Ok(user.into(path))
+}
+
+pub(crate) fn change_profile_picture(
+    uid: &String,
+    user_dao: &web::Data<Box<dyn PersistentUserDao>>,
+    update: &UpdateProfilePictureDto,
+) -> Result<(), ServiceError> {
+    trace!("controllers/user/update_user_without_auth");
+
+    let parsed = Uuid::parse_str(uid)?;
+    let _user = get_user_by_id!(user_dao, &parsed);
+
+    user_dao.update_profile_picture(_user?.id, update)?;
+
+    Ok(())
 }
 
 /*

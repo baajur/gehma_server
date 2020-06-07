@@ -54,6 +54,15 @@ macro_rules! init_data {
             })
             .execute(connection)
             .unwrap();
+
+        diesel::insert_into(profile_pictures)
+            .values(&ProfilePictureDao {
+                id: 1,
+                path: "path2".to_string(),
+            })
+            .execute(connection)
+            .unwrap();
+
     };
 }
 
@@ -89,6 +98,10 @@ macro_rules! private_init_server_integration_test {
                     web::post().to(crate::routes::number_registration::check),
                 )
                 .route("/api/user/{uid}", web::get().to(crate::routes::user::get))
+                .route(
+                    "/api/user/{uid}/profile",
+                    web::post().to(crate::routes::user::upload_profile_picture),
+                )
                 .route(
                     "/api/user/{uid}",
                     web::put().to(crate::routes::user::update),
@@ -390,6 +403,21 @@ macro_rules! update_token {
             .header("AUTHORIZATION", $session_token)
             .set_json(&crate::routes::user::UpdateTokenPayload {
                 token: $token.to_string(),
+            })
+            .to_request();
+
+        let resp = test::call_service(&mut $app, req).await;
+        assert!(resp.status().is_success());
+    }};
+}
+
+macro_rules! change_profile_picture {
+    ($app:ident, $cmp_user:ident, $new_id:expr, $session_token: expr) => {{
+        let req = test::TestRequest::post()
+            .uri(&format!("/api/user/{}/profile", $cmp_user.id.to_string()))
+            .header("AUTHORIZATION", $session_token)
+            .set_json(&core::models::dto::UpdateProfilePictureDto {
+                profile_id: $new_id,
             })
             .to_request();
 
@@ -1006,4 +1034,32 @@ async fn test_see_if_blocked_perspective_blocked() {
         hash("+4366412345678")
     );
     assert!(contacts.get(0).unwrap().blocked);
+}
+
+#[actix_rt::test]
+async fn test_update_profile_picture() {
+    env_logger::init();
+    let pool = get_pool();
+
+    cleanup(&pool);
+
+    init_data!(&pool);
+
+    let cmp_user = create_user().await;
+
+    let mut app = init_server_integration_test!(&pool).await;
+
+    let user_signin = signin!(app, cmp_user);
+
+    change_profile_picture!(
+        app,
+        cmp_user,
+        1,
+        user_signin.session_token.clone().unwrap()
+    );
+
+    let updated_user = get_user!(app, cmp_user, user_signin.session_token.unwrap());
+
+    cleanup(&pool);
+    assert_eq!("path2".to_string(), updated_user.profile_picture);
 }

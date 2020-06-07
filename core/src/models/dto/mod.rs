@@ -162,3 +162,8 @@ pub struct VoteDto {
     pub hash_tele_num: HashedTeleNum,
     pub event_id: i32,
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone, Eq, PartialEq)]
+pub struct UpdateProfilePictureDto {
+    pub profile_id: i32,
+}

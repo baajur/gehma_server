@@ -108,10 +108,10 @@ pub(crate) async fn main() -> std::io::Result<()> {
                             .route(web::post().to(routes::blacklist::add))
                             .route(web::put().to(routes::blacklist::delete)), //deletes
                     )
-                    /*.service(
+                    .service(
                         web::resource("/user/{uid}/profile")
-                            .route(web::post().to_async(routes::user::upload_profile_picture)),
-                    )*/
+                            .route(web::post().to(routes::user::upload_profile_picture)),
+                    )
                     .service(
                         web::resource("/user/{uid}")
                             .route(web::get().to(routes::user::get))

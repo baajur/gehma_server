@@ -6,7 +6,7 @@ use core::models::dao::*;
 use core::models::dto::*;
 use core::models::PhoneNumber;
 use diesel::{prelude::*, PgConnection};
-use log::{error, info};
+use log::{error, info, trace};
 use uuid::Uuid;
 
 const INCREASE_XP: i32 = 100;
@@ -236,27 +236,18 @@ impl PersistentUserDao for PgUserDao {
             })
     }
 
-    fn update_profile_picture(&self, user: &UserDao) -> Result<(), ServiceError> {
-        info!("queries/user/update_profile_picture");
-        use core::schema::users::dsl::{id, profile_picture, users};
+    fn update_profile_picture(&self, user_id: Uuid, user: &UpdateProfilePictureDto) -> Result<(), ServiceError> {
+        trace!("queries/user/update_profile_picture");
+        use core::schema::users::dsl::{id, profile_picture, users, changed_at};
 
         let conn: &PgConnection = &self.pool.get().unwrap();
 
-        let target = users.filter(id.eq(user.id));
-
-        //FIXME add better error message
-        let path = format!("static/profile_pictures/{}.jpg", user.hash_tele_num);
-        let _ = img_profile::generate(PROFILE_HEIGHT, PROFILE_WIDTH, path.clone()).map_err(
-            |error| {
-                error!("{}", error);
-                InternalServerError::GenerateImageError
-            },
-        )?;
+        let target = users.filter(id.eq(user_id));
 
         diesel::update(target)
             .set((
-                //changed_at.eq(chrono::Local::now().naive_local()),
-                profile_picture.eq(0),
+                changed_at.eq(chrono::Local::now().naive_local()),
+                profile_picture.eq(user.profile_id),
             ))
             .execute(conn)
             .map_err(|_db_error| {
@@ -265,8 +256,6 @@ impl PersistentUserDao for PgUserDao {
                     _db_error.to_string(),
                 ))
             })?;
-
-        info!("Updating profile {}", path);
 
         Ok(())
     }
