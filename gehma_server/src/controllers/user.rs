@@ -68,7 +68,7 @@ pub(crate) fn user_signin(
     }
 
     // Generate a new profile picture on every signin
-    user_dao.get_ref().update_profile_picture(&user)?;
+    //user_dao.get_ref().update_profile_picture(&user)?;
 
     user_dao.get_ref().create_usage_statistics_for_user(&user)?;
 
