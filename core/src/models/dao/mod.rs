@@ -57,7 +57,7 @@ impl UserDao {
             description: "".to_string(),
             client_version: version.to_string(),
             firebase_token: None,
-            profile_picture: None,
+            profile_picture: Some(0),
             access_token: access_token.to_string(),
             xp: 0,
             hash_tele_num: hash!(tele_num),
@@ -286,8 +286,8 @@ pub struct VoteDao {
     PartialEq,
     Queryable,
     QueryableByName,
-    Insertable,
-    Identifiable
+    Identifiable,
+    Insertable
 )]
 #[table_name = "profile_pictures"]
 pub struct ProfilePictureDao {

@@ -8,6 +8,7 @@ use crate::services::push_notifications::{
 };
 
 use crate::services::number_registration::NumberRegistrationServiceTrait;
+use core::models::dao::*;
 
 use crate::Pool;
 use diesel::query_dsl::RunQueryDsl;
@@ -37,6 +38,23 @@ fn get_dao_factory(pool: &Pool) -> DaoFactory {
 fn setup_database(pool: &Pool) {
     let connection: &PgConnection = &pool.get().unwrap();
     run_pending_migrations(connection).expect("cannot run pending migrations");
+}
+
+macro_rules! init_data {
+    ($pool:expr) => {
+        use core::schema::profile_pictures::dsl::profile_pictures;
+        use diesel::prelude::*;
+
+        let connection: &PgConnection = &$pool.get().unwrap();
+
+        diesel::insert_into(profile_pictures)
+            .values(&ProfilePictureDao {
+                id: 0,
+                path: "path".to_string(),
+            })
+            .execute(connection)
+            .unwrap();
+    };
 }
 
 macro_rules! init_server_integration_test {
@@ -145,9 +163,7 @@ macro_rules! ignore_contact {
 macro_rules! signin {
     ($app:ident, $query_user:ident) => {{
         let req = test::TestRequest::post()
-            .uri(&format!(
-                "/api/signin",
-            ))
+            .uri(&format!("/api/signin",))
             .header("ACCESS_TOKEN", $query_user.access_token.clone().unwrap())
             .set_json(&core::models::dto::PostUserDto {
                 tele_num: $query_user.tele_num.clone(),
@@ -197,6 +213,10 @@ fn cleanup(pool: &Pool) {
 
     sql_query("DELETE FROM users;")
         //.get_results(&pool.get().unwrap())
+        .execute(&pool.get().unwrap())
+        .unwrap();
+
+    sql_query("DELETE FROM profile_pictures;")
         .execute(&pool.get().unwrap())
         .unwrap();
 
@@ -386,6 +406,8 @@ async fn test_create_user() {
 
     cleanup(&pool);
 
+    init_data!(&pool);
+
     let tele_num = "+4366412345678";
     let country_code = "AT";
     let client_version = super::ALLOWED_CLIENT_VERSIONS[0].to_string();
@@ -442,6 +464,8 @@ async fn test_get_user() {
 
     cleanup(&pool);
 
+    init_data!(&pool);
+
     let cmp_user = create_user().await;
 
     let mut app = init_server_integration_test!(&pool).await;
@@ -480,13 +504,20 @@ async fn test_update_token_user() {
 
     cleanup(&pool);
 
+    init_data!(&pool);
+
     let cmp_user = create_user().await;
 
     let mut app = init_server_integration_test!(&pool).await;
 
     let user_signin = signin!(app, cmp_user);
 
-    update_token!(app, cmp_user, "token", user_signin.session_token.clone().unwrap());
+    update_token!(
+        app,
+        cmp_user,
+        "token",
+        user_signin.session_token.clone().unwrap()
+    );
 
     let updated_user = get_user!(app, cmp_user, user_signin.session_token.unwrap());
 
@@ -500,6 +531,8 @@ async fn test_update_description() {
     let pool = get_pool();
 
     cleanup(&pool);
+
+    init_data!(&pool);
 
     let cmp_user = create_user().await;
 
@@ -525,6 +558,8 @@ async fn test_push_notifications() {
     let pool = get_pool();
 
     cleanup(&pool);
+
+    init_data!(&pool);
 
     let cmp_user = create_user().await;
     let cmp_user2 = create_user2().await;
@@ -587,6 +622,8 @@ async fn test_push_notifications_one_friendship() {
 
     cleanup(&pool);
 
+    init_data!(&pool);
+
     let cmp_user = create_user().await;
     let cmp_user2 = create_user2().await;
     let cmp_user3 = create_user3().await;
@@ -639,6 +676,8 @@ async fn test_push_notifications_blacklist1() {
     let pool = get_pool();
 
     cleanup(&pool);
+
+    init_data!(&pool);
 
     let cmp_user = create_user().await;
     let cmp_user2 = create_user2().await;
@@ -717,6 +756,8 @@ async fn test_push_notifications_blacklist2() {
 
     cleanup(&pool);
 
+    init_data!(&pool);
+
     let cmp_user = create_user().await;
     let cmp_user2 = create_user2().await;
     let cmp_user3 = create_user3().await;
@@ -748,10 +789,34 @@ async fn test_push_notifications_blacklist2() {
     update_token!(app, cmp_user2, "token2", session_token2.clone());
     update_token!(app, cmp_user3, "token3", session_token3.clone());
 
-    make_friend!(app, cmp_user, "First", cmp_user2.tele_num.clone(), session_token.clone());
-    make_friend!(app, cmp_user2, "Second", cmp_user.tele_num.clone(), session_token2.clone());
-    make_friend!(app, cmp_user, "Third", cmp_user3.tele_num.clone(), session_token.clone());
-    make_friend!(app, cmp_user3, "Third2", cmp_user.tele_num.clone(), session_token3.clone());
+    make_friend!(
+        app,
+        cmp_user,
+        "First",
+        cmp_user2.tele_num.clone(),
+        session_token.clone()
+    );
+    make_friend!(
+        app,
+        cmp_user2,
+        "Second",
+        cmp_user.tele_num.clone(),
+        session_token2.clone()
+    );
+    make_friend!(
+        app,
+        cmp_user,
+        "Third",
+        cmp_user3.tele_num.clone(),
+        session_token.clone()
+    );
+    make_friend!(
+        app,
+        cmp_user3,
+        "Third2",
+        cmp_user.tele_num.clone(),
+        session_token3.clone()
+    );
 
     ignore_contact!(app, cmp_user2, cmp_user.tele_num, session_token2.clone()); //REVERSED HERE
 
@@ -768,6 +833,8 @@ async fn test_create_blacklist() {
     let pool = get_pool();
 
     cleanup(&pool);
+
+    init_data!(&pool);
 
     let cmp_user = create_user().await;
     let _cmp_user2 = create_user2().await;
@@ -791,6 +858,8 @@ async fn test_get_all_blacklists() {
 
     cleanup(&pool);
 
+    init_data!(&pool);
+
     let cmp_user = create_user().await;
     let _cmp_user2 = create_user2().await;
 
@@ -807,10 +876,7 @@ async fn test_get_all_blacklists() {
 
     // Get
     let req = test::TestRequest::get()
-        .uri(&format!(
-            "/api/user/{}/blacklist",
-            cmp_user.id,
-        ))
+        .uri(&format!("/api/user/{}/blacklist", cmp_user.id,))
         .header("AUTHORIZATION", session_token)
         .to_request();
 
@@ -845,6 +911,8 @@ async fn test_see_if_blocked_perspective_creator() {
 
     cleanup(&pool);
 
+    init_data!(&pool);
+
     let cmp_user = create_user().await;
     let _cmp_user2 = create_user2().await;
 
@@ -857,17 +925,20 @@ async fn test_see_if_blocked_perspective_creator() {
     let session_token2 = user_signin2.session_token.unwrap();
 
     // Creating contact
-    make_friend!(app, cmp_user, "test contact", "+4365012345678", session_token.clone());
+    make_friend!(
+        app,
+        cmp_user,
+        "test contact",
+        "+4365012345678",
+        session_token.clone()
+    );
 
     // Creating blacklist
     ignore_contact!(app, cmp_user, "+4365012345678", session_token.clone());
 
     // Get all blocked
     let req = test::TestRequest::get()
-        .uri(&format!(
-            "/api/contacts/{}",
-            cmp_user.id,
-        ))
+        .uri(&format!("/api/contacts/{}", cmp_user.id,))
         .header("AUTHORIZATION", session_token.clone())
         .to_request();
 
@@ -893,6 +964,8 @@ async fn test_see_if_blocked_perspective_blocked() {
 
     cleanup(&pool);
 
+    init_data!(&pool);
+
     let _cmp_user = create_user().await;
     let cmp_user2 = create_user2().await;
 
@@ -905,17 +978,20 @@ async fn test_see_if_blocked_perspective_blocked() {
     let session_token2 = user_signin2.session_token.unwrap();
 
     // Creating contact
-    make_friend!(app, cmp_user2, "test contact", "+4366412345678", session_token2.clone());
+    make_friend!(
+        app,
+        cmp_user2,
+        "test contact",
+        "+4366412345678",
+        session_token2.clone()
+    );
 
     // Creating blacklist
     ignore_contact!(app, cmp_user2, "+4366412345678", session_token2.clone());
 
     // Get all blocked
     let req = test::TestRequest::get()
-        .uri(&format!(
-            "/api/contacts/{}",
-            cmp_user2.id,
-        ))
+        .uri(&format!("/api/contacts/{}", cmp_user2.id,))
         .header("AUTHORIZATION", session_token2.clone())
         .to_request();
 

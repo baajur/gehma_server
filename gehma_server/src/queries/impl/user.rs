@@ -306,7 +306,7 @@ impl PersistentUserDao for PgUserDao {
         }
 
         let j = diesel::sql_query(
-            "SELECT p.path FROM users JOIN profile_pictures p ON users.profile_picture = p.id WHERE id = $1",
+            "SELECT p.path FROM users JOIN profile_pictures p ON users.profile_picture = p.id WHERE users.id = $1",
         )
         .bind::<diesel::sql_types::Uuid, _>(user.id)
         .get_result::<R>(conn)
