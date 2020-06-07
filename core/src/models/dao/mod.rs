@@ -214,7 +214,7 @@ pub struct ContactPushNotificationDao {
     pub firebase_token: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Queryable, Clone, Identifiable, AsChangeset, Eq, PartialEq, QueryableByName)]
+#[derive(Debug, Serialize, Deserialize, Clone, Identifiable, AsChangeset, Eq, PartialEq, QueryableByName, Queryable)]
 #[table_name = "events"]
 pub struct EventDao {
     pub name: String,

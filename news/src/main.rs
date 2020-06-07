@@ -17,6 +17,8 @@ use std::sync::Arc;
 
 use std::io;
 
+use log::info;
+
 use askama::Template;
 
 mod utils;
@@ -27,6 +29,12 @@ struct UserTemplate {
     offset: usize,
     next_offset: usize,
     events: Vec<EventDto>,
+}
+
+#[derive(Template)]
+#[template(path = "item.html")]
+struct ItemTemplate {
+    event: EventDto,
 }
 
 fn get_events(pool: Arc<Arc<Pool>>, offset: i64) -> Vec<EventDto> {
@@ -42,6 +50,24 @@ fn get_events(pool: Arc<Arc<Pool>>, offset: i64) -> Vec<EventDto> {
         .unwrap();
 
     dao.into_iter().map(|w| w.into()).collect()
+}
+
+fn get_event(pool: Arc<Arc<Pool>>, item: i32) -> EventDto {
+    use core::schema::events::dsl::{events, id};
+
+    let conn: &PgConnection = &(pool.get()).unwrap();
+
+    let dto = events
+        .filter(id.eq(item))
+        .limit(1)
+        .load::<EventDao>(conn)
+        .unwrap()
+        .first()
+        .unwrap()
+        .clone()
+        .into();
+
+    dto
 }
 
 async fn index(
@@ -74,6 +100,26 @@ async fn index(
     Ok(HttpResponse::Ok().content_type("text/html").body(s))
 }
 
+async fn item(pool: web::Data<Arc<Pool>>, id: web::Path<String>) -> Result<HttpResponse> {
+    let item = id
+        .into_inner()
+        .parse()
+        .map_err(|_| HttpResponse::BadRequest().json("Invalid id"))?;
+
+    let event = get_event(pool.into_inner(), item);
+
+    if event.href.is_some() {
+        return Ok(HttpResponse::PermanentRedirect()
+            .header(actix_web::http::header::LOCATION, event.href.unwrap())
+            .finish()
+            .into_body());
+    }
+
+    let s = ItemTemplate { event: event }.render().unwrap();
+
+    Ok(HttpResponse::Ok().content_type("text/html").body(s))
+}
+
 #[actix_rt::main]
 async fn main() -> io::Result<()> {
     dotenv::dotenv().ok();
@@ -87,6 +133,8 @@ async fn main() -> io::Result<()> {
         App::new()
             .data(Arc::new(pool_pg.clone()))
             .service(web::resource("/").route(web::get().to(index)))
+            .service(web::resource("item/{id}").route(web::get().to(item)))
+            .default_service(web::route().to(|| HttpResponse::NotFound()))
     })
     .bind("0.0.0.0:8080")?
     .run()
