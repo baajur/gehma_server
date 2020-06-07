@@ -75,8 +75,7 @@ pub(crate) fn user_signin(
     // Set a new session token
     let (session_token, _) = session_service.new_session(user.id);
 
-    let path = user_dao
-        .get_profile_picture(&user)?;
+    let path = user_dao.get_profile_picture(&user)?;
 
     let mut dto: UserDto = user.into(path);
 
@@ -94,9 +93,7 @@ pub(crate) fn get_entry(
     let user = get_user_by_id!(user_dao, &parsed);
     let user = user?;
 
-    let path = user_dao 
-        .into_inner()
-        .get_profile_picture(&user)?;
+    let path = user_dao.into_inner().get_profile_picture(&user)?;
 
     let mut user: UserDto = user.into(path);
 
@@ -126,7 +123,7 @@ pub(crate) fn update_user(
     user_dao: &web::Data<Box<dyn PersistentUserDao>>,
     current_time: DateTime<Local>,
     notification_service: web::Data<NotificationService>,
-) -> Result<UserDao, ::core::errors::ServiceError> {
+) -> Result<UserDto, ::core::errors::ServiceError> {
     info!("controllers/user/update_user_without_auth");
     let parsed = Uuid::parse_str(uid)?;
     let _user = get_user_by_id!(user_dao, &parsed);
@@ -157,7 +154,9 @@ pub(crate) fn update_user(
     // Log the user update change
     user_dao.get_ref().create_analytics_for_user(&user)?;
 
-    Ok(user)
+    let path = user_dao.get_profile_picture(&user)?;
+
+    Ok(user.into(path))
 }
 
 /*

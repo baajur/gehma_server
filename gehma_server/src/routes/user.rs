@@ -1,15 +1,15 @@
-use actix_web::{web, HttpResponse, HttpRequest};
+use actix_web::{web, HttpRequest, HttpResponse};
 use core::errors::ServiceError;
 use core::models::dto::{PostUserDto, UpdateUserDto};
 
 use crate::services::push_notifications::NotificationService;
 use crate::services::session::SessionService;
 use log::info;
-use web_contrib::utils::{set_response_headers};
+use web_contrib::utils::set_response_headers;
 
 use crate::controllers::user::*;
-use chrono::Local;
 use crate::queries::*;
+use chrono::Local;
 
 pub async fn signin(
     request: HttpRequest,
@@ -128,11 +128,7 @@ pub async fn update_token(
 ) -> Result<HttpResponse, ServiceError> {
     info!("routes/push_notification/update_token");
 
-    let _ = update_token_handler(
-        _info.into_inner(),
-        body.into_inner(),
-        user_dao,
-    )?;
+    let _ = update_token_handler(_info.into_inner(), body.into_inner(), user_dao)?;
 
     let mut res = HttpResponse::Ok().content_type("application/json").json(());
 

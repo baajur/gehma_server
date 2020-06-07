@@ -18,7 +18,7 @@ lazy_static! {
         description: "".to_string(),
         changed_at: chrono::Utc::now().naive_local(),
         created_at: chrono::Utc::now().naive_local(),
-        profile_picture: "".to_string(),
+        profile_picture: Some(0),
         hash_tele_num: hash("+4366412345678".to_string()),
         xp: 0,
         client_version: super::ALLOWED_CLIENT_VERSIONS[0].to_string(),
@@ -96,11 +96,15 @@ async fn test_create_user() {
     let mut user_dao_mock = MockPersistentUserDao::new();
     let blacklist_dao_mock = MockPersistentBlacklistDao::new();
     let contact_exists_dao_mock = MockPersistentContactsDao::new();
-    
+
     // Create a new user, because there is no
-    user_dao_mock.expect_get_by_tele_num().returning(|_| {
-        Err(ServiceError::ResourceDoesNotExist)
-    });
+    user_dao_mock
+        .expect_get_by_tele_num()
+        .returning(|_| Err(ServiceError::ResourceDoesNotExist));
+
+    user_dao_mock
+        .expect_get_profile_picture()
+        .returning(|_| Ok("path".to_string()));
 
     user_dao_mock.expect_create().returning(
         |tele_num, country_code, client_version, _access_token| {
@@ -112,7 +116,7 @@ async fn test_create_user() {
                 description: "".to_string(),
                 changed_at: chrono::Utc::now().naive_local(),
                 created_at: chrono::Utc::now().naive_local(),
-                profile_picture: "".to_string(),
+                profile_picture: Some(0),
                 hash_tele_num: hash(tele_num.to_string()),
                 xp: 0,
                 client_version: client_version.to_string(),
@@ -175,15 +179,17 @@ async fn test_get_user() {
 
     setup_login_account!(user_dao_mock);
 
+    user_dao_mock
+        .expect_get_profile_picture()
+        .returning(|_| Ok("path".to_string()));
+
     let mut app = init_server!(user_dao_mock, blacklist_dao_mock, contacts_dao_mock).await;
 
     let req = test::TestRequest::get()
-        .uri(&format!(
-            "/api/user/{}",
-            Uuid::new_v4(),
-        ))
+        .uri(&format!("/api/user/{}", Uuid::new_v4(),))
         .to_request();
 
+    
     let user: UserDto = test::read_response_json(&mut app, req).await;
 
     assert_eq!(user.tele_num, "+4366412345678");
@@ -203,10 +209,7 @@ async fn test_get_user_with_invalid_id() {
     let mut app = init_server!(user_dao_mock, blacklist_dao_mock, contacts_dao_mock).await;
 
     let req = test::TestRequest::get()
-        .uri(&format!(
-            "/api/user/{}",
-            "WRONGUID",
-        ))
+        .uri(&format!("/api/user/{}", "WRONGUID",))
         .to_request();
 
     let resp = test::call_service(&mut app, req).await;
@@ -231,18 +234,12 @@ async fn test_get_user_with_invalid_login() {
     let mut app = init_server!(user_dao_mock, blacklist_dao_mock, contacts_dao_mock).await;
 
     let req = test::TestRequest::get()
-        .uri(&format!(
-            "/api/user/{}",
-            Uuid::new_v4(),
-        ))
+        .uri(&format!("/api/user/{}", Uuid::new_v4(),))
         .to_request();
 
     let resp = test::call_service(&mut app, req).await;
     assert_eq!(401, resp.status());
-    assert_eq!(
-        "Unauthorized",
-        resp.response().error().unwrap().to_string()
-    );
+    assert_eq!("Unauthorized", resp.response().error().unwrap().to_string());
 }
 
 #[actix_rt::test]
@@ -270,6 +267,10 @@ async fn test_update_user() {
         });
 
     user_dao_mock
+        .expect_get_profile_picture()
+        .returning(|_| Ok("path".to_string()));
+
+    user_dao_mock
         .expect_update_user()
         .times(1)
         .returning(|_id, user, current_time| {
@@ -288,10 +289,11 @@ async fn test_update_user() {
         })
         .to_request();
 
+
     /*
     let resp = test::call_service(&mut app, req).await;
     println!("{:?}", resp);
-    println!("{:?}", resp.response().error().unwrap());
+    //println!("{:?}", resp.response().error().unwrap());
     */
 
     let user: UserDto = test::read_response_json(&mut app, req).await;
@@ -319,10 +321,7 @@ async fn test_update_token_user() {
     let mut app = init_server!(user_dao_mock, blacklist_dao_mock, contacts_dao_mock).await;
 
     let req = test::TestRequest::put()
-        .uri(&format!(
-            "/api/user/{}/token",
-            Uuid::new_v4(),
-        ))
+        .uri(&format!("/api/user/{}/token", Uuid::new_v4(),))
         .set_json(&crate::routes::user::UpdateTokenPayload {
             token: "test".to_string(),
         })
@@ -365,10 +364,7 @@ async fn test_create_blacklist() {
     let mut app = init_server!(user_dao_mock, blacklist_dao_mock, contacts_dao_mock).await;
 
     let req = test::TestRequest::post()
-        .uri(&format!(
-            "/api/user/{}/blacklist",
-            id.to_string(),
-        ))
+        .uri(&format!("/api/user/{}/blacklist", id.to_string(),))
         .set_json(&crate::routes::blacklist::PostData {
             hash_blocked: hash("+4365012345678").to_string(),
             country_code: "AT".to_string(),
@@ -404,10 +400,7 @@ async fn test_get_all_blacklist() {
     let mut app = init_server!(user_dao_mock, blacklist_dao_mock, contacts_dao_mock).await;
 
     let req = test::TestRequest::get()
-        .uri(&format!(
-            "/api/user/{}/blacklist",
-            Uuid::new_v4(),
-        ))
+        .uri(&format!("/api/user/{}/blacklist", Uuid::new_v4(),))
         .to_request();
 
     let blacklists: Vec<BlacklistDto> = test::read_response_json(&mut app, req).await;
@@ -444,10 +437,7 @@ async fn test_remove_blacklist() {
     let mut app = init_server!(user_dao_mock, blacklist_dao_mock, contacts_dao_mock).await;
 
     let req = test::TestRequest::put()
-        .uri(&format!(
-            "/api/user/{}/blacklist",
-            Uuid::new_v4(),
-        ))
+        .uri(&format!("/api/user/{}/blacklist", Uuid::new_v4(),))
         .set_json(&crate::routes::blacklist::PostData {
             hash_blocked: hash("+4365012345678").to_string(),
             country_code: "AT".to_string(),
@@ -482,25 +472,21 @@ async fn test_contacts() {
     contacts_dao_mock
         .expect_get_contacts()
         .times(1)
-        .returning(|_user| {
+        .returning(|_user, _| {
             let mut u = USER.clone();
             u.led = true;
             u.description = "test".to_string();
             Ok(vec![ContactDto {
                 blocked: false,
                 name: "Test".to_string(),
-                user: u.into(),
+                user: u.into("path".to_string()),
             }])
         });
 
     let mut app = init_server!(user_dao_mock, blacklist_dao_mock, contacts_dao_mock).await;
 
     let req = test::TestRequest::post()
-        .uri(&format!(
-            "/api/contacts/{}/{}",
-            Uuid::new_v4(),
-            "AT",
-        ))
+        .uri(&format!("/api/contacts/{}/{}", Uuid::new_v4(), "AT",))
         .set_json(&PayloadNumbersDto {
             numbers: vec![PayloadUserDto {
                 name: "Test".to_string(),
@@ -513,10 +499,7 @@ async fn test_contacts() {
     assert!(resp.status().is_success());
 
     let req = test::TestRequest::get()
-        .uri(&format!(
-            "/api/contacts/{}",
-            Uuid::new_v4(),
-        ))
+        .uri(&format!("/api/contacts/{}", Uuid::new_v4(),))
         .to_request();
 
     //let resp = test::call_service(&mut app, req).await;
@@ -557,7 +540,7 @@ async fn test_contacts_with_blacklist_1() {
     contacts_dao_mock
         .expect_get_contacts()
         .times(1)
-        .returning(|_user| {
+        .returning(|_user, _| {
             Ok(vec![ContactDto {
                 blocked: false,
                 name: "Test".to_string(),
@@ -582,11 +565,7 @@ async fn test_contacts_with_blacklist_1() {
     let mut app = init_server!(user_dao_mock, blacklist_dao_mock, contacts_dao_mock).await;
 
     let req = test::TestRequest::post()
-        .uri(&format!(
-            "/api/contacts/{}/{}",
-            Uuid::new_v4(),
-            "AT",
-        ))
+        .uri(&format!("/api/contacts/{}/{}", Uuid::new_v4(), "AT",))
         .set_json(&PayloadNumbersDto {
             numbers: vec![PayloadUserDto {
                 name: "Test".to_string(),
@@ -599,10 +578,7 @@ async fn test_contacts_with_blacklist_1() {
     assert!(resp.status().is_success());
 
     let req = test::TestRequest::get()
-        .uri(&format!(
-            "/api/contacts/{}",
-            Uuid::new_v4(),
-        ))
+        .uri(&format!("/api/contacts/{}", Uuid::new_v4(),))
         .to_request();
 
     let users: Vec<ContactDto> = test::read_response_json(&mut app, req).await;
@@ -643,7 +619,7 @@ async fn test_contacts_with_blacklist_2() {
     contacts_dao_mock
         .expect_get_contacts()
         .times(1)
-        .returning(|_user| {
+        .returning(|_user, _| {
             Ok(vec![ContactDto {
                 blocked: false,
                 name: "Test".to_string(),
@@ -668,11 +644,7 @@ async fn test_contacts_with_blacklist_2() {
     let mut app = init_server!(user_dao_mock, blacklist_dao_mock, contacts_dao_mock).await;
 
     let req = test::TestRequest::post()
-        .uri(&format!(
-            "/api/contacts/{}/{}",
-            Uuid::new_v4(),
-            "AT",
-        ))
+        .uri(&format!("/api/contacts/{}/{}", Uuid::new_v4(), "AT",))
         .set_json(&PayloadNumbersDto {
             numbers: vec![PayloadUserDto {
                 name: "Test".to_string(),
@@ -685,10 +657,7 @@ async fn test_contacts_with_blacklist_2() {
     assert!(resp.status().is_success());
 
     let req = test::TestRequest::get()
-        .uri(&format!(
-            "/api/contacts/{}",
-            Uuid::new_v4(),
-        ))
+        .uri(&format!("/api/contacts/{}", Uuid::new_v4(),))
         .to_request();
 
     let users: Vec<ContactDto> = test::read_response_json(&mut app, req).await;
@@ -720,11 +689,7 @@ async fn test_contacts_max() {
     }
 
     let req = test::TestRequest::post()
-        .uri(&format!(
-            "/api/contacts/{}/{}",
-            Uuid::new_v4(),
-            "AT",
-        ))
+        .uri(&format!("/api/contacts/{}/{}", Uuid::new_v4(), "AT",))
         .set_json(&PayloadNumbersDto { numbers })
         .to_request();
 
