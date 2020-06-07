@@ -256,7 +256,7 @@ impl PersistentUserDao for PgUserDao {
         diesel::update(target)
             .set((
                 //changed_at.eq(chrono::Local::now().naive_local()),
-                profile_picture.eq(&path),
+                profile_picture.eq(0),
             ))
             .execute(conn)
             .map_err(|_db_error| {
@@ -291,6 +291,33 @@ impl PersistentUserDao for PgUserDao {
         })?;
 
         Ok(())
+    }
+
+    fn get_profile_picture(&self, user: &UserDao) -> Result<String, ServiceError> {
+        let conn: &PgConnection = &self.pool.get().unwrap();
+
+        use diesel::prelude::*;
+        use diesel::sql_types::Text;
+        use diesel::QueryableByName;
+        #[derive(QueryableByName)]
+        struct R {
+            #[sql_type = "Text"]
+            path: String,
+        }
+
+        let j = diesel::sql_query(
+            "SELECT p.path FROM users JOIN profile_pictures p ON users.profile_picture = p.id WHERE id = $1",
+        )
+        .bind::<diesel::sql_types::Uuid, _>(user.id)
+        .get_result::<R>(conn)
+        .map_err(|_db_error| {
+            error!("{:?}", _db_error);
+            ServiceError::InternalServerError(InternalServerError::DatabaseError(
+                _db_error.to_string(),
+            ))
+        })?;
+
+        Ok(j.path)
     }
 }
 

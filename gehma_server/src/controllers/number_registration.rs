@@ -9,7 +9,7 @@ use log::{debug, error, info};
 use crate::queries::*;
 use crate::services::number_registration::NumberRegistrationService;
 
-const ACCESS_TOKEN_LENGTH : usize = 32;
+const ACCESS_TOKEN_LENGTH: usize = 32;
 
 pub(crate) fn request(
     body: RequestCodeDto,
@@ -39,7 +39,10 @@ pub(crate) fn check_code(
     if res {
         // Check if a user already exists
         match user_dao.get_ref().get_by_tele_num(&parsed) {
-            Ok(user) => return Ok(user.into()),
+            Ok(user) => {
+                let path = user_dao.get_profile_picture(&user)?;
+                return Ok(user.into(path))
+            },
             Err(ServiceError::ResourceDoesNotExist) => debug!("User does not exist. Inserting"),
             Err(e) => return Err(e),
         }
@@ -47,18 +50,17 @@ pub(crate) fn check_code(
         // If not then create one
         let token = core::utils::generate_random_string(ACCESS_TOKEN_LENGTH);
 
-        match user_dao
+        let user = user_dao
             .get_ref()
             .create(&parsed, &body.country_code, &body.client_version, &token)
-        {
-            Ok(user) => Ok(user.into()),
-            Err(e) => {
+            .map_err(|e| {
                 error!("{}", e);
-                Err(ServiceError::InternalServerError(
-                    InternalServerError::DatabaseError(e.to_string()),
-                ))
-            }
-        }
+                ServiceError::InternalServerError(InternalServerError::DatabaseError(e.to_string()))
+            })?;
+
+        let path = user_dao.get_profile_picture(&user)?;
+
+        Ok(user.into(path))
     } else {
         info!("Code was wrong");
         Err(ServiceError::InvalidUserInput(

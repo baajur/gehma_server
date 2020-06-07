@@ -75,7 +75,11 @@ pub(crate) fn user_signin(
     // Set a new session token
     let (session_token, _) = session_service.new_session(user.id);
 
-    let mut dto: UserDto = user.into();
+    let path = user_dao
+        .get_profile_picture(&user)?;
+
+    let mut dto: UserDto = user.into(path);
+
     dto.session_token = Some(session_token);
 
     Ok(dto)
@@ -88,8 +92,13 @@ pub(crate) fn get_entry(
     let parsed = Uuid::parse_str(uid)?;
 
     let user = get_user_by_id!(user_dao, &parsed);
+    let user = user?;
 
-    let mut user: UserDto = user?.into();
+    let path = user_dao 
+        .into_inner()
+        .get_profile_picture(&user)?;
+
+    let mut user: UserDto = user.into(path);
 
     // Do not display access token on normal GET
     // It will be only sent on `request_code`

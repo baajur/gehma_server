@@ -64,7 +64,9 @@ pub(crate) fn get_contacts(
         .map(|w| w.hash_blocked)
         .collect();
 
-    let mut contacts = contact_dao.get_ref().get_contacts(&user)?;
+    let mut contacts = contact_dao
+        .get_ref()
+        .get_contacts(&user, user_dao.into_inner())?;
 
     contacts
         .iter_mut()

@@ -45,4 +45,7 @@ pub trait PersistentUserDao {
     ) -> IResult<(UserDao, Vec<ContactPushNotificationDao>)>;
     fn update_profile_picture(&self, user: &UserDao) -> IResult<()>;
     fn update_token(&self, id: &Uuid, token: String) -> IResult<()>;
+
+    /// Get the profile picture's path
+    fn get_profile_picture(&self, user: &UserDao) -> IResult<String>;
 }

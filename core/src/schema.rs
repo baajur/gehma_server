@@ -42,6 +42,13 @@ table! {
 }
 
 table! {
+    profile_pictures (id) {
+        id -> Int4,
+        path -> Text,
+    }
+}
+
+table! {
     usage_statistics (id) {
         id -> Int4,
         tele_num -> Varchar,
@@ -60,10 +67,10 @@ table! {
         changed_at -> Timestamp,
         client_version -> Varchar,
         firebase_token -> Nullable<Varchar>,
-        profile_picture -> Varchar,
         access_token -> Varchar,
         hash_tele_num -> Bpchar,
         xp -> Int4,
+        profile_picture -> Nullable<Int4>,
     }
 }
 
@@ -74,6 +81,7 @@ table! {
     }
 }
 
+joinable!(users -> profile_pictures (profile_picture));
 joinable!(votes -> events (event_id));
 
 allow_tables_to_appear_in_same_query!(
@@ -81,6 +89,7 @@ allow_tables_to_appear_in_same_query!(
     blacklist,
     contacts,
     events,
+    profile_pictures,
     usage_statistics,
     users,
     votes,

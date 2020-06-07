@@ -4,7 +4,7 @@ use crate::schema::*;
 use crate::utils::phonenumber_to_international;
 
 use diesel::sql_types::{Nullable, Text, Uuid};
-use diesel::{Queryable, QueryableByName};
+use diesel::{Queryable, QueryableByName, Associations};
 
 use data_encoding::HEXUPPER;
 use ring::digest;
@@ -33,10 +33,10 @@ pub struct UserDao {
     pub changed_at: chrono::NaiveDateTime,
     pub client_version: String,
     pub firebase_token: Option<String>,
-    pub profile_picture: String,
     pub access_token: String,
     pub hash_tele_num: HashedTeleNum,
     pub xp: i32,
+    pub profile_picture: Option<i32>,
 }
 
 macro_rules! hash {
@@ -57,7 +57,7 @@ impl UserDao {
             description: "".to_string(),
             client_version: version.to_string(),
             firebase_token: None,
-            profile_picture: "".to_string(),
+            profile_picture: None,
             access_token: access_token.to_string(),
             xp: 0,
             hash_tele_num: hash!(tele_num),
@@ -71,6 +71,24 @@ impl UserDao {
         self.changed_at = time;
 
         self
+    }
+
+    pub fn into(self, profile_picture: String) -> crate::models::dto::UserDto {
+        UserDto {
+            id: self.id,
+            tele_num: self.tele_num.clone(),
+            led: self.led,
+            country_code: self.country_code.clone(),
+            description: self.description.clone(),
+            changed_at: self.changed_at,
+            profile_picture: profile_picture.to_string(),
+            hash_tele_num: self.hash_tele_num.clone(),
+            xp: self.xp,
+            client_version: self.client_version,
+            access_token: Some(self.access_token),
+            firebase_token: self.firebase_token,
+            session_token: None,
+        }
     }
 }
 
@@ -214,7 +232,18 @@ pub struct ContactPushNotificationDao {
     pub firebase_token: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Identifiable, AsChangeset, Eq, PartialEq, QueryableByName, Queryable)]
+#[derive(
+    Debug,
+    Serialize,
+    Deserialize,
+    Clone,
+    Identifiable,
+    AsChangeset,
+    Eq,
+    PartialEq,
+    QueryableByName,
+    Queryable,
+)]
 #[table_name = "events"]
 pub struct EventDao {
     pub name: String,
@@ -229,9 +258,40 @@ pub struct EventDao {
     pub id: i32,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, AsChangeset, Eq, PartialEq, Queryable, QueryableByName, Insertable)]
+#[derive(
+    Debug,
+    Serialize,
+    Deserialize,
+    Clone,
+    AsChangeset,
+    Eq,
+    PartialEq,
+    Queryable,
+    QueryableByName,
+    Insertable,
+)]
 #[table_name = "votes"]
 pub struct VoteDao {
     pub hash_tele_num: HashedTeleNum,
-    pub event_id: i32
+    pub event_id: i32,
 }
+
+#[derive(
+    Debug,
+    Serialize,
+    Deserialize,
+    Clone,
+    AsChangeset,
+    Eq,
+    PartialEq,
+    Queryable,
+    QueryableByName,
+    Insertable,
+    Identifiable
+)]
+#[table_name = "profile_pictures"]
+pub struct ProfilePictureDao {
+    pub id: i32,
+    pub path: String
+}
+

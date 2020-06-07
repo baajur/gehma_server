@@ -9,6 +9,7 @@ use crate::Pool;
 
 use crate::queries::*;
 use log::{error, info};
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct PgContactsDao {
@@ -188,6 +189,7 @@ impl PersistentContactsDao for PgContactsDao {
     fn get_contacts(
         &self,
         user: &UserDao,
+        user_dao: Arc<Box<dyn PersistentUserDao>>,
     ) -> Result<Vec<ContactDto>, ::core::errors::ServiceError> {
         info!("queries/user/get_contacts");
 
@@ -231,7 +233,7 @@ impl PersistentContactsDao for PgContactsDao {
                 String, //cc
                 String, //description
                 chrono::NaiveDateTime,
-                String,        //profile pic
+                Option<i32>,   //profile pic
                 HashedTeleNum, //hash_blocked
                 Option<HashedTeleNum>,
                 i32,                   //XP
@@ -278,7 +280,11 @@ impl PersistentContactsDao for PgContactsDao {
                                 xp: _xp,
                             };
 
-                            ContactDto::new(_name, _blocked.is_some(), user_d.into())
+                            let path = user_dao
+                                .get_profile_picture(&user_d)
+                                .expect("Fetching profile picture failed");
+
+                            ContactDto::new(_name, _blocked.is_some(), user_d.into(path))
                         },
                     )
                     .collect())
