@@ -164,6 +164,12 @@ pub struct VoteDto {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Eq, PartialEq)]
+pub struct ProfilePictureDto {
+    pub id: i32,
+    pub path: String
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Eq, PartialEq)]
 pub struct UpdateProfilePictureDto {
     pub profile_id: i32,
 }

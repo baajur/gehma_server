@@ -62,7 +62,6 @@ macro_rules! init_data {
             })
             .execute(connection)
             .unwrap();
-
     };
 }
 
@@ -86,6 +85,7 @@ macro_rules! private_init_server_integration_test {
                 .data(get_dao_factory($pool).get_user_dao())
                 .data(get_dao_factory($pool).get_blacklist_dao())
                 .data(get_dao_factory($pool).get_contacts_dao())
+                .data(get_dao_factory($pool).get_profile_pictures_dao())
                 .data(get_session_service())
                 .wrap(middleware::auth::Authentication)
                 .route("/api/signin", web::post().to(crate::routes::user::signin))
@@ -98,6 +98,10 @@ macro_rules! private_init_server_integration_test {
                     web::post().to(crate::routes::number_registration::check),
                 )
                 .route("/api/user/{uid}", web::get().to(crate::routes::user::get))
+                .route(
+                    "/api/user/{uid}/profile",
+                    web::get().to(crate::routes::profile_pictures::get_all),
+                )
                 .route(
                     "/api/user/{uid}/profile",
                     web::post().to(crate::routes::user::upload_profile_picture),
@@ -1051,15 +1055,43 @@ async fn test_update_profile_picture() {
 
     let user_signin = signin!(app, cmp_user);
 
-    change_profile_picture!(
-        app,
-        cmp_user,
-        1,
-        user_signin.session_token.clone().unwrap()
-    );
+    change_profile_picture!(app, cmp_user, 1, user_signin.session_token.clone().unwrap());
 
     let updated_user = get_user!(app, cmp_user, user_signin.session_token.unwrap());
 
     cleanup(&pool);
     assert_eq!("path2".to_string(), updated_user.profile_picture);
+}
+
+#[actix_rt::test]
+async fn test_get_all_profile_pictures() {
+    env_logger::init();
+    let pool = get_pool();
+
+    cleanup(&pool);
+
+    init_data!(&pool);
+
+    let cmp_user = create_user().await;
+
+    let mut app = init_server_integration_test!(&pool).await;
+
+    let user_signin = signin!(app, cmp_user);
+
+    let req = test::TestRequest::get()
+        .uri(&format!("/api/user/{}/profile", cmp_user.id.to_string()))
+        .header("AUTHORIZATION", user_signin.session_token.unwrap())
+        .to_request();
+
+    /*
+    let resp = test::call_service(&mut $app, req).await;
+
+    if !resp.status().is_success() {
+        eprintln!("{:?}", resp.response().error().unwrap());
+    }*/
+
+    let pictures: Vec<ProfilePictureDto> = test::read_response_json(&mut app, req).await;
+
+    cleanup(&pool);
+    assert_eq!(2, pictures.len());
 }

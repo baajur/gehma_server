@@ -67,6 +67,7 @@ pub(crate) async fn main() -> std::io::Result<()> {
             .data(dao_factory.get_user_dao())
             .data(dao_factory.get_contacts_dao())
             .data(dao_factory.get_blacklist_dao())
+            .data(dao_factory.get_profile_pictures_dao())
             .wrap(
                 Cors::new()
                     .allowed_origin("http://localhost:3000")
@@ -94,10 +95,7 @@ pub(crate) async fn main() -> std::io::Result<()> {
                                 web::resource("/{filename:.*}").route(web::get().to(load_file)),
                             ),
                     )
-                    .service(
-                        web::resource("/signin")
-                            .route(web::post().to(routes::user::signin)),
-                    )
+                    .service(web::resource("/signin").route(web::post().to(routes::user::signin)))
                     .service(
                         web::resource("/user/{uid}/token")
                             .route(web::put().to(routes::user::update_token)),
@@ -110,7 +108,8 @@ pub(crate) async fn main() -> std::io::Result<()> {
                     )
                     .service(
                         web::resource("/user/{uid}/profile")
-                            .route(web::post().to(routes::user::upload_profile_picture)),
+                            .route(web::get().to(routes::profile_pictures::get_all))
+                            .route(web::post().to(routes::user::upload_profile_picture))
                     )
                     .service(
                         web::resource("/user/{uid}")

@@ -28,6 +28,12 @@ impl DaoFactory {
         })
     }
 
+    pub fn get_profile_pictures_dao(&self) -> Box<dyn PersistentProfilePictureDao> {
+        Box::new(PgProfilePictureDao {
+            pool: self.0.clone(),
+        })
+    }
+
     /*
     pub fn get_session_dao(&self) -> Box<dyn PersistentSessionDao> {
         Box::new(RedisSessionDao {

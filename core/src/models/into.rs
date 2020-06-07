@@ -54,3 +54,12 @@ impl Into<VoteDto> for VoteDao {
         }
     }
 }
+
+impl Into<ProfilePictureDto> for ProfilePictureDao {
+    fn into(self) -> ProfilePictureDto {
+        ProfilePictureDto {
+            id: self.id,
+            path: self.path,
+        }
+    }
+}
