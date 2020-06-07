@@ -17,8 +17,6 @@ use std::sync::Arc;
 
 use std::io;
 
-use log::info;
-
 use askama::Template;
 
 mod utils;
@@ -120,6 +118,10 @@ async fn item(pool: web::Data<Arc<Pool>>, id: web::Path<String>) -> Result<HttpR
     Ok(HttpResponse::Ok().content_type("text/html").body(s))
 }
 
+async fn privacy(pool: web::Data<Arc<Pool>>) -> Result<HttpResponse> {
+    Ok(HttpResponse::Ok().content_type("text/plain").body("Bei dem Aufruf der Seite werden IP-Adresse, Uhrzeit und Browser mitgespeichert. Diese Daten werden alle 3 Monate wieder geloescht werden."))
+}
+
 #[actix_rt::main]
 async fn main() -> io::Result<()> {
     dotenv::dotenv().ok();
@@ -133,6 +135,7 @@ async fn main() -> io::Result<()> {
         App::new()
             .data(Arc::new(pool_pg.clone()))
             .service(web::resource("/").route(web::get().to(index)))
+            .service(web::resource("/privacy").route(web::get().to(privacy)))
             .service(web::resource("item/{id}").route(web::get().to(item)))
             .default_service(web::route().to(|| HttpResponse::NotFound()))
     })

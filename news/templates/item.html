@@ -1,1 +1,27 @@
-item
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Item</title>
+</head>
+<body>
+	<h1>{{event.name}}</h1> 
+
+	<br/>
+
+	<table>
+		<tr>
+		<td>Datum</td>
+		<td>{{event.opening.format("%d-%m-%Y %H:%M").to_string()}}</td>
+		</td>
+		<tr>
+			<td colspan=2>
+				{{event.description}}	
+			</td>
+		</tr>
+
+	</table>
+	
+  </body>
+</html>
+

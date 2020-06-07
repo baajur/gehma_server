@@ -2,14 +2,23 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Actix web</title>
+  <title>Trending</title>
 </head>
 <body>
-  <h1>Welcome!</h1>
-  <p>
- {% for s in events -%}
-	{{ s.name }}
-{% endfor -%}  
+	<h1>Trending!</h1> 
+
+	<div style="position:absolute; right:25px; bottom:25px;"> <a href="/privacy">Privacy Policy</a> </div>
+
+	<br/>
+	
+  <table>
+	{% for s in events -%}
+	<tr>
+		<td>{{- loop.index0 }}.</td>
+		<td><a href="/item/{{s.id}}">{{ s.name }}</a> {% if s.href.clone().is_some() %} <i>({{s.href.as_ref().unwrap()}})</i> {% endif %}</td>
+	</tr>
+	{% endfor -%}  
+	</table<
 </body>
 </html>
 
