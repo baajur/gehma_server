@@ -35,16 +35,15 @@ struct ItemTemplate {
     event: EventDto,
 }
 
-fn get_events(pool: Arc<Arc<Pool>>, offset: i64) -> Vec<EventDto> {
-    use core::schema::events::dsl::{created_at, events};
+fn get_events(pool: Arc<Arc<Pool>>, offset: i32) -> Vec<EventDto> {
+    //use core::schema::events::dsl::{created_at, id, events};
+    //use core::schema::votes::dsl::{votes};
 
     let conn: &PgConnection = &(pool.get()).unwrap();
 
-    let dao = events
-        .order_by(created_at.desc())
-        .offset(offset)
-        .limit(20)
-        .load::<EventDao>(conn)
+    let dao: Vec<EventDao> = diesel::sql_query("SELECT * FROM trending OFFSET $1 LIMIT 20")
+        .bind::<diesel::sql_types::Integer, _>(offset)
+        .load(conn)
         .unwrap();
 
     dao.into_iter().map(|w| w.into()).collect()

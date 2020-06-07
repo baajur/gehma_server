@@ -65,3 +65,12 @@ impl Into<EventDto> for EventDao {
         }
     }
 }
+
+impl Into<VoteDto> for VoteDao {
+    fn into(self) -> VoteDto {
+        VoteDto {
+            hash_tele_num: self.hash_tele_num,
+            event_id: self.event_id,
+        }
+    }
+}

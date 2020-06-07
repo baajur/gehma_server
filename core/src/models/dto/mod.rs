@@ -156,3 +156,9 @@ pub struct EventDto {
     pub href: Option<String>,
     pub id: i32,
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone, Eq, PartialEq)]
+pub struct VoteDto {
+    pub hash_tele_num: HashedTeleNum,
+    pub event_id: i32,
+}

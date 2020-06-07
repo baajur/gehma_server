@@ -67,6 +67,15 @@ table! {
     }
 }
 
+table! {
+    votes (hash_tele_num, event_id) {
+        hash_tele_num -> Varchar,
+        event_id -> Int4,
+    }
+}
+
+joinable!(votes -> events (event_id));
+
 allow_tables_to_appear_in_same_query!(
     analytics,
     blacklist,
@@ -74,4 +83,5 @@ allow_tables_to_appear_in_same_query!(
     events,
     usage_statistics,
     users,
+    votes,
 );

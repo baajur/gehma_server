@@ -229,16 +229,9 @@ pub struct EventDao {
     pub id: i32,
 }
 
-/*
-impl ContactDao {
-    pub fn my_from(name: String, user: &UserDao, target_tele_num: String) -> ContactInsertDao {
-        ContactInsertDao {
-            from_id: user.id,
-            target_tele_num: target_tele_num.clone(),
-            created_at: chrono::Local::now().naive_local(),
-            name,
-            target_hash_tele_num: hash!(target_tele_num),
-        }
-    }
+#[derive(Debug, Serialize, Deserialize, Clone, AsChangeset, Eq, PartialEq, Queryable, QueryableByName, Insertable)]
+#[table_name = "votes"]
+pub struct VoteDao {
+    pub hash_tele_num: HashedTeleNum,
+    pub event_id: i32
 }
-*/

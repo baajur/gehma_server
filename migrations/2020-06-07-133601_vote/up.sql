@@ -1,0 +1,6 @@
+CREATE TABLE votes (
+	hash_tele_num VARCHAR(100) NOT NULL REFERENCES users (hash_tele_num) ON UPDATE CASCADE ON DELETE CASCADE,
+	event_id INTEGER NOT NULL REFERENCES events (id) ON UPDATE CASCADE ON DELETE CASCADE,
+	PRIMARY KEY(hash_tele_num, event_id)
+);
+
