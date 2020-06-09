@@ -36,7 +36,6 @@ pub(crate) fn check_code(
 
     let res = number_registration_service.check_code(&parsed, &body.code)?;
 
-
     // Create a new user when the code was correct
     if res {
         info!("Code is correct");
@@ -45,16 +44,16 @@ pub(crate) fn check_code(
         match user_dao.get_ref().get_by_tele_num(&parsed) {
             Ok(user) => {
                 let path = user_dao.get_profile_picture(&user).map_err(|err| {
-                    error!("Profile picture {:?}", err); 
+                    error!("Profile picture {:?}", err);
                     err
                 })?;
-                return Ok(user.into(path))
-            },
+                return Ok(user.into(path));
+            }
             Err(ServiceError::ResourceDoesNotExist) => debug!("User does not exist. Inserting"),
             Err(e) => {
                 error!("{:?}", e);
-                return Err(e)
-            },
+                return Err(e);
+            }
         }
 
         // If not then create one

@@ -85,7 +85,7 @@ where
             .get("AUTHORIZATION")
             .map(|value| value.to_str().ok())
             .ok_or_else(|| {
-                warn!("No AUTHORIZATION header");
+                warn!("No AUTHORIZATION header ({})", req.path());
                 ServiceError::Unauthorized
             })
             .unwrap()
