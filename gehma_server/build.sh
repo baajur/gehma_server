@@ -12,4 +12,4 @@ echo "Building kper/gehma:$1" \
 && docker save kper/gehma:$1 -o ~/images/gehma_$1  \
 && echo "Bzip2 ~/images/gehma_$1" \
 && bzip2 ~/images/gehma_$1 \
-echo "Finished"
+echo "Build finished"
