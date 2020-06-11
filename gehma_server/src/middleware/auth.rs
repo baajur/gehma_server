@@ -1,6 +1,7 @@
 use crate::services::session::SessionService;
 use chrono::prelude::*;
 use core::errors::ServiceError;
+use log::trace;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Claims {
@@ -68,6 +69,8 @@ where
             .app_data::<SessionService>()
             .expect("no session service configured");
 
+        trace!("path {}", req.path());
+
         if req.path().starts_with("/api/signin")
             || req.path().starts_with("/api/auth")
             || req.path().starts_with("/api/static")
@@ -91,6 +94,7 @@ where
             .unwrap()
             .unwrap();
 
+        trace!("Validate session token");
         let authenticate_pass = session_service.validate(token.to_string()).unwrap();
 
         if authenticate_pass {

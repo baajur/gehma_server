@@ -43,6 +43,7 @@ pub(crate) fn check_code(
         // Check if a user already exists
         match user_dao.get_ref().get_by_tele_num(&parsed) {
             Ok(user) => {
+                debug!("User exists");
                 let path = user_dao.get_profile_picture(&user).map_err(|err| {
                     error!("Profile picture {:?}", err);
                     err
@@ -57,8 +58,10 @@ pub(crate) fn check_code(
         }
 
         // If not then create one
+        debug!("Generate token");
         let token = core::utils::generate_random_string(ACCESS_TOKEN_LENGTH);
 
+        debug!("Create new user");
         let user = user_dao
             .get_ref()
             .create(&parsed, &body.country_code, &body.client_version, &token)
