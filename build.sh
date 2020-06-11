@@ -10,6 +10,8 @@ echo "Building kper/gehma:$1" \
 && docker build -t kper/gehma:$1 .  \
 && echo "Saving kper/gehma:$1 to ~/images/gehma_$1" \
 && docker save kper/gehma:$1 -o ~/images/gehma_$1  \
-&& echo "Bzip2 ~/images/gehma_$1" \
-&& bzip2 ~/images/gehma_$1 \
-echo "Build finished"
+&& echo "Tar ~/images/gehma_$1" \
+&& tar -zcvf ~/images/gehma_$1.tar.gz ~/images/gehma_$1 \
+&& chown kper:kper ~/images/gehma_$1.tar.gz\
+&& rm ~/images/gehma_$1 \
+&& echo "Build finished"
