@@ -54,6 +54,8 @@ impl NotificationServiceTrait for OneSignalService {
             .map(|w| w.1)
             .collect();
 
+        log::debug!("Tokens {:?}", tokens.len());
+
         let _response = client
             .post("https://onesignal.com/api/v1/notifications")
             .header(CONTENT_TYPE, "application/json")
@@ -73,7 +75,7 @@ impl NotificationServiceTrait for OneSignalService {
                 ServiceError::InternalServerError(InternalServerError::NotificationError)
             });
 
-        //info!("response {:#?}", response);
+        log::info!("response {:#?}", _response);
 
         /*
         let work = tokio::prelude::stream::iter_ok(values)

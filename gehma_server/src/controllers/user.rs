@@ -116,7 +116,7 @@ pub(crate) fn update_token_handler(
 
 pub(crate) fn update_user(
     uid: &String,
-    user: &UpdateUserDto,
+    update_user: &UpdateUserDto,
     user_dao: &web::Data<Box<dyn PersistentUserDao>>,
     current_time: DateTime<Local>,
     notification_service: web::Data<NotificationService>,
@@ -129,24 +129,28 @@ pub(crate) fn update_user(
 
     let (user, contacts) = user_dao
         .get_ref()
-        .update_user(&parsed, user, current_time)?;
+        .update_user(&parsed, update_user, current_time)?;
 
     debug!("Contacts sending push_notifications {}", contacts.len());
 
-    // Sending push notification
-    notification_service.into_inner().push(
-        contacts
-            .into_iter()
-            .filter_map(|c| {
-                if c.firebase_token.is_some() {
-                    Some((c.name, c.firebase_token.unwrap()))
-                } else {
-                    debug!("Filtering contact {} because no token", c.name);
-                    None
-                }
-            })
-            .collect(),
-    )?;
+    let contacts = contacts
+        .into_iter()
+        .filter_map(|c| {
+            if c.firebase_token.is_some() && c.firebase_token != Some("".to_string()) {
+                Some((c.name, c.firebase_token.unwrap()))
+            } else {
+                debug!("Filtering contact {} because no token", c.name);
+                None
+            }
+        })
+        .collect();
+
+
+    if update_user.led && user.led {
+        info!("Contacts {:?}", contacts);
+        // Sending push notification
+        notification_service.into_inner().push(contacts)?;
+    }
 
     // Log the user update change
     user_dao.get_ref().create_analytics_for_user(&user)?;
