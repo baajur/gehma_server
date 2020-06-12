@@ -5,7 +5,7 @@ RUN apt-get install -y openssl postgresql postgresql-contrib
 WORKDIR /gehma
 #RUN USER=root cargo new --bin gehma
 COPY . .
-RUN cd gehma_server && cargo build --release --color never
+RUN cd gehma_server && cargo build --release --color never && strip target/release/sprechstunde
 
 FROM ubuntu:latest
 WORKDIR /gehma
