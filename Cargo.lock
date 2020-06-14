@@ -1211,6 +1211,7 @@ dependencies = [
  "pq-sys",
  "r2d2",
  "uuid 0.6.5",
+ "uuid 0.7.4",
 ]
 
 [[package]]
@@ -1827,6 +1828,19 @@ dependencies = [
  "widestring",
  "winapi 0.3.8",
  "winreg",
+]
+
+[[package]]
+name = "iterate_access_tokens"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "core",
+ "data-encoding",
+ "diesel",
+ "dotenv",
+ "ring",
+ "uuid 0.7.4",
 ]
 
 [[package]]
@@ -3777,6 +3791,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "90dbc611eb48397705a6b0f6e917da23ae517e4d127123d2cf7674206627d32a"
 dependencies = [
  "rand 0.6.5",
+ "serde",
 ]
 
 [[package]]

@@ -4,5 +4,6 @@ members = [
     "web_contrib",
     "gehma_server",
     "img_profile",
-	"news"
+	"news",
+	"migration_software/iterate_access_tokens"
 ]

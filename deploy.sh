@@ -8,5 +8,5 @@ fi
 
 ./build.sh $1 \
 && echo "Begin transfer to gehma_prod:/IMAGES/gehma_$1" \
-&& sudo scp ~/images/gehma_$1.tar.gz kper@gehma_prod:/IMAGES \
+&& scp ~/images/gehma_$1.tar.gz kper@gehma_prod:/IMAGES \
 && echo "Transfer finished"

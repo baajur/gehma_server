@@ -8,7 +8,7 @@ use log::{debug, error, info, trace};
 use crate::queries::*;
 use crate::services::number_registration::NumberRegistrationService;
 
-const ACCESS_TOKEN_LENGTH: usize = 32;
+pub const ACCESS_TOKEN_LENGTH: usize = 32;
 
 pub(crate) fn request(
     body: RequestCodeDto,

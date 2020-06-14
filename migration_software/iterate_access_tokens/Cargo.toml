@@ -1,0 +1,14 @@
+[package]
+name = "iterate_access_tokens"
+version = "0.1.0"
+authors = ["Kevin Per <kevin.per@protonmail.com>"]
+edition = "2018"
+
+[dependencies]
+core = { path = "../../core" }
+diesel = { version = "1.4.*", features = ["postgres","uuidv07", "r2d2", "chrono"] }
+chrono = { version = "0.4.6", features = ["serde"] }
+dotenv = "0.14.1"
+uuid = { version = "0.7", features = ["serde", "v4"] }
+ring = "0.14.6"
+data-encoding = "2.1.2"
