@@ -36,7 +36,7 @@ pub struct UserDao {
     pub access_token: String,
     pub hash_tele_num: HashedTeleNum,
     pub xp: i32,
-    pub profile_picture: Option<i32>,
+    pub profile_picture: i32,
 }
 
 macro_rules! hash {
@@ -57,7 +57,7 @@ impl UserDao {
             description: "".to_string(),
             client_version: version.to_string(),
             firebase_token: None,
-            profile_picture: Some(1),
+            profile_picture: 1, //DEFAULT
             access_token: access_token.to_string(),
             xp: 0,
             hash_tele_num: hash!(tele_num),

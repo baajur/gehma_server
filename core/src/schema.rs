@@ -70,7 +70,7 @@ table! {
         access_token -> Varchar,
         hash_tele_num -> Bpchar,
         xp -> Int4,
-        profile_picture -> Nullable<Int4>,
+        profile_picture -> Int4,
     }
 }
 

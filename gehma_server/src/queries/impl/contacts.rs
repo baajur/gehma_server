@@ -233,7 +233,7 @@ impl PersistentContactsDao for PgContactsDao {
                 String, //cc
                 String, //description
                 chrono::NaiveDateTime,
-                Option<i32>,   //profile pic
+                i32,   //profile pic
                 HashedTeleNum, //hash_blocked
                 Option<HashedTeleNum>,
                 i32,                   //XP
