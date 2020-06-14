@@ -31,7 +31,7 @@ use dao_factory::*;
 #[cfg(test)]
 mod tests;
 
-pub const ALLOWED_CLIENT_VERSIONS: &[&str] = &["0.5.4"];
+pub const ALLOWED_CLIENT_VERSIONS: &[&str] = &["0.6.0"];
 pub const LIMIT_PUSH_NOTIFICATION_CONTACTS: usize = 128;
 pub const ALLOWED_PROFILE_PICTURE_SIZE: usize = 10_000; //in Kilobytes
 
@@ -59,8 +59,8 @@ pub(crate) async fn main() -> std::io::Result<()> {
         App::new()
             .data(pool_pg.clone())
             //.data(pool_redis.clone())
-            //.data(get_auth())
-            .data(set_testing_auth())
+            .data(get_auth())
+            //.data(set_testing_auth())
             .data(get_onesignal_notification_service())
             .data(get_ratelimits())
             .data(get_session_service())
