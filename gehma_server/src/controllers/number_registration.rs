@@ -44,6 +44,7 @@ pub(crate) fn check_code(
         match user_dao.get_ref().get_by_tele_num(&parsed) {
             Ok(user) => {
                 debug!("User exists");
+                info!("user {:#?}", user);
                 let path = user_dao.get_profile_picture(&user).map_err(|err| {
                     error!("Profile picture {:?}", err);
                     err

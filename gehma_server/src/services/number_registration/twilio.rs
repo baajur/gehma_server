@@ -95,7 +95,7 @@ impl NumberRegistrationServiceTrait for TwilioAuthenticator {
 
         //FIXME
         let client = Client::new();
-        let result: TwilioVerificationCheckResponse = client
+        let result: Result<TwilioVerificationCheckResponse, _> = client
             .post(&format!(
                 "https://verify.twilio.com/v2/Services/{}/VerificationCheck",
                 self.config.get_project_id()
@@ -107,19 +107,24 @@ impl NumberRegistrationServiceTrait for TwilioAuthenticator {
             )
             .send()
             .map_err(|w| {
-                error!("{:?}", w);
+                error!("error {:?}", w);
+                eprintln!("error {:?}", w);
                 ServiceError::BadRequest("Cannot parse twilio's response".to_string())
             })?
             .json()
-            .map_err(|_| ServiceError::Unauthorized)?;
+            .map_err(|_| ServiceError::Unauthorized);
 
         info!("result {:?}", result);
 
-        //https://www.twilio.com/docs/verify/api
-        if result.to == tele_num.to_string() && &result.status == "approved" && result.valid == true
-        {
-            info!("Check ok");
-            return Ok(true);
+        if let Ok(result) = result {
+            //https://www.twilio.com/docs/verify/api
+            if result.to == tele_num.to_string()
+                && &result.status == "approved"
+                && result.valid == true
+            {
+                info!("Check ok");
+                return Ok(true);
+            }
         }
 
         info!("Check not ok");

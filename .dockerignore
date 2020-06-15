@@ -4,3 +4,5 @@ core/target
 schauma/target
 schauma_spider/target
 gehma_server/target
+migration_software/iterate_access_tokens/target
+migration_software/sha256_hasher/target

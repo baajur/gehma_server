@@ -22,17 +22,17 @@ pub(crate) fn user_signin(
     notification_service: web::Data<NotificationService>,
     session_service: web::Data<SessionService>,
 ) -> Result<UserDto, ServiceError> {
-    info!("controllers/user/user_signin");
+    info!("fn user_signin");
 
-    let access_token = request
-        .headers()
-        .get("ACCESS_TOKEN")
-        .ok_or(ServiceError::BadRequest(
-            "Missing access token in ACCESS_TOKEN header".to_string(),
-        ))?;
+    println!("headers {:?}", request.headers());
+
+    let access_token = request.headers().get("Authorization").ok_or_else(|| {
+        error!("{}", "Missing access token in Authorization header");
+        ServiceError::BadRequest("Missing access token in Authorization header".to_string())
+    })?;
 
     if !crate::ALLOWED_CLIENT_VERSIONS.contains(&body.client_version.as_str()) {
-        error!("Version mismatch. Server does not suppoert client version");
+        error!("Version mismatch. Server does not support client version");
         return Err(ServiceError::BadRequest(format!(
             "Version mismatch. The supported versions are {:?}",
             crate::ALLOWED_CLIENT_VERSIONS
@@ -46,6 +46,10 @@ pub(crate) fn user_signin(
 
     // Check if authorized
     if &user.access_token != access_token {
+        eprintln!(
+            "Access token do not match ({:?} != {:?})",
+            user.access_token, access_token
+        );
         return Err(ServiceError::Unauthorized);
     }
 
@@ -144,7 +148,6 @@ pub(crate) fn update_user(
             }
         })
         .collect();
-
 
     if update_user.led && user.led {
         info!("Contacts {:?}", contacts);
