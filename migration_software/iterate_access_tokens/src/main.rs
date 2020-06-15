@@ -26,9 +26,13 @@ fn main() {
 fn update_user(connection: &PgConnection) {
     use core::schema::users::dsl::{users, access_token, id};
 
-    let mut result = users.load::<UserDao>(connection).unwrap();
+    let mut result = users.load::<UserDao>(connection);
 
-    for user in result.into_iter() {
+    if let Err(ref err) = result {
+        eprintln!("err {}", err);
+    }
+
+    for user in result.unwrap().into_iter() {
         let target = users.filter(id.eq(user.id));
 
         let token = core::utils::generate_random_string(ACCESS_TOKEN_LENGTH);
