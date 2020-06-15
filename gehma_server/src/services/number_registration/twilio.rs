@@ -1,12 +1,11 @@
 use super::NumberRegistrationServiceTrait;
 use chrono::prelude::*;
-use core::models::PhoneNumber;
-use serde::{Serialize, Deserialize};
-use log::{error, info};
 use core::errors::ServiceError;
+use core::models::PhoneNumber;
+use log::{debug, error, info};
+use serde::{Deserialize, Serialize};
 
 use reqwest::Client;
-
 
 #[derive(Clone)]
 pub struct TwilioConfiguration {
@@ -84,17 +83,15 @@ pub struct TwilioAuthenticator {
 }
 
 impl NumberRegistrationServiceTrait for TwilioAuthenticator {
-    fn check_code(
-        &self,
-        tele_num: &PhoneNumber,
-        user_token: &str,
-    ) -> Result<bool, ServiceError> {
-        info!("auth/authenticate");
+    fn check_code(&self, tele_num: &PhoneNumber, user_token: &str) -> Result<bool, ServiceError> {
+        info!("fn check_code");
 
         let params = [
             ("To", tele_num.to_string()),
             ("Code", user_token.to_string()),
         ];
+
+        info!("params {:?}", params);
 
         //FIXME
         let client = Client::new();
@@ -116,10 +113,16 @@ impl NumberRegistrationServiceTrait for TwilioAuthenticator {
             .json()
             .map_err(|_| ServiceError::Unauthorized)?;
 
+        info!("result {:?}", result);
+
+        //https://www.twilio.com/docs/verify/api
         if result.to == tele_num.to_string() && &result.status == "approved" && result.valid == true
         {
+            info!("Check ok");
             return Ok(true);
         }
+
+        info!("Check not ok");
 
         Ok(false)
     }
@@ -127,10 +130,7 @@ impl NumberRegistrationServiceTrait for TwilioAuthenticator {
     fn request_code(&self, tele_num: &PhoneNumber) -> Result<(), ServiceError> {
         info!("auth/request_code");
 
-        let params = [
-            ("To", tele_num.to_string()),
-            ("Channel", "sms".to_string()),
-        ];
+        let params = [("To", tele_num.to_string()), ("Channel", "sms".to_string())];
 
         //FIXME
         let client = Client::new();
