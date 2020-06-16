@@ -1,6 +1,3 @@
-use data_encoding::HEXUPPER;
-use ring::digest;
-
 use core::models::dao::*;
 
 use diesel::pg::PgConnection;
@@ -26,7 +23,7 @@ fn main() {
 fn update_user(connection: &PgConnection) {
     use core::schema::users::dsl::{users, access_token, id};
 
-    let mut result = users.load::<UserDao>(connection);
+    let result = users.load::<UserDao>(connection);
 
     if let Err(ref err) = result {
         eprintln!("err {}", err);
@@ -39,7 +36,7 @@ fn update_user(connection: &PgConnection) {
 
         diesel::update(target)
             .set(
-                (access_token.eq(token)),
+                access_token.eq(token),
             )
             .execute(connection)
             .unwrap();

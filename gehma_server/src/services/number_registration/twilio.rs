@@ -2,7 +2,7 @@ use super::NumberRegistrationServiceTrait;
 use chrono::prelude::*;
 use core::errors::ServiceError;
 use core::models::PhoneNumber;
-use log::{debug, error, info};
+use log::{error, info};
 use serde::{Deserialize, Serialize};
 
 use reqwest::Client;

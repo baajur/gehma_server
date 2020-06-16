@@ -1360,12 +1360,9 @@ dependencies = [
 name = "iterate_access_tokens"
 version = "0.1.0"
 dependencies = [
- "chrono",
  "core",
- "data-encoding",
  "diesel",
  "dotenv",
- "ring",
  "uuid 0.7.4",
 ]
 
