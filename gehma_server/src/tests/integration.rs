@@ -44,14 +44,21 @@ macro_rules! init_data {
     ($pool:expr) => {
         use core::schema::profile_pictures::dsl::profile_pictures;
         use diesel::prelude::*;
+        use diesel::sql_query;
 
+        /*
         let connection: &PgConnection = &$pool.get().unwrap();
+
+        sql_query("DELETE FROM profile_pictures;")
+            .execute(connection)
+            .unwrap();
 
         diesel::insert_into(profile_pictures)
             .values(&ProfilePictureDao {
                 id: 0,
                 path: "path".to_string(),
             })
+            .on_conflict_do_nothing()
             .execute(connection)
             .unwrap();
 
@@ -60,8 +67,10 @@ macro_rules! init_data {
                 id: 1,
                 path: "path2".to_string(),
             })
+            .on_conflict_do_nothing()
             .execute(connection)
             .unwrap();
+        */
     };
 }
 
@@ -181,7 +190,7 @@ macro_rules! signin {
     ($app:ident, $query_user:ident) => {{
         let req = test::TestRequest::post()
             .uri(&format!("/api/signin",))
-            .header("ACCESS_TOKEN", $query_user.access_token.clone().unwrap())
+            .header("AUTHORIZATION", $query_user.access_token.clone().unwrap())
             .set_json(&core::models::dto::PostUserDto {
                 tele_num: $query_user.tele_num.clone(),
                 country_code: $query_user.country_code.clone(),
@@ -233,9 +242,11 @@ fn cleanup(pool: &Pool) {
         .execute(&pool.get().unwrap())
         .unwrap();
 
+    /*
     sql_query("DELETE FROM profile_pictures;")
         .execute(&pool.get().unwrap())
         .unwrap();
+    */
 
     sql_query("DELETE FROM usage_statistics;")
         .execute(&pool.get().unwrap())
@@ -1042,7 +1053,7 @@ async fn test_see_if_blocked_perspective_blocked() {
 
 #[actix_rt::test]
 async fn test_update_profile_picture() {
-    env_logger::init();
+    //env_logger::init();
     let pool = get_pool();
 
     cleanup(&pool);
@@ -1060,12 +1071,12 @@ async fn test_update_profile_picture() {
     let updated_user = get_user!(app, cmp_user, user_signin.session_token.unwrap());
 
     cleanup(&pool);
-    assert_eq!("path2".to_string(), updated_user.profile_picture);
+    assert_eq!("ghost.png".to_string(), updated_user.profile_picture);
 }
 
 #[actix_rt::test]
 async fn test_get_all_profile_pictures() {
-    env_logger::init();
+    //env_logger::init();
     let pool = get_pool();
 
     cleanup(&pool);

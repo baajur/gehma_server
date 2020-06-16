@@ -44,7 +44,7 @@ impl PersistentUserDao for PgUserDao {
         version: &str,
         access_token: &str,
     ) -> Result<UserDao, ServiceError> {
-        info!("queries/user/create_query");
+        info!("create()");
         use core::schema::users::dsl::users;
 
         let new_inv = UserDao::my_from(&tel.to_string(), country_code, version, access_token);
@@ -57,6 +57,7 @@ impl PersistentUserDao for PgUserDao {
             //.map(|w| w.into())
             .map_err(|_db_error| {
                 error!("{}", _db_error);
+                error!("user {:#?}", new_inv);
                 ServiceError::InternalServerError(InternalServerError::DatabaseError(
                     _db_error.to_string(),
                 ))
@@ -196,9 +197,7 @@ impl PersistentUserDao for PgUserDao {
         let conn: &PgConnection = &self.pool.get().unwrap();
 
         users
-            .filter(
-                tele_num.eq(phone_number.to_string()),
-            )
+            .filter(tele_num.eq(phone_number.to_string()))
             .load::<UserDao>(conn)
             .map_err(|_db_error| {
                 error!("db_error: {}", _db_error);
@@ -234,9 +233,13 @@ impl PersistentUserDao for PgUserDao {
             })
     }
 
-    fn update_profile_picture(&self, user_id: Uuid, user: &UpdateProfilePictureDto) -> Result<(), ServiceError> {
+    fn update_profile_picture(
+        &self,
+        user_id: Uuid,
+        user: &UpdateProfilePictureDto,
+    ) -> Result<(), ServiceError> {
         trace!("queries/user/update_profile_picture");
-        use core::schema::users::dsl::{id, profile_picture, users, changed_at};
+        use core::schema::users::dsl::{changed_at, id, profile_picture, users};
 
         let conn: &PgConnection = &self.pool.get().unwrap();
 
