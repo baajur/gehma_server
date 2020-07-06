@@ -63,3 +63,16 @@ impl Into<ProfilePictureDto> for ProfilePictureDao {
         }
     }
 }
+
+impl Into<BroadcastElementDto> for BroadcastElementDao {
+    fn into(self) -> BroadcastElementDto {
+        BroadcastElementDto {
+            id: self.id,
+            display_user: self.display_user,
+            originator_user_id: self.originator_user_id,
+            text: self.text,
+            created_at: self.created_at,
+            updated_at: self.updated_at,
+        }
+    }
+}

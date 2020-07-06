@@ -4,7 +4,7 @@ use crate::schema::*;
 use crate::utils::phonenumber_to_international;
 
 use diesel::sql_types::{Nullable, Text, Uuid};
-use diesel::{Queryable, QueryableByName, Associations};
+use diesel::{Associations, Queryable, QueryableByName};
 
 use data_encoding::HEXUPPER;
 use ring::digest;
@@ -230,6 +230,8 @@ pub struct ContactPushNotificationDao {
     pub name: String,
     #[sql_type = "Nullable<Text>"]
     pub firebase_token: Option<String>,
+    #[sql_type = "Text"]
+    pub target_hash_tele_num: HashedTeleNum,
 }
 
 #[derive(
@@ -287,11 +289,48 @@ pub struct VoteDao {
     Queryable,
     QueryableByName,
     Identifiable,
-    Insertable
+    Insertable,
 )]
 #[table_name = "profile_pictures"]
 pub struct ProfilePictureDao {
     pub id: i32,
-    pub path: String
+    pub path: String,
 }
 
+#[derive(
+    Debug,
+    Serialize,
+    Deserialize,
+    Clone,
+    AsChangeset,
+    Eq,
+    PartialEq,
+    Queryable,
+    QueryableByName,
+    Identifiable,
+)]
+#[table_name = "broadcast"]
+pub struct BroadcastElementDao {
+    pub id: i32,
+    /// User who created it
+    pub originator_user_id: uuid::Uuid,
+    pub text: String,
+    pub is_seen: bool,
+    pub updated_at: chrono::NaiveDateTime,
+    pub created_at: chrono::NaiveDateTime,
+    /// User for whom, it will be display
+    pub display_user: HashedTeleNum,
+}
+
+#[derive(Debug, Serialize, Deserialize, Insertable)]
+#[table_name = "broadcast"]
+pub struct InsertBroadcastElementDao {
+    /// User for whom, it will be display
+    pub display_user: HashedTeleNum,
+    /// User who created it
+    pub originator_user_id: uuid::Uuid,
+    pub text: String,
+    pub is_seen: bool,
+    pub updated_at: chrono::NaiveDateTime,
+    pub created_at: chrono::NaiveDateTime,
+}

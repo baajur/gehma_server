@@ -142,6 +142,10 @@ macro_rules! private_init_server_integration_test {
                 .route(
                     "/api/contacts/{uid}",
                     web::get().to(crate::routes::contacts::get_contacts),
+                )
+                .route(
+                    "/api/broadcasts/{uid}",
+                    web::get().to(routes::broadcast::get_all),
                 ),
         )
     }};
@@ -216,6 +220,8 @@ macro_rules! gehma {
             .to_request();
 
         execute!($app, req);
+
+        log::debug!("gehma executed");
     };
 }
 
@@ -253,6 +259,10 @@ fn cleanup(pool: &Pool) {
         .unwrap();
 
     sql_query("DELETE FROM analytics;")
+        .execute(&pool.get().unwrap())
+        .unwrap();
+
+    sql_query("DELETE FROM broadcast;")
         .execute(&pool.get().unwrap())
         .unwrap();
 }
@@ -438,6 +448,26 @@ macro_rules! change_profile_picture {
 
         let resp = test::call_service(&mut $app, req).await;
         assert!(resp.status().is_success());
+    }};
+}
+
+macro_rules! get_broadcasts {
+    ($app:ident, $cmp_user:ident, $session_token:expr, $mark_seen:expr) => {{
+        let req = test::TestRequest::get()
+            .uri(&format!("/api/broadcasts/{}?mark_seen={}", $cmp_user.id.to_string(), $mark_seen.to_string()))
+            .header("AUTHORIZATION", $session_token)
+            .to_request();
+
+        /*
+        let resp = test::call_service(&mut $app, req).await;
+
+        if !resp.status().is_success() {
+            eprintln!("{:?}", resp.response().error().unwrap());
+        }*/
+
+        let elements: Vec<BroadcastElementDto> = test::read_response_json(&mut $app, req).await;
+
+        elements
     }};
 }
 
@@ -1105,4 +1135,64 @@ async fn test_get_all_profile_pictures() {
 
     cleanup(&pool);
     assert_eq!(2, pictures.len());
+}
+
+#[actix_rt::test]
+async fn test_get_broadcasts() {
+    env_logger::init();
+    let pool = get_pool();
+
+    cleanup(&pool);
+
+    init_data!(&pool);
+
+    let cmp_user = create_user().await;
+    let cmp_user2 = create_user2().await;
+
+    let mut app = init_server_integration_test!(&pool).await;
+
+    let user_signin = signin!(app, cmp_user);
+    let user_signin2 = signin!(app, cmp_user2);
+
+    let session_token = user_signin.session_token.unwrap();
+    let session_token2 = user_signin2.session_token.unwrap();
+
+    // Creating contact
+    make_friend!(
+        app,
+        cmp_user2,
+        "test contact",
+        "+4366412345678",
+        session_token2.clone()
+    );
+    make_friend!(
+        app,
+        cmp_user,
+        "test contact",
+        "+4365012345678",
+        session_token.clone()
+    );
+
+    update_token!(app, cmp_user, "token", session_token.clone());
+
+    update_token!(app, cmp_user2, "token", session_token2.clone());
+
+    gehma!(app, cmp_user, "updated description", session_token.clone());
+
+    //let updated_user = get_user!(app, cmp_user, session_token.clone());
+    let broadcasts = get_broadcasts!(app, cmp_user, session_token.clone(), true);
+
+    assert_eq!(broadcasts.len(), 1);
+    assert_eq!(
+        broadcasts.get(0).unwrap().text,
+        "updated description".to_string()
+    );
+
+    // Now, there should be gone, because seen
+    let broadcasts = get_broadcasts!(app, cmp_user, session_token.clone(), false);
+
+    cleanup(&pool);
+
+    assert_eq!(broadcasts.len(), 0);
+
 }

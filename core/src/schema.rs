@@ -18,6 +18,18 @@ table! {
 }
 
 table! {
+    broadcast (id) {
+        id -> Int4,
+        originator_user_id -> Uuid,
+        text -> Text,
+        is_seen -> Bool,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
+        display_user -> Text,
+    }
+}
+
+table! {
     contacts (from_id, target_hash_tele_num) {
         from_id -> Uuid,
         created_at -> Timestamp,
@@ -87,6 +99,7 @@ joinable!(votes -> events (event_id));
 allow_tables_to_appear_in_same_query!(
     analytics,
     blacklist,
+    broadcast,
     contacts,
     events,
     profile_pictures,

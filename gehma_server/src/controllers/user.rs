@@ -24,8 +24,6 @@ pub(crate) fn user_signin(
 ) -> Result<UserDto, ServiceError> {
     info!("fn user_signin");
 
-    println!("headers {:?}", request.headers());
-
     let access_token = request.headers().get("Authorization").ok_or_else(|| {
         error!("{}", "Missing access token in Authorization header");
         ServiceError::BadRequest("Missing access token in Authorization header".to_string())

@@ -46,4 +46,14 @@ pub trait PersistentUserDao {
 
     /// Get the profile picture's path
     fn get_profile_picture(&self, user: &UserDao) -> IResult<String>;
+
+    /// User `originator_user` creates a broadcast entry for the `disaplay_user`
+    fn create_broadcast_entry(&self, originator_user: &UserDao, display_user: &HashedTeleNum, text: &String) -> IResult<()>;
+
+    /// Get's the latest broadcast elements, which wasn't seen yet, for the user `user_id`.
+    /// `mark_seen` determines if it is only peeked
+    fn get_latest_broadcast(&self, user: &UserDao, mark_seen: bool) -> IResult<Vec<BroadcastElementDao>>;
+
+    /// Updates all unseen elements to seen.
+    fn update_latest_broadcast(&self, user: &UserDao) -> IResult<()>;
 }

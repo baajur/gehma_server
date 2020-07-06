@@ -1,0 +1,2 @@
+ALTER TABLE broadcast DROP COLUMN display_user;
+ALTER TABLE broadcast ADD COLUMN display_user_id UUID NOT NULL REFERENCES users (id) ON UPDATE CASCADE ON DELETE CASCADE;

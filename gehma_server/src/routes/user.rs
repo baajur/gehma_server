@@ -55,6 +55,8 @@ pub async fn get(
     set_response_headers(&mut res);
 
     Ok(res)
+
+    //response!(users)
 }
 
 pub async fn upload_profile_picture(

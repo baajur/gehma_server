@@ -2,9 +2,9 @@ use crate::services::number_registration::testing::*;
 use crate::services::number_registration::twilio::*;
 use crate::services::number_registration::NumberRegistrationService;
 use crate::services::push_notifications::firebase::*;
+use crate::services::push_notifications::one_signal::*;
 use crate::services::push_notifications::testing::*;
 use crate::services::push_notifications::NotificationService;
-use crate::services::push_notifications::one_signal::*;
 use crate::services::session::*;
 
 use crate::ratelimits::*;
@@ -65,16 +65,12 @@ pub(crate) fn get_firebase_notification_service() -> NotificationService {
     Box::new(FirebaseNotificationService { config })
 }
 
-
 #[allow(dead_code)]
 pub(crate) fn get_onesignal_notification_service() -> NotificationService {
     let id = std::env::var("ONE_SIGNAL_ID").expect("No ONE_SIGNAL_ID configured");
     let key = std::env::var("ONE_SIGNAL_KEY").expect("No ONE_SIGNAL_KEY configured");
 
-    let config = OneSignalConfiguration {
-        id,
-        key
-    };
+    let config = OneSignalConfiguration { id, key };
 
     Box::new(OneSignalService { config })
 }
@@ -84,4 +80,18 @@ pub(crate) fn get_session_service() -> SessionService {
     let secret = std::env::var("SESSION_KEY").expect("No SESSION_KEY configured");
 
     Box::new(SessionServicePriv::new(secret))
+}
+
+macro_rules! response {
+    ($payload:expr) => {{
+        use actix_web::{HttpResponse};
+
+        let mut res = HttpResponse::Ok()
+            .content_type("application/json")
+            .json($expr);
+
+        set_response_headers(&mut res);
+
+        Ok(res)
+    }};
 }

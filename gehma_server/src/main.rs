@@ -24,6 +24,7 @@ mod middleware;
 
 mod database;
 mod redis;
+#[macro_use]
 mod utils;
 
 use dao_factory::*;
@@ -109,7 +110,7 @@ pub(crate) async fn main() -> std::io::Result<()> {
                     .service(
                         web::resource("/user/{uid}/profile")
                             .route(web::get().to(routes::profile_pictures::get_all))
-                            .route(web::post().to(routes::user::upload_profile_picture))
+                            .route(web::post().to(routes::user::upload_profile_picture)),
                     )
                     .service(
                         web::resource("/user/{uid}")
@@ -131,6 +132,10 @@ pub(crate) async fn main() -> std::io::Result<()> {
                     .service(
                         web::resource("/auth/check")
                             .route(web::post().to(routes::number_registration::check)),
+                    )
+                    .service(
+                        web::resource("/broadcasts/{uid}")
+                            .route(web::get().to(routes::broadcast::get_all)),
                     )
                     .default_service(web::route().to(HttpResponse::NotFound)),
             )

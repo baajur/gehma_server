@@ -173,3 +173,16 @@ pub struct ProfilePictureDto {
 pub struct UpdateProfilePictureDto {
     pub profile_id: i32,
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone, Eq, PartialEq)]
+pub struct BroadcastElementDto {
+    pub id: i32,
+    /// User for whom, it will be display
+    pub display_user: HashedTeleNum, 
+    /// User who created it
+    pub originator_user_id: uuid::Uuid,
+    pub text: String,
+    pub created_at: chrono::NaiveDateTime,
+    pub updated_at: chrono::NaiveDateTime,
+}
+

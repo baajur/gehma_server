@@ -10,6 +10,7 @@ use log::{error, info, trace};
 use uuid::Uuid;
 
 const INCREASE_XP: i32 = 100;
+const BROADCAST_LIMIT: i64 = 20;
 
 #[derive(Clone)]
 pub struct PgUserDao {
@@ -144,30 +145,23 @@ impl PersistentUserDao for PgUserDao {
                     let contacts = get_users_for_sending_push_notification(&user, &self.pool)?;
 
                     Ok((user, contacts))
-
-                //Sending push notification
-                /*if !self
-                    .ratelimit_service
-                    .inner
-                    .lock()
-                    .unwrap()
-                    .check_rate_limit_updates(&myid, &self.pool, current_time)?
-                {*/
-
-                /*sending_push_notifications(&user, &self.pool, &notification_service).map_err(
-                    |err| {
-                        error!("{}", err);
-                        ServiceError::BadRequest("Cannot send push notifications".to_string())
-                    },
-                )?;*/
-
-                //return Err(ServiceError::RateLimit("No push notification sent. Try again later".to_string()));
-                /*} else {
-                    info!("Ratelimit reached, not sending push notification");
-                }*/
                 } else {
                     Ok((user, vec![]))
                 }
+            })
+            .and_then(|(user, contacts)| {
+                // Create an broadcast entry
+                for contact in contacts.iter() {
+                    if let Err(err) = self.create_broadcast_entry(
+                        &user,
+                        &contact.target_hash_tele_num,
+                        &user.description,
+                    ) {
+                        error!("Cannot make a broadcast entry: {}", err);
+                    }
+                }
+
+                Ok((user, contacts))
             })
     }
 
@@ -309,6 +303,67 @@ impl PersistentUserDao for PgUserDao {
 
         Ok(j.path)
     }
+
+    fn get_latest_broadcast(
+        &self,
+        user: &UserDao,
+        mark_seen: bool,
+    ) -> Result<Vec<BroadcastElementDao>, ::core::errors::ServiceError> {
+        use core::schema::broadcast::dsl::*;
+
+        let conn: &PgConnection = &self.pool.get().unwrap();
+
+        let list = broadcast
+            .filter(is_seen.eq(false).and(display_user.eq(&user.hash_tele_num)))
+            .limit(BROADCAST_LIMIT)
+            .order_by(created_at.desc())
+            .load::<BroadcastElementDao>(conn)?;
+
+        if mark_seen {
+            log::debug!("Update broadcasts as seen");
+            self.update_latest_broadcast(user)?;
+        }
+
+        Ok(list)
+    }
+
+    /// Updates all unseen elements to seen.
+    fn update_latest_broadcast(&self, user: &UserDao) -> Result<(), ::core::errors::ServiceError> {
+        use core::schema::broadcast::dsl::*;
+
+        let conn: &PgConnection = &self.pool.get().unwrap();
+
+        let target = broadcast.filter(display_user.eq(&user.hash_tele_num));
+
+        diesel::update(target).set(is_seen.eq(true)).execute(conn)?;
+
+        Ok(())
+    }
+
+    /// User `originator_user` creates a broadcast entry for the `disaplay_user`
+    fn create_broadcast_entry(
+        &self,
+        originator_user: &UserDao,
+        display_user_hash: &HashedTeleNum,
+        mytext: &String,
+    ) -> Result<(), ::core::errors::ServiceError> {
+        use core::schema::broadcast::dsl::*;
+
+        let conn: &PgConnection = &self.pool.get().unwrap();
+
+        diesel::insert_into(broadcast)
+            .values(InsertBroadcastElementDao {
+                display_user: display_user_hash.clone(),
+                originator_user_id: originator_user.id,
+                text: mytext.clone(),
+                is_seen: false,
+                updated_at: chrono::Local::now().naive_local(),
+                created_at: chrono::Local::now().naive_local(),
+            })
+            .execute(conn)?;
+
+        Ok(())
+    }
 }
 
 fn get_users_for_sending_push_notification(
@@ -320,7 +375,7 @@ fn get_users_for_sending_push_notification(
     let conn: &PgConnection = &pool.get().unwrap();
 
     let my_contacts: Vec<ContactPushNotificationDao> = diesel::sql_query(
-        "SELECT from_id, name, firebase_token FROM contact_view WHERE from_id = $1",
+        "SELECT from_id, name, firebase_token, target_hash_tele_num FROM contact_view WHERE from_id = $1",
     )
     .bind::<diesel::sql_types::Uuid, _>(user.id)
     .load::<ContactPushNotificationDao>(conn)
