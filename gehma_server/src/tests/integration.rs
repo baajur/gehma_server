@@ -1139,7 +1139,7 @@ async fn test_get_all_profile_pictures() {
 
 #[actix_rt::test]
 async fn test_get_broadcasts() {
-    env_logger::init();
+    //env_logger::init();
     let pool = get_pool();
 
     cleanup(&pool);
@@ -1194,5 +1194,64 @@ async fn test_get_broadcasts() {
     cleanup(&pool);
 
     assert_eq!(broadcasts.len(), 0);
+
+}
+
+#[actix_rt::test]
+async fn test_get_broadcasts_not_cleared() {
+    //env_logger::init();
+    let pool = get_pool();
+
+    cleanup(&pool);
+
+    init_data!(&pool);
+
+    let cmp_user = create_user().await;
+    let cmp_user2 = create_user2().await;
+
+    let mut app = init_server_integration_test!(&pool).await;
+
+    let user_signin = signin!(app, cmp_user);
+    let user_signin2 = signin!(app, cmp_user2);
+
+    let session_token = user_signin.session_token.unwrap();
+    let session_token2 = user_signin2.session_token.unwrap();
+
+    // Creating contact
+    make_friend!(
+        app,
+        cmp_user2,
+        "test contact",
+        "+4366412345678",
+        session_token2.clone()
+    );
+    make_friend!(
+        app,
+        cmp_user,
+        "test contact",
+        "+4365012345678",
+        session_token.clone()
+    );
+
+    update_token!(app, cmp_user, "token", session_token.clone());
+
+    update_token!(app, cmp_user2, "token", session_token2.clone());
+
+    gehma!(app, cmp_user, "updated description", session_token.clone());
+
+    let broadcasts = get_broadcasts!(app, cmp_user, session_token.clone(), false); // false changed
+
+    assert_eq!(broadcasts.len(), 1);
+    assert_eq!(
+        broadcasts.get(0).unwrap().text,
+        "updated description".to_string()
+    );
+
+    // Now, there should be gone, because seen
+    let broadcasts = get_broadcasts!(app, cmp_user, session_token.clone(), false);
+
+    cleanup(&pool);
+
+    assert_eq!(broadcasts.len(), 1);
 
 }
