@@ -27,13 +27,10 @@ pub(crate) fn get_entries(
         lookup.insert(c.user.id.clone(), c);
     }
 
-    eprintln!("lookup {:?}", lookup);
-
     let elements = user_dao
         .get_latest_broadcast(&user, mark_seen)?
         .into_iter()
         .filter_map(|w| {
-            eprintln!("{:#?}", w.originator_user_id);
             let contact = lookup.get(&w.originator_user_id);
 
             if let Some(c) = contact {
