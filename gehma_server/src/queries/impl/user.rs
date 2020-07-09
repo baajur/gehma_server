@@ -10,7 +10,7 @@ use log::{debug, error, info, trace};
 use uuid::Uuid;
 
 const INCREASE_XP: i32 = 100;
-const BROADCAST_LIMIT: i64 = 20;
+//const BROADCAST_LIMIT: i64 = 20;
 
 #[derive(Clone)]
 pub struct PgUserDao {
@@ -317,7 +317,7 @@ impl PersistentUserDao for PgUserDao {
 
         let list = broadcast
             .filter(is_seen.eq(false).and(display_user.eq(&user.hash_tele_num)))
-            .limit(BROADCAST_LIMIT)
+            //.limit(BROADCAST_LIMIT)
             .order_by(created_at.desc())
             .load::<BroadcastElementDao>(conn)?;
 
