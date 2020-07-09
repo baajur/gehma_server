@@ -125,7 +125,9 @@ pub struct ContactDto {
 }
 
 impl ContactDto {
-    pub fn new(name: impl Into<String>, blocked: bool, user: UserDto) -> Self {
+    pub fn new(name: impl Into<String>, blocked: bool, mut user: UserDto) -> Self {
+        user.access_token = None;
+        user.firebase_token = None;
         Self {
             name: name.into(),
             user,
