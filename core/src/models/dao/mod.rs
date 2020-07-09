@@ -325,12 +325,26 @@ pub struct BroadcastElementDao {
 #[derive(Debug, Serialize, Deserialize, Insertable)]
 #[table_name = "broadcast"]
 pub struct InsertBroadcastElementDao {
-    /// User for whom, it will be display
-    pub display_user: HashedTeleNum,
     /// User who created it
     pub originator_user_id: uuid::Uuid,
     pub text: String,
     pub is_seen: bool,
     pub updated_at: chrono::NaiveDateTime,
     pub created_at: chrono::NaiveDateTime,
+    /// User for whom, it will be display
+    pub display_user: HashedTeleNum,
+}
+
+
+impl BroadcastElementDao {
+    pub fn my_from(self, contact: &ContactDto) -> BroadcastElementDto {
+        BroadcastElementDto {
+            id: self.id,
+            display_user: self.display_user,
+            originator_user: contact.clone(),
+            text: self.text,
+            created_at: self.created_at,
+            updated_at: self.updated_at,
+        }
+    }
 }

@@ -454,7 +454,11 @@ macro_rules! change_profile_picture {
 macro_rules! get_broadcasts {
     ($app:ident, $cmp_user:ident, $session_token:expr, $mark_seen:expr) => {{
         let req = test::TestRequest::get()
-            .uri(&format!("/api/broadcasts/{}?mark_seen={}", $cmp_user.id.to_string(), $mark_seen.to_string()))
+            .uri(&format!(
+                "/api/broadcasts/{}?mark_seen={}",
+                $cmp_user.id.to_string(),
+                $mark_seen.to_string()
+            ))
             .header("AUTHORIZATION", $session_token)
             .to_request();
 
@@ -1139,7 +1143,7 @@ async fn test_get_all_profile_pictures() {
 
 #[actix_rt::test]
 async fn test_get_broadcasts() {
-    //env_logger::init();
+    env_logger::init();
     let pool = get_pool();
 
     cleanup(&pool);
@@ -1180,21 +1184,24 @@ async fn test_get_broadcasts() {
     gehma!(app, cmp_user, "updated description", session_token.clone());
 
     //let updated_user = get_user!(app, cmp_user, session_token.clone());
-    let broadcasts = get_broadcasts!(app, cmp_user, session_token.clone(), true);
+    let broadcasts = get_broadcasts!(app, cmp_user2, session_token2.clone(), true);
 
     assert_eq!(broadcasts.len(), 1);
     assert_eq!(
         broadcasts.get(0).unwrap().text,
         "updated description".to_string()
     );
+    assert_eq!(
+        broadcasts.get(0).unwrap().originator_user.user.tele_num,
+        "+4366412345678".to_string()
+    );
 
     // Now, there should be gone, because seen
-    let broadcasts = get_broadcasts!(app, cmp_user, session_token.clone(), false);
+    let broadcasts = get_broadcasts!(app, cmp_user2, session_token2.clone(), false);
 
     cleanup(&pool);
 
     assert_eq!(broadcasts.len(), 0);
-
 }
 
 #[actix_rt::test]
@@ -1239,7 +1246,7 @@ async fn test_get_broadcasts_not_cleared() {
 
     gehma!(app, cmp_user, "updated description", session_token.clone());
 
-    let broadcasts = get_broadcasts!(app, cmp_user, session_token.clone(), false); // false changed
+    let broadcasts = get_broadcasts!(app, cmp_user2, session_token2.clone(), false); // false changed
 
     assert_eq!(broadcasts.len(), 1);
     assert_eq!(
@@ -1248,10 +1255,9 @@ async fn test_get_broadcasts_not_cleared() {
     );
 
     // Now, there should be gone, because seen
-    let broadcasts = get_broadcasts!(app, cmp_user, session_token.clone(), false);
+    let broadcasts = get_broadcasts!(app, cmp_user2, session_token2.clone(), false);
 
     cleanup(&pool);
 
     assert_eq!(broadcasts.len(), 1);
-
 }

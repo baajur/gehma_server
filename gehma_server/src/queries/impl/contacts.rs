@@ -189,7 +189,7 @@ impl PersistentContactsDao for PgContactsDao {
     fn get_contacts(
         &self,
         user: &UserDao,
-        user_dao: Arc<Box<dyn PersistentUserDao>>,
+        user_dao: &Arc<Box<dyn PersistentUserDao>>,
     ) -> Result<Vec<ContactDto>, ::core::errors::ServiceError> {
         info!("queries/user/get_contacts");
 

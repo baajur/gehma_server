@@ -6,7 +6,7 @@ use core::models::dao::*;
 use core::models::dto::*;
 use core::models::PhoneNumber;
 use diesel::{prelude::*, PgConnection};
-use log::{error, info, trace};
+use log::{debug, error, info, trace};
 use uuid::Uuid;
 
 const INCREASE_XP: i32 = 100;
@@ -309,6 +309,8 @@ impl PersistentUserDao for PgUserDao {
         user: &UserDao,
         mark_seen: bool,
     ) -> Result<Vec<BroadcastElementDao>, ::core::errors::ServiceError> {
+        debug!("fn get_latest_broadcast for {} ({})", user.tele_num, user.hash_tele_num);
+
         use core::schema::broadcast::dsl::*;
 
         let conn: &PgConnection = &self.pool.get().unwrap();
@@ -318,6 +320,8 @@ impl PersistentUserDao for PgUserDao {
             .limit(BROADCAST_LIMIT)
             .order_by(created_at.desc())
             .load::<BroadcastElementDao>(conn)?;
+
+        debug!("BroadcastElements {} found", list.len());
 
         if mark_seen {
             log::debug!("Update broadcasts as seen");
@@ -353,8 +357,8 @@ impl PersistentUserDao for PgUserDao {
 
         diesel::insert_into(broadcast)
             .values(InsertBroadcastElementDao {
-                display_user: display_user_hash.clone(),
                 originator_user_id: originator_user.id,
+                display_user: display_user_hash.clone(),
                 text: mytext.clone(),
                 is_seen: false,
                 updated_at: chrono::Local::now().naive_local(),

@@ -7,6 +7,7 @@ use uuid::Uuid;
 use mockall::*;
 
 type IResult<K> = Result<K, ServiceError>;
+type DisplayUser = HashedTeleNum;
 
 #[automock]
 pub trait PersistentUserDao {
@@ -48,7 +49,7 @@ pub trait PersistentUserDao {
     fn get_profile_picture(&self, user: &UserDao) -> IResult<String>;
 
     /// User `originator_user` creates a broadcast entry for the `disaplay_user`
-    fn create_broadcast_entry(&self, originator_user: &UserDao, display_user: &HashedTeleNum, text: &String) -> IResult<()>;
+    fn create_broadcast_entry(&self, originator_user: &UserDao, display_user: &DisplayUser, text: &String) -> IResult<()>;
 
     /// Get's the latest broadcast elements, which wasn't seen yet, for the user `user_id`.
     /// `mark_seen` determines if it is only peeked

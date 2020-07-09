@@ -66,7 +66,7 @@ pub(crate) fn get_contacts(
 
     let mut contacts = contact_dao
         .get_ref()
-        .get_contacts(&user, user_dao.into_inner())?;
+        .get_contacts(&user, &user_dao.into_inner())?;
 
     contacts
         .iter_mut()

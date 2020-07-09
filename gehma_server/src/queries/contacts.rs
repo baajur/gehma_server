@@ -20,6 +20,6 @@ pub trait PersistentContactsDao {
     fn get_contacts(
         &self,
         user: &UserDao,
-        user_dao: Arc<Box<dyn PersistentUserDao>>,
+        user_dao: &Arc<Box<dyn PersistentUserDao>>,
     ) -> IResult<Vec<ContactDto>>;
 }

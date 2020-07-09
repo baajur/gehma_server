@@ -5,7 +5,7 @@ use diesel::types::FromSql;
 use std::io::Write;
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Serialize, Deserialize, AsExpression, FromSqlRow, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, AsExpression, FromSqlRow, PartialEq, Eq, Hash)]
 #[sql_type = "diesel::sql_types::Text"]
 pub struct HashedTeleNum(pub String);
 
@@ -174,15 +174,14 @@ pub struct UpdateProfilePictureDto {
     pub profile_id: i32,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Eq, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct BroadcastElementDto {
     pub id: i32,
     /// User for whom, it will be display
     pub display_user: HashedTeleNum, 
     /// User who created it
-    pub originator_user_id: uuid::Uuid,
+    pub originator_user: ContactDto,
     pub text: String,
     pub created_at: chrono::NaiveDateTime,
     pub updated_at: chrono::NaiveDateTime,
 }
-
