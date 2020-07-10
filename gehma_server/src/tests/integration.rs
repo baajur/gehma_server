@@ -95,6 +95,7 @@ macro_rules! private_init_server_integration_test {
                 .data(get_dao_factory($pool).get_blacklist_dao())
                 .data(get_dao_factory($pool).get_contacts_dao())
                 .data(get_dao_factory($pool).get_profile_pictures_dao())
+                .data(get_dao_factory($pool).get_invitation_dao())
                 .data(get_session_service())
                 .wrap(middleware::auth::Authentication)
                 .route("/api/signin", web::post().to(crate::routes::user::signin))

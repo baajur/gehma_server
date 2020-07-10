@@ -187,3 +187,31 @@ pub struct BroadcastElementDto {
     pub created_at: chrono::NaiveDateTime,
     pub updated_at: chrono::NaiveDateTime,
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct InvitationDto {
+    pub id: i32,
+    pub is_seen: bool,
+    pub state: i32, //0 is undecided, 1 is ok, 2 is declined
+    pub members: Vec<WrappedUserDto>,
+    pub originator: WrappedUserDto,
+    pub original_text: String,
+    pub edit_text: String,
+    pub original_time: chrono::NaiveDateTime,
+    pub edit_time: chrono::NaiveDateTime,
+    pub created_at: chrono::NaiveDateTime,
+    pub updated_at: chrono::NaiveDateTime,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct RequestInvitationCreateDto {
+    pub text: String,
+    pub time: chrono::NaiveDateTime,
+    pub contacts: Vec<HashedTeleNum>
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct UpdateInvitationStateDto {
+    pub accept: bool,
+}
+

@@ -348,3 +348,45 @@ impl BroadcastElementDao {
         }
     }
 }
+
+#[derive(Debug, Serialize, Deserialize, Associations, QueryableByName, Queryable, Clone)]
+#[table_name = "invitation"]
+#[belongs_to(UserDao, foreign_key = "originator_user_id")]
+#[belongs_to(InvitationDao, foreign_key = "id")]
+pub struct InvitationDao {
+    pub id: i32,
+    pub originator_user_id: uuid::Uuid,
+    pub edit_text: String,
+    pub edit_time: chrono::NaiveDateTime,
+    pub original_text: String,
+    pub original_time: chrono::NaiveDateTime,
+    pub created_at: chrono::NaiveDateTime,
+    pub updated_at: chrono::NaiveDateTime,
+}
+
+#[derive(Debug, Serialize, Deserialize, Insertable)]
+#[table_name = "invitation"]
+pub struct InsertInvitationDao {
+    pub originator_user_id: uuid::Uuid,
+    pub edit_text: String,
+    pub edit_time: chrono::NaiveDateTime,
+    pub original_text: String,
+    pub original_time: chrono::NaiveDateTime,
+    pub created_at: chrono::NaiveDateTime,
+    pub updated_at: chrono::NaiveDateTime,
+}
+
+#[derive(Debug, Serialize, Deserialize, Associations, Insertable, Queryable, QueryableByName, Clone)]
+#[table_name = "invitation_members"]
+#[belongs_to(UserDao, foreign_key = "user_id")]
+#[belongs_to(InvitationDao, foreign_key = "inv_id")]
+pub struct InvitationMemberDao {
+    pub inv_id: i32,
+    pub user_id: uuid::Uuid,
+    pub is_seen: bool,
+    pub state: i32,
+    pub created_at: chrono::NaiveDateTime,
+    pub updated_at: chrono::NaiveDateTime,
+}
+
+

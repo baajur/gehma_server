@@ -54,6 +54,30 @@ table! {
 }
 
 table! {
+    invitation (id) {
+        id -> Int4,
+        originator_user_id -> Uuid,
+        edit_text -> Text,
+        edit_time -> Timestamp,
+        original_text -> Text,
+        original_time -> Timestamp,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
+    }
+}
+
+table! {
+    invitation_members (inv_id, user_id) {
+        inv_id -> Int4,
+        user_id -> Uuid,
+        is_seen -> Bool,
+        state -> Int4,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
+    }
+}
+
+table! {
     profile_pictures (id) {
         id -> Int4,
         path -> Text,
@@ -93,6 +117,9 @@ table! {
     }
 }
 
+joinable!(invitation -> users (originator_user_id));
+joinable!(invitation_members -> invitation (inv_id));
+joinable!(invitation_members -> users (user_id));
 joinable!(users -> profile_pictures (profile_picture));
 joinable!(votes -> events (event_id));
 
@@ -102,6 +129,8 @@ allow_tables_to_appear_in_same_query!(
     broadcast,
     contacts,
     events,
+    invitation,
+    invitation_members,
     profile_pictures,
     usage_statistics,
     users,

@@ -34,6 +34,12 @@ impl DaoFactory {
         })
     }
 
+    pub fn get_invitation_dao(&self) -> Box<dyn PersistentInvitation> {
+        Box::new(PgInvitationDao {
+            pool: self.0.clone(),
+        })
+    }
+
     /*
     pub fn get_session_dao(&self) -> Box<dyn PersistentSessionDao> {
         Box::new(RedisSessionDao {
