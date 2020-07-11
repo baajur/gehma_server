@@ -478,7 +478,7 @@ macro_rules! get_broadcasts {
 
 #[actix_rt::test]
 async fn test_create_user() {
-    env_logger::init();
+    //env_logger::init();
     let pool = get_pool();
     let mut app = init_server_integration_test!(&pool).await;
 
