@@ -2,4 +2,4 @@
 
 Spontanously meeting friends. This server is deprecated because nobody used it :/
 
-![Main Screen](./v0.6.0_screen.jpg){: width=150 height=100 }
+![Main Screen](./v0.6.0_screen.jpg | width=200)
