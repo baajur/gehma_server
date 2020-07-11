@@ -1,4 +1,4 @@
-# Gehma [![Build Status](https://travis-ci.org/kper/gehma_server.svg?branch=master)](https://travis-ci.org/kper/gehma_server)
+# Gehma
 
 Spontanously meeting friends. This server is deprecated because nobody used it :/
 
